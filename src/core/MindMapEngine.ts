@@ -5,6 +5,7 @@ import { ArchitecturalAnalyzer } from './ArchitecturalAnalyzer.js';
 import { AdvancedQueryEngine } from './AdvancedQueryEngine.js';
 import { TemporalQueryEngine } from './TemporalQueryEngine.js';
 import { AggregateQueryEngine } from './AggregateQueryEngine.js';
+import { MultiLanguageIntelligence } from './MultiLanguageIntelligence.js';
 import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight } from '../types/index.js';
 import { join } from 'path';
 
@@ -16,6 +17,7 @@ export class MindMapEngine {
   private advancedQueryEngine: AdvancedQueryEngine;
   private temporalQueryEngine: TemporalQueryEngine;
   private aggregateQueryEngine: AggregateQueryEngine;
+  private multiLanguageIntelligence: MultiLanguageIntelligence;
   private projectRoot: string;
 
   constructor(projectRoot: string) {
@@ -27,6 +29,7 @@ export class MindMapEngine {
     this.advancedQueryEngine = new AdvancedQueryEngine(this.storage);
     this.temporalQueryEngine = new TemporalQueryEngine(this.storage);
     this.aggregateQueryEngine = new AggregateQueryEngine(this.storage);
+    this.multiLanguageIntelligence = new MultiLanguageIntelligence(this.storage);
   }
 
   async initialize(): Promise<void> {
@@ -1628,5 +1631,18 @@ export class MindMapEngine {
     if (outcome === 'error' || (outcome === 'success' && filesInvolved.length > 3)) {
       this.temporalQueryEngine.createSnapshot();
     }
+  }
+
+  // Multi-Language Intelligence Methods
+  async detectCrossLanguageDependencies() {
+    return await this.multiLanguageIntelligence.detectCrossLanguageDependencies();
+  }
+
+  async analyzePolyglotProject() {
+    return await this.multiLanguageIntelligence.analyzePolyglotProject();
+  }
+
+  async generateMultiLanguageRefactorings() {
+    return await this.multiLanguageIntelligence.generateRefactoringSuggestions();
   }
 }

@@ -518,6 +518,83 @@ export const EXECUTE_SAVED_QUERY_TOOL: Tool = {
   }
 };
 
+export const DETECT_CROSS_LANGUAGE_DEPS_TOOL: Tool = {
+  name: 'detect_cross_language_deps',
+  description: 'Detect cross-language dependencies and communication patterns in polyglot projects',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      include_confidence: {
+        type: 'boolean',
+        description: 'Include confidence scores in results (default: true)',
+        default: true
+      },
+      dependency_types: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['api_call', 'ffi', 'microservice', 'shared_data', 'config', 'build_dependency']
+        },
+        description: 'Filter by specific dependency types (optional)'
+      },
+      min_confidence: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'Minimum confidence threshold (default: 0.3)',
+        default: 0.3
+      }
+    }
+  }
+};
+
+export const ANALYZE_POLYGLOT_PROJECT_TOOL: Tool = {
+  name: 'analyze_polyglot_project',
+  description: 'Analyze project structure for multi-language patterns, architecture style, and language interoperability',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      include_recommendations: {
+        type: 'boolean',
+        description: 'Include architectural recommendations (default: true)',
+        default: true
+      },
+      detailed_frameworks: {
+        type: 'boolean',
+        description: 'Include detailed framework analysis (default: false)',
+        default: false
+      }
+    }
+  }
+};
+
+export const GENERATE_MULTI_LANGUAGE_REFACTORINGS_TOOL: Tool = {
+  name: 'generate_multi_language_refactorings',
+  description: 'Generate intelligent refactoring suggestions for multi-language codebases',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      focus_area: {
+        type: 'string',
+        enum: ['architecture', 'dependencies', 'configuration', 'apis', 'all'],
+        description: 'Focus area for refactoring suggestions (default: all)',
+        default: 'all'
+      },
+      max_effort: {
+        type: 'string',
+        enum: ['low', 'medium', 'high'],
+        description: 'Maximum effort level for suggestions (default: high)',
+        default: 'high'
+      },
+      include_risks: {
+        type: 'boolean',
+        description: 'Include risk analysis for each suggestion (default: true)',
+        default: true
+      }
+    }
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -534,5 +611,8 @@ export const ALL_TOOLS: Tool[] = [
   AGGREGATE_QUERY_TOOL,
   GET_INSIGHTS_TOOL,
   SAVE_QUERY_TOOL,
-  EXECUTE_SAVED_QUERY_TOOL
+  EXECUTE_SAVED_QUERY_TOOL,
+  DETECT_CROSS_LANGUAGE_DEPS_TOOL,
+  ANALYZE_POLYGLOT_PROJECT_TOOL,
+  GENERATE_MULTI_LANGUAGE_REFACTORINGS_TOOL
 ];

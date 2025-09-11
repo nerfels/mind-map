@@ -89,6 +89,15 @@ class MindMapMCPServer {
           case 'execute_saved_query':
             return await this.handleExecuteSavedQuery(args as any);
           
+          case 'detect_cross_language_deps':
+            return await this.handleDetectCrossLanguageDeps(args as any);
+          
+          case 'analyze_polyglot_project':
+            return await this.handleAnalyzePolyglotProject(args as any);
+          
+          case 'generate_multi_language_refactorings':
+            return await this.handleGenerateMultiLanguageRefactorings(args as any);
+          
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -1106,6 +1115,184 @@ class MindMapMCPServer {
     await this.server.connect(transport);
     
     console.error('Mind Map MCP Server started successfully');
+  }
+
+  // Multi-Language Intelligence Tool Handlers
+  private async handleDetectCrossLanguageDeps(args: {
+    include_confidence?: boolean;
+    dependency_types?: string[];
+    min_confidence?: number;
+  }) {
+    const { include_confidence = true, dependency_types, min_confidence = 0.3 } = args;
+
+    const dependencies = await this.mindMap.detectCrossLanguageDependencies();
+    
+    // Filter by dependency types if specified
+    let filteredDependencies = dependency_types 
+      ? dependencies.filter(dep => dependency_types.includes(dep.dependencyType))
+      : dependencies;
+
+    // Filter by minimum confidence
+    filteredDependencies = filteredDependencies.filter(dep => dep.confidence >= min_confidence);
+
+    const text = filteredDependencies.length > 0 
+      ? `🔗 Cross-Language Dependencies Found (${filteredDependencies.length}):\n\n` +
+        filteredDependencies.map((dep, index) => 
+          `${index + 1}. ${dep.sourceLanguage.toUpperCase()} → ${dep.targetLanguage.toUpperCase()}\n` +
+          `   Type: ${dep.dependencyType}\n` +
+          `   Source: ${dep.sourceFile}\n` +
+          `   Target: ${dep.targetFile}\n` +
+          (include_confidence ? `   Confidence: ${(dep.confidence * 100).toFixed(1)}%\n` : '') +
+          `   Evidence: ${dep.evidence.join(', ')}\n` +
+          `   Bidirectional: ${dep.bidirectional ? 'Yes' : 'No'}\n`
+        ).join('\n')
+      : '🔗 No cross-language dependencies detected above the confidence threshold.';
+
+    return {
+      content: [{ type: 'text', text }]
+    };
+  }
+
+  private async handleAnalyzePolyglotProject(args: {
+    include_recommendations?: boolean;
+    detailed_frameworks?: boolean;
+  }) {
+    const { include_recommendations = true, detailed_frameworks = false } = args;
+
+    const analysis = await this.mindMap.analyzePolyglotProject();
+
+    let text = `🌐 Polyglot Project Analysis:\n\n`;
+    
+    // Language breakdown
+    text += `📊 **Languages (${analysis.languages.size}):**\n`;
+    const sortedLanguages = Array.from(analysis.languages.entries())
+      .sort(([,a], [,b]) => b.fileCount - a.fileCount);
+    
+    for (const [lang, data] of sortedLanguages) {
+      text += `• ${lang.toUpperCase()}: ${data.fileCount} files`;
+      if (detailed_frameworks && data.primaryFrameworks.length > 0) {
+        text += ` (${data.primaryFrameworks.join(', ')})`;
+      }
+      text += `\n`;
+    }
+
+    // Architecture style
+    text += `\n🏗️ **Architecture Style:** ${analysis.architecturalStyle}\n`;
+    
+    // Primary vs secondary languages
+    text += `\n🎯 **Primary Language:** ${analysis.primaryLanguage}\n`;
+    if (analysis.secondaryLanguages.length > 0) {
+      text += `📋 **Secondary Languages:** ${analysis.secondaryLanguages.join(', ')}\n`;
+    }
+
+    // Cross-language patterns
+    if (analysis.crossLanguagePatterns.length > 0) {
+      text += `\n🔄 **Cross-Language Patterns:**\n`;
+      for (const pattern of analysis.crossLanguagePatterns) {
+        text += `• ${pattern.replace('_', ' ')}\n`;
+      }
+    }
+
+    // Interoperability patterns
+    if (analysis.interopPatterns.length > 0) {
+      text += `\n🤝 **Interoperability Patterns:**\n`;
+      for (const pattern of analysis.interopPatterns) {
+        text += `• **${pattern.type}**: ${pattern.description}\n`;
+        text += `  Languages: ${pattern.languages.join(', ')}\n`;
+        text += `  Files: ${pattern.files.length} files\n`;
+        text += `  Confidence: ${(pattern.confidence * 100).toFixed(1)}%\n\n`;
+      }
+    }
+
+    // Recommendations
+    if (include_recommendations) {
+      text += `\n💡 **Recommendations:**\n`;
+      if (analysis.architecturalStyle === 'monolithic' && analysis.languages.size > 2) {
+        text += `• Consider microservices architecture for better language separation\n`;
+      }
+      if (analysis.crossLanguagePatterns.includes('rest_api')) {
+        text += `• Standardize API interfaces across services\n`;
+      }
+      if (analysis.crossLanguagePatterns.includes('json_data')) {
+        text += `• Consider using schema validation for data exchange\n`;
+      }
+      if (analysis.languages.size > 3) {
+        text += `• Implement centralized configuration management\n`;
+        text += `• Consider containerization for deployment consistency\n`;
+      }
+    }
+
+    return {
+      content: [{ type: 'text', text }]
+    };
+  }
+
+  private async handleGenerateMultiLanguageRefactorings(args: {
+    focus_area?: string;
+    max_effort?: string;
+    include_risks?: boolean;
+  }) {
+    const { focus_area = 'all', max_effort = 'high', include_risks = true } = args;
+
+    const refactorings = await this.mindMap.generateMultiLanguageRefactorings();
+    
+    // Filter by focus area
+    let filteredRefactorings = focus_area === 'all' 
+      ? refactorings
+      : refactorings.filter(r => {
+          switch (focus_area) {
+            case 'architecture': return ['extract_service', 'merge_modules'].includes(r.type);
+            case 'dependencies': return ['update_dependencies'].includes(r.type);
+            case 'configuration': return ['consolidate_config'].includes(r.type);
+            case 'apis': return ['standardize_api'].includes(r.type);
+            default: return true;
+          }
+        });
+
+    // Filter by max effort
+    const effortOrder = { 'low': 1, 'medium': 2, 'high': 3 };
+    const maxEffortLevel = effortOrder[max_effort as keyof typeof effortOrder] || 3;
+    filteredRefactorings = filteredRefactorings.filter(r => 
+      effortOrder[r.effort as keyof typeof effortOrder] <= maxEffortLevel
+    );
+
+    const text = filteredRefactorings.length > 0 
+      ? `🔧 Multi-Language Refactoring Suggestions (${filteredRefactorings.length}):\n\n` +
+        filteredRefactorings.map((refactoring, index) => {
+          let suggestion = `${index + 1}. **${refactoring.description}**\n`;
+          suggestion += `   Type: ${refactoring.type}\n`;
+          suggestion += `   Languages: ${refactoring.languages.join(', ')}\n`;
+          suggestion += `   Impact: ${refactoring.impact} | Effort: ${refactoring.effort}\n`;
+          suggestion += `   Files: ${refactoring.files.length} files\n`;
+          
+          if (refactoring.benefits.length > 0) {
+            suggestion += `   ✅ Benefits:\n`;
+            for (const benefit of refactoring.benefits) {
+              suggestion += `   • ${benefit}\n`;
+            }
+          }
+          
+          if (include_risks && refactoring.risks.length > 0) {
+            suggestion += `   ⚠️ Risks:\n`;
+            for (const risk of refactoring.risks) {
+              suggestion += `   • ${risk}\n`;
+            }
+          }
+          
+          if (refactoring.steps.length > 0) {
+            suggestion += `   📋 Steps:\n`;
+            for (let i = 0; i < refactoring.steps.length; i++) {
+              suggestion += `   ${i + 1}. ${refactoring.steps[i]}\n`;
+            }
+          }
+          
+          return suggestion;
+        }).join('\n')
+      : '🔧 No refactoring suggestions found for the specified criteria.';
+
+    return {
+      content: [{ type: 'text', text }]
+    };
   }
 }
 

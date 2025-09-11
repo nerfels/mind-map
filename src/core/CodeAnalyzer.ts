@@ -3,16 +3,25 @@ import * as ts from 'typescript';
 import { CodeStructure } from '../types/index.js';
 import { PythonAnalyzer, PythonCodeStructure } from './PythonAnalyzer.js';
 import { JavaAnalyzer, JavaCodeStructure } from './JavaAnalyzer.js';
+import { GoAnalyzer, GoCodeStructure } from './GoAnalyzer.js';
+import { RustAnalyzer, RustCodeStructure } from './RustAnalyzer.js';
+import { CppAnalyzer, CppCodeStructure } from './CppAnalyzer.js';
 
 export class CodeAnalyzer {
   private supportedExtensions: Set<string>;
   private pythonAnalyzer: PythonAnalyzer;
   private javaAnalyzer: JavaAnalyzer;
+  private goAnalyzer: GoAnalyzer;
+  private rustAnalyzer: RustAnalyzer;
+  private cppAnalyzer: CppAnalyzer;
 
   constructor() {
-    this.supportedExtensions = new Set(['ts', 'tsx', 'js', 'jsx', 'py', 'java']);
+    this.supportedExtensions = new Set(['ts', 'tsx', 'js', 'jsx', 'py', 'java', 'go', 'rs', 'c', 'cpp', 'cc', 'cxx', 'c++', 'h', 'hpp', 'hxx', 'h++']);
     this.pythonAnalyzer = new PythonAnalyzer();
     this.javaAnalyzer = new JavaAnalyzer();
+    this.goAnalyzer = new GoAnalyzer();
+    this.rustAnalyzer = new RustAnalyzer();
+    this.cppAnalyzer = new CppAnalyzer();
   }
 
   canAnalyze(filePath: string): boolean {
@@ -33,6 +42,12 @@ export class CodeAnalyzer {
         return await this.pythonAnalyzer.analyzeFile(filePath);
       } else if (extension === 'java') {
         return await this.javaAnalyzer.analyzeFile(filePath);
+      } else if (extension === 'go') {
+        return await this.goAnalyzer.analyzeFile(filePath);
+      } else if (extension === 'rs') {
+        return await this.rustAnalyzer.analyzeFile(filePath);
+      } else if (extension && ['c', 'cpp', 'cc', 'cxx', 'c++', 'h', 'hpp', 'hxx', 'h++'].includes(extension)) {
+        return await this.cppAnalyzer.analyzeFile(filePath);
       } else {
         // Handle TypeScript/JavaScript files
         const content = await readFile(filePath, 'utf-8');
@@ -280,6 +295,8 @@ export class CodeAnalyzer {
       return this.pythonAnalyzer.detectFrameworks(structure as any, filePath);
     } else if (extension === 'java' && 'javaImports' in structure) {
       return this.javaAnalyzer.detectFrameworks(structure as any, filePath);
+    } else if (extension === 'go' && 'goImports' in structure) {
+      return this.goAnalyzer.detectFrameworks(structure as any, filePath);
     } else {
       // TypeScript/JavaScript framework detection (existing logic)
       return this.detectTSJSFrameworks(filePath, structure);
@@ -296,6 +313,8 @@ export class CodeAnalyzer {
       return this.pythonAnalyzer.analyzePatterns(structure as any);
     } else if (extension === 'java' && 'javaImports' in structure) {
       return this.javaAnalyzer.analyzePatterns(structure as any);
+    } else if (extension === 'go' && 'goImports' in structure) {
+      return this.goAnalyzer.analyzePatterns(structure as any);
     } else {
       // TypeScript/JavaScript pattern analysis (could be implemented)
       return this.analyzeTSJSPatterns(filePath, structure);

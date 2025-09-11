@@ -1,20 +1,21 @@
 # Mind Map MCP Server
 
-**Enterprise-Grade Multi-Language Intelligence Complete** - An advanced Model Context Protocol (MCP) server that creates and maintains a persistent knowledge graph of your codebase for Claude Code. Features comprehensive AST analysis, predictive error detection, and intelligent learning systems.
+**Enterprise-Grade Multi-Language Intelligence Complete** - An advanced Model Context Protocol (MCP) server that creates and maintains a persistent knowledge graph of your codebase for Claude Code. Features comprehensive AST analysis, predictive error detection, intelligent learning systems, and cross-language dependency analysis for polyglot projects.
 
 ## 🚀 Current Status: Production Ready
 
-**✅ Phases 1-4 Complete** | **✅ TypeScript/JavaScript/Python/Java AST Support** | **✅ 16 Advanced MCP Tools**
+**✅ Phases 1-5.7 Complete** | **✅ 6-Language AST Support** | **✅ 19 Advanced MCP Tools** | **✅ Multi-Language Intelligence**
 
 ## Features
 
 ### 🧠 Advanced Code Intelligence  
-- **Multi-Language AST Analysis**: Full TypeScript/JavaScript/Python/Java parsing with function/class extraction
-- **Comprehensive Language Support**: TypeScript, JavaScript, Python, Java with framework detection
-- **Enterprise Framework Detection**: React, Vue, Express, Django, Flask, Spring Boot, JPA, Maven, Gradle
-- **Architectural Pattern Detection**: Identifies 7 pattern types (layered, MVC, microservices, repository, factory, observer, plugin)
-- **Predictive Error Detection**: Risk analysis system with historical pattern matching
-- **Intelligent Fix Suggestions**: Context-aware recommendations based on error patterns
+- **Multi-Language AST Analysis**: Full parsing for 6 languages (TypeScript/JavaScript/Python/Java/Go/Rust/C++) with function/class extraction
+- **Cross-Language Dependency Detection**: Identifies API calls, FFI, microservices, and shared data patterns across languages
+- **Polyglot Project Analysis**: Architectural style detection with multi-language recommendations
+- **Enterprise Framework Detection**: React, Vue, Express, Django, Flask, Spring Boot, Gin, Actix, Qt, Boost, and 50+ more
+- **Architectural Pattern Detection**: 7 pattern types with multi-language interoperability analysis
+- **Predictive Error Detection**: Risk analysis system with language-specific pattern matching
+- **Intelligent Fix Suggestions**: Context-aware recommendations with cross-language insights
 
 ### 📚 Advanced Learning System
 - **Task Outcome Learning**: Tracks success/failure patterns with confidence scoring
@@ -82,7 +83,7 @@ npm start
 node dist/index.js
 ```
 
-## Available MCP Tools (16 Total)
+## Available MCP Tools (19 Total)
 
 ### Core Intelligence Tools
 - **`scan_project`**: Initial project analysis with AST parsing and pattern detection
@@ -104,7 +105,12 @@ node dist/index.js
 - **`get_performance`**: Real-time performance monitoring and bottleneck detection
 - **`save_query`**: Save and manage reusable query templates
 - **`execute_saved_query`**: Run saved queries with parameter substitution
-- **`clear_cache`**: Cache management and cleanup utilities
+- **`get_insights`**: Comprehensive project insights with actionable recommendations
+
+### Multi-Language Intelligence Tools
+- **`detect_cross_language_deps`**: Identify cross-language dependencies and communication patterns
+- **`analyze_polyglot_project`**: Analyze multi-language project structure and architecture
+- **`generate_multi_language_refactorings`**: Generate refactoring suggestions for polyglot codebases
 
 ### Example Usage
 
@@ -150,11 +156,13 @@ The server performs comprehensive scanning and creates nodes for:
 - **Error Patterns**: Historical error categorization and solution mapping
 
 ### 2. Multi-Language AST Parsing
-Currently supports:
-- **TypeScript/JavaScript**: Full AST with function/class extraction via TypeScript compiler API
-- **Python**: Complete AST parsing with subprocess execution for functions, classes, decorators
+Full support for 6 major programming languages:
+- **TypeScript/JavaScript**: Complete AST with function/class extraction via TypeScript compiler API
+- **Python**: Full AST parsing with subprocess execution for functions, classes, decorators  
 - **Java**: Complete AST parsing with java-parser for classes, methods, annotations, Spring Boot detection
-- **Coming Soon**: Go, Rust, C/C++ support (Phase 5.3-5.5)
+- **Go**: Go AST parsing with struct/interface/function extraction and framework detection
+- **Rust**: Rust AST analysis with struct/trait/impl extraction and crate dependency mapping
+- **C/C++**: C++ parsing with class/function/template extraction and build system analysis
 
 ### 3. Intelligent Learning System
 As you use Claude Code, the server:
@@ -222,19 +230,21 @@ The server consists of several key components:
 
 ## Roadmap
 
-### ✅ Completed (Phases 1-4 + 5.1-5.2)
-- **Core MCP Server**: 16 tools with stdio transport  
-- **Multi-Language AST Analysis**: TypeScript/JavaScript + Python + Java parsing
-- **Advanced Intelligence**: Predictive errors, fix suggestions, architectural patterns
-- **Enterprise Querying**: Cypher-like queries, temporal analysis, aggregates
-- **Performance Systems**: Multi-index storage, LRU caching, monitoring
+### ✅ Completed (Phases 1-5.7)
+- **Core MCP Server**: 19 tools with stdio transport  
+- **Multi-Language AST Analysis**: 6 languages (TypeScript/JavaScript/Python/Java/Go/Rust/C++) with comprehensive parsing
+- **Cross-Language Intelligence**: Dependency detection, polyglot analysis, multi-language refactoring
+- **Advanced Intelligence**: Predictive errors, fix suggestions, architectural patterns, risk analysis
+- **Enterprise Querying**: Cypher-like queries, temporal analysis, aggregates, saved queries
+- **Performance Systems**: Multi-index storage, LRU caching, monitoring, insights
 
-### 🚧 In Progress (Phase 5: Extended Multi-Language)
-- **Phase 5.1**: ✅ Python AST support completed
-- **Phase 5.2**: ✅ Java AST support completed (java-parser with Spring Boot detection)
-- **Phase 5.3**: Go AST support (go/parser, go/ast)
-- **Phase 5.4**: Rust AST support (syn crate integration)
-- **Phase 5.5**: C/C++ AST support (libclang/tree-sitter)
+### 🚧 Completed Multi-Language Support (Phase 5)
+- **Phase 5.1**: ✅ Python AST support with Flask/Django detection
+- **Phase 5.2**: ✅ Java AST support with Spring Boot/Maven/Gradle detection
+- **Phase 5.3**: ✅ Go AST support with Gin/Echo framework detection
+- **Phase 5.4**: ✅ Rust AST support with Actix/Tokio/Serde detection
+- **Phase 5.5**: ✅ C/C++ AST support with Qt/Boost/CMake detection  
+- **Phase 5.7**: ✅ Multi-Language Intelligence with cross-language dependency detection
 
 ### 🔮 Future (Phase 6+)
 - **Visual Interface**: Mind map visualization and exploration

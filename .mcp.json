@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mind-map-mcp": {
+      "command": "node",
+      "args": ["/data/data/com.termux/files/home/projects/mind-map/dist/index.js"],
+      "env": {}
+    }
+  }
+}
