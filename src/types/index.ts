@@ -6,17 +6,20 @@ export interface MindMapNode {
   metadata: Record<string, any>;
   confidence: number;
   lastUpdated: Date;
-  properties: Record<string, any>;
+  properties?: Record<string, any>;
+  frameworks?: string[];
+  createdAt?: Date;
 }
 
 export interface MindMapEdge {
   id: string;
   source: string;
   target: string;
-  type: 'contains' | 'imports' | 'calls' | 'fixes' | 'relates_to' | 'depends_on';
-  weight: number;
+  type: 'contains' | 'imports' | 'calls' | 'fixes' | 'relates_to' | 'depends_on' | 'detects';
+  weight?: number;
   confidence: number;
-  metadata: Record<string, any>;
+  metadata?: Record<string, any>;
+  createdAt?: Date;
 }
 
 export interface MindMapGraph {

@@ -1,10 +1,10 @@
 # Mind Map MCP Server
 
-**Enterprise-Grade Multi-Language Intelligence Complete** - An advanced Model Context Protocol (MCP) server that creates and maintains a persistent knowledge graph of your codebase for Claude Code. Features comprehensive AST analysis, predictive error detection, intelligent learning systems, and cross-language dependency analysis for polyglot projects.
+**Enterprise-Grade Multi-Language Intelligence Complete** - An advanced Model Context Protocol (MCP) server that creates and maintains a persistent knowledge graph of your codebase for Claude Code. Features comprehensive AST analysis, predictive error detection, intelligent learning systems, cross-language dependency analysis, and integrated development tooling for 6 programming languages.
 
 ## 🚀 Current Status: Production Ready
 
-**✅ Phases 1-5.7 Complete** | **✅ 6-Language AST Support** | **✅ 19 Advanced MCP Tools** | **✅ Multi-Language Intelligence**
+**✅ Phases 1-5.8 Complete** | **✅ 6-Language AST + Tooling** | **✅ 23 Advanced MCP Tools** | **✅ 80+ Development Tools**
 
 ## Features
 
@@ -16,6 +16,14 @@
 - **Architectural Pattern Detection**: 7 pattern types with multi-language interoperability analysis
 - **Predictive Error Detection**: Risk analysis system with language-specific pattern matching
 - **Intelligent Fix Suggestions**: Context-aware recommendations with cross-language insights
+
+### 🔧 Integrated Development Tooling
+- **80+ Development Tools**: Complete tooling ecosystem across 6 languages with intelligent detection
+- **Smart Tool Execution**: Run tests, linters, formatters, and security scanners with issue parsing
+- **Intelligent Recommendations**: Get suggestions for missing tools with installation commands
+- **Tool Suite Orchestration**: Run multiple tools in parallel with aggregated results
+- **Issue Classification**: Parse and categorize tool outputs for actionable insights
+- **Mind Map Integration**: Store tool results as nodes/edges for learning and correlation
 
 ### 📚 Advanced Learning System
 - **Task Outcome Learning**: Tracks success/failure patterns with confidence scoring
@@ -83,7 +91,7 @@ npm start
 node dist/index.js
 ```
 
-## Available MCP Tools (19 Total)
+## Available MCP Tools (23 Total)
 
 ### Core Intelligence Tools
 - **`scan_project`**: Initial project analysis with AST parsing and pattern detection
@@ -111,6 +119,12 @@ node dist/index.js
 - **`detect_cross_language_deps`**: Identify cross-language dependencies and communication patterns
 - **`analyze_polyglot_project`**: Analyze multi-language project structure and architecture
 - **`generate_multi_language_refactorings`**: Generate refactoring suggestions for polyglot codebases
+
+### Development Tooling Integration
+- **`detect_project_tooling`**: Detect available development tools across all languages in the project
+- **`run_language_tool`**: Execute specific development tools with intelligent issue parsing
+- **`get_tooling_recommendations`**: Get intelligent recommendations for missing development tools
+- **`run_tool_suite`**: Run multiple development tools in parallel with aggregated results
 
 ### Example Usage
 
@@ -230,10 +244,11 @@ The server consists of several key components:
 
 ## Roadmap
 
-### ✅ Completed (Phases 1-5.7)
-- **Core MCP Server**: 19 tools with stdio transport  
+### ✅ Completed (Phases 1-5.8)
+- **Core MCP Server**: 23 tools with stdio transport  
 - **Multi-Language AST Analysis**: 6 languages (TypeScript/JavaScript/Python/Java/Go/Rust/C++) with comprehensive parsing
 - **Cross-Language Intelligence**: Dependency detection, polyglot analysis, multi-language refactoring
+- **Development Tooling Integration**: 80+ tools across 6 languages with intelligent execution and parsing
 - **Advanced Intelligence**: Predictive errors, fix suggestions, architectural patterns, risk analysis
 - **Enterprise Querying**: Cypher-like queries, temporal analysis, aggregates, saved queries
 - **Performance Systems**: Multi-index storage, LRU caching, monitoring, insights
@@ -245,6 +260,7 @@ The server consists of several key components:
 - **Phase 5.4**: ✅ Rust AST support with Actix/Tokio/Serde detection
 - **Phase 5.5**: ✅ C/C++ AST support with Qt/Boost/CMake detection  
 - **Phase 5.7**: ✅ Multi-Language Intelligence with cross-language dependency detection
+- **Phase 5.8**: ✅ Language-Specific Tooling Integration with 80+ development tools
 
 ### 🔮 Future (Phase 6+)
 - **Visual Interface**: Mind map visualization and exploration

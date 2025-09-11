@@ -595,6 +595,117 @@ export const GENERATE_MULTI_LANGUAGE_REFACTORINGS_TOOL: Tool = {
   }
 };
 
+export const DETECT_PROJECT_TOOLING_TOOL: Tool = {
+  name: 'detect_project_tooling',
+  description: 'Detect available development tools across all languages in the project',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      force_refresh: {
+        type: 'boolean',
+        description: 'Force a fresh scan instead of using cached results (default: false)',
+        default: false
+      },
+      language_filter: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['python', 'java', 'go', 'rust', 'cpp', 'c', 'javascript', 'typescript']
+        },
+        description: 'Filter results by specific languages (optional)'
+      }
+    }
+  }
+};
+
+export const RUN_LANGUAGE_TOOL_TOOL: Tool = {
+  name: 'run_language_tool',
+  description: 'Execute a specific development tool and return results with issue analysis',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      tool_name: {
+        type: 'string',
+        description: 'Name of the tool to run (e.g., pytest, cargo-clippy, maven)'
+      },
+      language: {
+        type: 'string',
+        enum: ['python', 'java', 'go', 'rust', 'cpp', 'c'],
+        description: 'Language context for the tool'
+      },
+      args: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Additional command-line arguments for the tool (optional)',
+        default: []
+      },
+      timeout: {
+        type: 'number',
+        description: 'Timeout in milliseconds (default: 120000)',
+        default: 120000
+      }
+    },
+    required: ['tool_name', 'language']
+  }
+};
+
+export const GET_TOOLING_RECOMMENDATIONS_TOOL: Tool = {
+  name: 'get_tooling_recommendations',
+  description: 'Get intelligent recommendations for missing or beneficial development tools',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      priority_filter: {
+        type: 'string',
+        enum: ['high', 'medium', 'low', 'all'],
+        description: 'Filter recommendations by priority level (default: all)',
+        default: 'all'
+      },
+      include_install_commands: {
+        type: 'boolean',
+        description: 'Include installation commands in recommendations (default: true)',
+        default: true
+      }
+    }
+  }
+};
+
+export const RUN_TOOL_SUITE_TOOL: Tool = {
+  name: 'run_tool_suite',
+  description: 'Run multiple development tools and aggregate results for comprehensive analysis',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      tool_types: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['test', 'lint', 'format', 'build', 'security', 'coverage', 'type_check']
+        },
+        description: 'Types of tools to run (runs all available if not specified)'
+      },
+      languages: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['python', 'java', 'go', 'rust', 'cpp', 'c']
+        },
+        description: 'Languages to include (runs all detected if not specified)'
+      },
+      parallel: {
+        type: 'boolean',
+        description: 'Run tools in parallel for faster execution (default: true)',
+        default: true
+      },
+      fail_fast: {
+        type: 'boolean',
+        description: 'Stop execution on first failure (default: false)',
+        default: false
+      }
+    }
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -614,5 +725,9 @@ export const ALL_TOOLS: Tool[] = [
   EXECUTE_SAVED_QUERY_TOOL,
   DETECT_CROSS_LANGUAGE_DEPS_TOOL,
   ANALYZE_POLYGLOT_PROJECT_TOOL,
-  GENERATE_MULTI_LANGUAGE_REFACTORINGS_TOOL
+  GENERATE_MULTI_LANGUAGE_REFACTORINGS_TOOL,
+  DETECT_PROJECT_TOOLING_TOOL,
+  RUN_LANGUAGE_TOOL_TOOL,
+  GET_TOOLING_RECOMMENDATIONS_TOOL,
+  RUN_TOOL_SUITE_TOOL
 ];

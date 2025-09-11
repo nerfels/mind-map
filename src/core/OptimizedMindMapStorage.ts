@@ -238,19 +238,19 @@ export class OptimizedMindMapStorage {
     this.nodeIndex.byConfidence.get(confidenceBucket)!.add(node.id);
     
     // Framework index
-    if (node.properties.framework) {
-      if (!this.nodeIndex.byFramework.has(node.properties.framework)) {
-        this.nodeIndex.byFramework.set(node.properties.framework, new Set());
+    if (node.properties?.framework) {
+      if (!this.nodeIndex.byFramework.has(node.properties?.framework)) {
+        this.nodeIndex.byFramework.set(node.properties?.framework, new Set());
       }
-      this.nodeIndex.byFramework.get(node.properties.framework)!.add(node.id);
+      this.nodeIndex.byFramework.get(node.properties?.framework)!.add(node.id);
     }
     
     // Language index
-    if (node.properties.language) {
-      if (!this.nodeIndex.byLanguage.has(node.properties.language)) {
-        this.nodeIndex.byLanguage.set(node.properties.language, new Set());
+    if (node.properties?.language) {
+      if (!this.nodeIndex.byLanguage.has(node.properties?.language)) {
+        this.nodeIndex.byLanguage.set(node.properties?.language, new Set());
       }
-      this.nodeIndex.byLanguage.get(node.properties.language)!.add(node.id);
+      this.nodeIndex.byLanguage.get(node.properties?.language)!.add(node.id);
     }
   }
 
@@ -268,11 +268,11 @@ export class OptimizedMindMapStorage {
     const confidenceBucket = Math.floor(node.confidence * 5);
     this.nodeIndex.byConfidence.get(confidenceBucket)?.delete(nodeId);
     
-    if (node.properties.framework) {
-      this.nodeIndex.byFramework.get(node.properties.framework)?.delete(nodeId);
+    if (node.properties?.framework) {
+      this.nodeIndex.byFramework.get(node.properties?.framework)?.delete(nodeId);
     }
-    if (node.properties.language) {
-      this.nodeIndex.byLanguage.get(node.properties.language)?.delete(nodeId);
+    if (node.properties?.language) {
+      this.nodeIndex.byLanguage.get(node.properties?.language)?.delete(nodeId);
     }
   }
 

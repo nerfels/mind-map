@@ -6,6 +6,7 @@ import { AdvancedQueryEngine } from './AdvancedQueryEngine.js';
 import { TemporalQueryEngine } from './TemporalQueryEngine.js';
 import { AggregateQueryEngine } from './AggregateQueryEngine.js';
 import { MultiLanguageIntelligence } from './MultiLanguageIntelligence.js';
+import { LanguageToolingDetector } from './LanguageToolingDetector.js';
 import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight } from '../types/index.js';
 import { join } from 'path';
 
@@ -18,6 +19,7 @@ export class MindMapEngine {
   private temporalQueryEngine: TemporalQueryEngine;
   private aggregateQueryEngine: AggregateQueryEngine;
   private multiLanguageIntelligence: MultiLanguageIntelligence;
+  private languageToolingDetector: LanguageToolingDetector;
   private projectRoot: string;
 
   constructor(projectRoot: string) {
@@ -30,6 +32,7 @@ export class MindMapEngine {
     this.temporalQueryEngine = new TemporalQueryEngine(this.storage);
     this.aggregateQueryEngine = new AggregateQueryEngine(this.storage);
     this.multiLanguageIntelligence = new MultiLanguageIntelligence(this.storage);
+    this.languageToolingDetector = new LanguageToolingDetector(this.storage);
   }
 
   async initialize(): Promise<void> {
@@ -200,7 +203,9 @@ export class MindMapEngine {
 
             // Update properties with detected frameworks
             if (frameworks.length > 0) {
-              fileNode.properties.framework = frameworks.join(', ');
+              if (fileNode.properties) {
+                fileNode.properties.framework = frameworks.join(', ');
+              }
             }
 
             // Create pattern nodes for significant patterns
@@ -363,7 +368,8 @@ export class MindMapEngine {
       type: 'contains',
       weight: 1.0,
       confidence: 1.0,
-      metadata: {}
+      metadata: {},
+      createdAt: new Date()
     };
     this.storage.addEdge(edge);
   }
@@ -423,8 +429,8 @@ export class MindMapEngine {
       node.name,
       node.path,
       node.metadata.extension,
-      node.properties.language,
-      node.properties.framework
+      node.properties?.language,
+      node.properties?.framework
     ].filter(Boolean).join(' ').toLowerCase();
 
     if (searchableText.includes(queryLower)) {
@@ -468,10 +474,10 @@ export class MindMapEngine {
 
     // Extension/language matching
     if (node.metadata.extension === queryLower) score += 4;
-    if (node.properties.language === queryLower) score += 4;
+    if (node.properties?.language === queryLower) score += 4;
 
     // Framework matching
-    if (node.properties.framework === queryLower) score += 4;
+    if (node.properties?.framework === queryLower) score += 4;
 
     // Type-specific scoring
     if (node.type === 'function') {
@@ -538,7 +544,8 @@ export class MindMapEngine {
           type: 'relates_to',
           weight: 0.8,
           confidence: 0.8,
-          metadata: { relationship: 'error_occurred_in' }
+          metadata: { relationship: 'error_occurred_in' },
+          createdAt: new Date()
         };
         this.storage.addEdge(edge);
       }
@@ -594,7 +601,8 @@ export class MindMapEngine {
       metadata: { 
         importType,
         relationship: 'imports_from'
-      }
+      },
+      createdAt: new Date()
     };
     this.storage.addEdge(edge);
   }
@@ -610,7 +618,8 @@ export class MindMapEngine {
       metadata: { 
         relationshipType,
         relationship: 'pattern_detected'
-      }
+      },
+      createdAt: new Date()
     };
     this.storage.addEdge(edge);
   }
@@ -870,7 +879,7 @@ export class MindMapEngine {
   private getHistoricalErrors(category: string, location?: string): MindMapNode[] {
     return this.storage.findNodes(node => 
       node.type === 'error' && 
-      node.properties.category === category &&
+      node.properties?.category === category &&
       (!location || node.metadata.filesInvolved?.includes(location))
     );
   }
@@ -881,7 +890,7 @@ export class MindMapEngine {
       edge.source === fileNode.id && edge.type === 'depends_on'
     );
     return edges.filter(edge => 
-      edge.metadata.importType === 'relative'
+      edge.metadata?.importType === 'relative'
     ).length;
   }
 
@@ -958,7 +967,7 @@ export class MindMapEngine {
   private getHistoricalFixes(errorCategory: string, filePath?: string): HistoricalFix[] {
     const errorNodes = this.storage.findNodes(node => 
       node.type === 'error' && 
-      node.properties.category === errorCategory &&
+      node.properties?.category === errorCategory &&
       node.metadata.fixApplied &&
       (!filePath || node.metadata.filesInvolved?.includes(filePath))
     );
@@ -1267,13 +1276,13 @@ export class MindMapEngine {
       const fileNode = this.storage.findNodes(node => node.path === filePath && node.type === 'file')[0];
       if (fileNode) {
         // Add framework-specific suggestions
-        const framework = fileNode.properties.framework;
+        const framework = fileNode.properties?.framework;
         if (framework) {
           suggestions.push(...this.getFrameworkSpecificSuggestions(errorCategory, framework));
         }
 
         // Add language-specific suggestions
-        const language = fileNode.properties.language;
+        const language = fileNode.properties?.language;
         if (language) {
           suggestions.push(...this.getLanguageSpecificSuggestions(errorCategory, language));
         }
@@ -1644,5 +1653,26 @@ export class MindMapEngine {
 
   async generateMultiLanguageRefactorings() {
     return await this.multiLanguageIntelligence.generateRefactoringSuggestions();
+  }
+
+  // Language Tooling Methods
+  async detectProjectTooling(forceRefresh = false) {
+    return await this.languageToolingDetector.detectProjectTooling(this.projectRoot, forceRefresh);
+  }
+
+  async runLanguageTool(tool: any, args: string[] = []) {
+    return await this.languageToolingDetector.runTool(tool, this.projectRoot, args);
+  }
+
+  async getToolingRecommendations() {
+    return await this.languageToolingDetector.getToolingRecommendations(this.projectRoot);
+  }
+
+  async runToolSuite(tools: any[], parallel = true) {
+    return await this.languageToolingDetector.runToolSuite(tools, this.projectRoot, parallel);
+  }
+
+  getToolingStats() {
+    return this.languageToolingDetector.getToolingStats();
   }
 }

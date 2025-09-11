@@ -98,6 +98,18 @@ class MindMapMCPServer {
           case 'generate_multi_language_refactorings':
             return await this.handleGenerateMultiLanguageRefactorings(args as any);
           
+          case 'detect_project_tooling':
+            return await this.handleDetectProjectTooling(args as any);
+          
+          case 'run_language_tool':
+            return await this.handleRunLanguageTool(args as any);
+          
+          case 'get_tooling_recommendations':
+            return await this.handleGetToolingRecommendations(args as any);
+          
+          case 'run_tool_suite':
+            return await this.handleRunToolSuite(args as any);
+          
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -1293,6 +1305,250 @@ class MindMapMCPServer {
     return {
       content: [{ type: 'text', text }]
     };
+  }
+
+  // Language Tooling Integration Tool Handlers
+  private async handleDetectProjectTooling(args: {
+    force_refresh?: boolean;
+    language_filter?: string[];
+  }) {
+    const { force_refresh = false, language_filter } = args;
+
+    const toolingByLanguage = await this.mindMap.detectProjectTooling(force_refresh);
+    
+    // Filter by languages if specified
+    let filteredTooling = toolingByLanguage;
+    if (language_filter && language_filter.length > 0) {
+      filteredTooling = new Map();
+      for (const lang of language_filter) {
+        if (toolingByLanguage.has(lang)) {
+          filteredTooling.set(lang, toolingByLanguage.get(lang)!);
+        }
+      }
+    }
+
+    let text = `🔧 Project Development Tools Detected:\n\n`;
+    
+    if (filteredTooling.size === 0) {
+      text += 'No development tools detected for the specified languages.';
+    } else {
+      for (const [language, tools] of filteredTooling) {
+        text += `**${language.toUpperCase()} (${tools.length} tools):**\n`;
+        
+        const availableTools = tools.filter(t => t.available);
+        const unavailableTools = tools.filter(t => !t.available);
+        
+        if (availableTools.length > 0) {
+          text += `  ✅ Available:\n`;
+          for (const tool of availableTools) {
+            const version = tool.version ? ` v${tool.version}` : '';
+            text += `    • ${tool.name}${version} (${tool.type}) - ${tool.description}\n`;
+          }
+        }
+        
+        if (unavailableTools.length > 0) {
+          text += `  ❌ Missing:\n`;
+          for (const tool of unavailableTools) {
+            text += `    • ${tool.name} (${tool.type}) - ${tool.description}\n`;
+          }
+        }
+        text += '\n';
+      }
+    }
+
+    return {
+      content: [{ type: 'text', text }]
+    };
+  }
+
+  private async handleRunLanguageTool(args: {
+    tool_name: string;
+    language: string;
+    args?: string[];
+    timeout?: number;
+  }) {
+    const { tool_name, language, args: toolArgs = [], timeout = 120000 } = args;
+
+    try {
+      const toolingByLanguage = await this.mindMap.detectProjectTooling();
+      const languageTools = toolingByLanguage.get(language);
+      
+      if (!languageTools) {
+        return {
+          content: [{ type: 'text', text: `❌ No tools detected for language: ${language}` }]
+        };
+      }
+
+      const tool = languageTools.find(t => t.name === tool_name);
+      if (!tool) {
+        const availableTools = languageTools.map(t => t.name).join(', ');
+        return {
+          content: [{ type: 'text', text: `❌ Tool '${tool_name}' not found for ${language}.\nAvailable tools: ${availableTools}` }]
+        };
+      }
+
+      if (!tool.available) {
+        return {
+          content: [{ type: 'text', text: `❌ Tool '${tool_name}' is not available. Please install it first.` }]
+        };
+      }
+
+      const result = await this.mindMap.runLanguageTool(tool, toolArgs);
+      
+      let text = `🔧 **${tool.name}** Results:\n\n`;
+      text += `⏱️  Duration: ${result.duration}ms\n`;
+      text += `📊 Status: ${result.success ? '✅ Success' : '❌ Failed'} (exit code: ${result.exitCode})\n\n`;
+      
+      if (result.issues && result.issues.length > 0) {
+        text += `🚨 **Issues Found (${result.issues.length}):**\n`;
+        for (const issue of result.issues.slice(0, 20)) { // Limit to first 20 issues
+          const location = issue.line ? `${issue.file}:${issue.line}` : issue.file;
+          const severity = issue.severity === 'error' ? '🔴' : issue.severity === 'warning' ? '🟡' : '🔵';
+          text += `${severity} ${location}: ${issue.message}`;
+          if (issue.rule) text += ` [${issue.rule}]`;
+          text += '\n';
+        }
+        
+        if (result.issues.length > 20) {
+          text += `\n... and ${result.issues.length - 20} more issues`;
+        }
+      } else {
+        text += result.success ? '✅ No issues found!' : '❌ Tool execution failed';
+      }
+      
+      if (result.stderr && result.stderr.trim()) {
+        text += `\n\n**Error Output:**\n\`\`\`\n${result.stderr.slice(0, 500)}\n\`\`\``;
+      }
+
+      return {
+        content: [{ type: 'text', text }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: `❌ Failed to run tool: ${error}` }]
+      };
+    }
+  }
+
+  private async handleGetToolingRecommendations(args: {
+    priority_filter?: string;
+    include_install_commands?: boolean;
+  }) {
+    const { priority_filter = 'all', include_install_commands = true } = args;
+
+    const recommendations = await this.mindMap.getToolingRecommendations();
+    
+    let text = `💡 Development Tool Recommendations:\n\n`;
+    
+    if (recommendations.size === 0) {
+      text += 'No specific tool recommendations found. Your tooling setup looks good!';
+    } else {
+      for (const [language, langRecommendations] of recommendations) {
+        const filteredRecs = priority_filter === 'all' 
+          ? langRecommendations 
+          : langRecommendations.filter(r => r.priority === priority_filter);
+        
+        if (filteredRecs.length > 0) {
+          text += `**${language.toUpperCase()} Recommendations:**\n`;
+          
+          for (const rec of filteredRecs) {
+            const priorityIcon = rec.priority === 'high' ? '🔴' : rec.priority === 'medium' ? '🟡' : '🟢';
+            text += `${priorityIcon} **${rec.tool}** (${rec.priority} priority)\n`;
+            text += `   ${rec.reason}\n`;
+            
+            if (include_install_commands && rec.installCommand) {
+              text += `   📥 Install: \`${rec.installCommand}\`\n`;
+            }
+            
+            if (rec.configExample) {
+              text += `   ⚙️ Config example:\n\`\`\`\n${rec.configExample.slice(0, 200)}\n\`\`\`\n`;
+            }
+            text += '\n';
+          }
+        }
+      }
+    }
+
+    return {
+      content: [{ type: 'text', text }]
+    };
+  }
+
+  private async handleRunToolSuite(args: {
+    tool_types?: string[];
+    languages?: string[];
+    parallel?: boolean;
+    fail_fast?: boolean;
+  }) {
+    const { tool_types, languages, parallel = true, fail_fast = false } = args;
+
+    try {
+      const toolingByLanguage = await this.mindMap.detectProjectTooling();
+      
+      // Filter by languages if specified
+      let targetLanguages = languages || Array.from(toolingByLanguage.keys());
+      
+      const toolsToRun: any[] = [];
+      for (const lang of targetLanguages) {
+        const langTools = toolingByLanguage.get(lang);
+        if (!langTools) continue;
+        
+        const availableTools = langTools.filter(t => 
+          t.available && 
+          (!tool_types || tool_types.includes(t.type))
+        );
+        
+        toolsToRun.push(...availableTools);
+      }
+
+      if (toolsToRun.length === 0) {
+        return {
+          content: [{ type: 'text', text: '❌ No matching tools found to run with the specified criteria.' }]
+        };
+      }
+
+      let text = `🔧 Running Tool Suite (${toolsToRun.length} tools)...\n\n`;
+      
+      const results = await this.mindMap.runToolSuite(toolsToRun, parallel);
+      
+      let successCount = 0;
+      let totalIssues = 0;
+      
+      for (const [toolName, result] of results) {
+        const status = result.success ? '✅' : '❌';
+        text += `${status} **${toolName}**: ${result.duration}ms`;
+        
+        if (result.issues) {
+          const errorCount = result.issues.filter(i => i.severity === 'error').length;
+          const warningCount = result.issues.filter(i => i.severity === 'warning').length;
+          
+          if (errorCount > 0) text += ` (${errorCount} errors`;
+          if (warningCount > 0) text += `${errorCount > 0 ? ', ' : ' ('}${warningCount} warnings`;
+          if (errorCount > 0 || warningCount > 0) text += ')';
+          
+          totalIssues += result.issues.length;
+        }
+        
+        text += '\n';
+        
+        if (result.success) successCount++;
+        
+        if (!result.success && fail_fast) {
+          text += '\n⚠️  Stopping execution due to failure (fail_fast enabled)';
+          break;
+        }
+      }
+      
+      text += `\n📊 **Summary:** ${successCount}/${results.size} tools succeeded, ${totalIssues} total issues found`;
+
+      return {
+        content: [{ type: 'text', text }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: `❌ Failed to run tool suite: ${error}` }]
+      };
+    }
   }
 }
 
