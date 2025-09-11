@@ -1,16 +1,17 @@
 # Mind Map MCP Server
 
-**Enterprise-Grade Intelligence Complete** - An advanced Model Context Protocol (MCP) server that creates and maintains a persistent knowledge graph of your codebase for Claude Code. Features comprehensive AST analysis, predictive error detection, and intelligent learning systems.
+**Enterprise-Grade Multi-Language Intelligence Complete** - An advanced Model Context Protocol (MCP) server that creates and maintains a persistent knowledge graph of your codebase for Claude Code. Features comprehensive AST analysis, predictive error detection, and intelligent learning systems.
 
 ## 🚀 Current Status: Production Ready
 
-**✅ Phases 1-4 Complete** | **✅ TypeScript/JavaScript + Python AST Support** | **✅ 16 Advanced MCP Tools**
+**✅ Phases 1-4 Complete** | **✅ TypeScript/JavaScript/Python/Java AST Support** | **✅ 16 Advanced MCP Tools**
 
 ## Features
 
 ### 🧠 Advanced Code Intelligence  
-- **AST Code Analysis**: Full TypeScript/JavaScript/Python parsing with function/class extraction
-- **Multi-Language Support**: TypeScript, JavaScript, Python with framework detection
+- **Multi-Language AST Analysis**: Full TypeScript/JavaScript/Python/Java parsing with function/class extraction
+- **Comprehensive Language Support**: TypeScript, JavaScript, Python, Java with framework detection
+- **Enterprise Framework Detection**: React, Vue, Express, Django, Flask, Spring Boot, JPA, Maven, Gradle
 - **Architectural Pattern Detection**: Identifies 7 pattern types (layered, MVC, microservices, repository, factory, observer, plugin)
 - **Predictive Error Detection**: Risk analysis system with historical pattern matching
 - **Intelligent Fix Suggestions**: Context-aware recommendations based on error patterns
@@ -152,7 +153,8 @@ The server performs comprehensive scanning and creates nodes for:
 Currently supports:
 - **TypeScript/JavaScript**: Full AST with function/class extraction via TypeScript compiler API
 - **Python**: Complete AST parsing with subprocess execution for functions, classes, decorators
-- **Coming Soon**: Java, Go, Rust, C/C++ support (Phase 5.2-5.5)
+- **Java**: Complete AST parsing with java-parser for classes, methods, annotations, Spring Boot detection
+- **Coming Soon**: Go, Rust, C/C++ support (Phase 5.3-5.5)
 
 ### 3. Intelligent Learning System
 As you use Claude Code, the server:
@@ -220,16 +222,16 @@ The server consists of several key components:
 
 ## Roadmap
 
-### ✅ Completed (Phases 1-4)
+### ✅ Completed (Phases 1-4 + 5.1-5.2)
 - **Core MCP Server**: 16 tools with stdio transport  
-- **AST Analysis**: TypeScript/JavaScript + Python parsing
+- **Multi-Language AST Analysis**: TypeScript/JavaScript + Python + Java parsing
 - **Advanced Intelligence**: Predictive errors, fix suggestions, architectural patterns
 - **Enterprise Querying**: Cypher-like queries, temporal analysis, aggregates
 - **Performance Systems**: Multi-index storage, LRU caching, monitoring
 
-### 🚧 In Progress (Phase 5: Multi-Language)
+### 🚧 In Progress (Phase 5: Extended Multi-Language)
 - **Phase 5.1**: ✅ Python AST support completed
-- **Phase 5.2**: Java AST support (JavaParser/Eclipse JDT)
+- **Phase 5.2**: ✅ Java AST support completed (java-parser with Spring Boot detection)
 - **Phase 5.3**: Go AST support (go/parser, go/ast)
 - **Phase 5.4**: Rust AST support (syn crate integration)
 - **Phase 5.5**: C/C++ AST support (libclang/tree-sitter)

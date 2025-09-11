@@ -163,4 +163,65 @@ The `test-server.js` is a standalone testing script that validates MCP protocol 
 - New relationship types for more sophisticated code analysis
 - AST parsing integration for deeper code understanding
 - Pattern recognition can be enhanced with machine learning approaches
-- USE the mind map mcp
+
+## Mind Map MCP Integration Strategy
+
+### When Working on This Project, ALWAYS:
+
+1. **Start Every Session**:
+   ```bash
+   # Build and scan the project first
+   npm run build
+   ./test-server.js  # Verify MCP functionality
+   ```
+
+2. **Use Strategic MCP Workflow**:
+   - `scan_project` → Get fresh project analysis
+   - `get_stats` → Understand current state
+   - `predict_errors` → Before making changes
+   - `suggest_fixes` → When errors occur
+   - `update_mindmap` → After completing tasks
+
+3. **Leverage Advanced Capabilities**:
+   - Use `advanced_query` for complex code analysis
+   - Use `analyze_architecture` to understand patterns
+   - Use `get_insights` for actionable recommendations
+   - Use `temporal_query` to track code evolution
+
+### Strategic Usage Patterns:
+
+**For New Features**:
+```typescript
+1. suggest_exploration({ task_description: "implementing new feature X" })
+2. predict_errors({ file_path: "target_file.ts" })
+3. [implement feature]
+4. update_mindmap({ task_description: "added feature X", outcome: "success" })
+```
+
+**For Debugging**:
+```typescript
+1. suggest_fixes({ error_message: "actual error", file_path: "error_location" })
+2. query_mindmap({ query: "similar error patterns", type: "error" })
+3. [apply fix]
+4. update_mindmap({ task_description: "fixed bug", outcome: "success", solution_details: {...} })
+```
+
+**For Refactoring**:
+```typescript
+1. analyze_architecture()
+2. advanced_query("MATCH (f:file)-[:contains]->(func:function) WHERE func.confidence < 0.5 RETURN f.path, func.name")
+3. get_insights({ categories: ["code_quality"], actionable_only: true })
+4. [refactor code]
+5. update_mindmap({ task_description: "refactored module X", outcome: "success" })
+```
+
+### Configuration Reference:
+- **MCP Config**: `~/.claude/mcp_config.json` (already configured)
+- **Strategy Guide**: `~/.claude/MIND_MAP_STRATEGY.md` (comprehensive usage patterns)
+- **16 Available Tools**: Core intelligence, advanced analysis, performance utilities
+
+### Performance Targets:
+- Query response time: < 10ms
+- Error prediction accuracy: > 80%
+- Solution effectiveness: Track via confidence scores
+- Learning velocity: Measure improvement over sessions

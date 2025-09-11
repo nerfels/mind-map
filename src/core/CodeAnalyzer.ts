@@ -2,14 +2,17 @@ import { readFile } from 'fs/promises';
 import * as ts from 'typescript';
 import { CodeStructure } from '../types/index.js';
 import { PythonAnalyzer, PythonCodeStructure } from './PythonAnalyzer.js';
+import { JavaAnalyzer, JavaCodeStructure } from './JavaAnalyzer.js';
 
 export class CodeAnalyzer {
   private supportedExtensions: Set<string>;
   private pythonAnalyzer: PythonAnalyzer;
+  private javaAnalyzer: JavaAnalyzer;
 
   constructor() {
-    this.supportedExtensions = new Set(['ts', 'tsx', 'js', 'jsx', 'py']);
+    this.supportedExtensions = new Set(['ts', 'tsx', 'js', 'jsx', 'py', 'java']);
     this.pythonAnalyzer = new PythonAnalyzer();
+    this.javaAnalyzer = new JavaAnalyzer();
   }
 
   canAnalyze(filePath: string): boolean {
@@ -28,6 +31,8 @@ export class CodeAnalyzer {
       // Route to appropriate analyzer based on file extension
       if (extension === 'py') {
         return await this.pythonAnalyzer.analyzeFile(filePath);
+      } else if (extension === 'java') {
+        return await this.javaAnalyzer.analyzeFile(filePath);
       } else {
         // Handle TypeScript/JavaScript files
         const content = await readFile(filePath, 'utf-8');
@@ -273,6 +278,8 @@ export class CodeAnalyzer {
     
     if (extension === 'py' && 'pythonImports' in structure) {
       return this.pythonAnalyzer.detectFrameworks(structure as any, filePath);
+    } else if (extension === 'java' && 'javaImports' in structure) {
+      return this.javaAnalyzer.detectFrameworks(structure as any, filePath);
     } else {
       // TypeScript/JavaScript framework detection (existing logic)
       return this.detectTSJSFrameworks(filePath, structure);
@@ -287,6 +294,8 @@ export class CodeAnalyzer {
     
     if (extension === 'py' && 'pythonImports' in structure) {
       return this.pythonAnalyzer.analyzePatterns(structure as any);
+    } else if (extension === 'java' && 'javaImports' in structure) {
+      return this.javaAnalyzer.analyzePatterns(structure as any);
     } else {
       // TypeScript/JavaScript pattern analysis (could be implemented)
       return this.analyzeTSJSPatterns(filePath, structure);
