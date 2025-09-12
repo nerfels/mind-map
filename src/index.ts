@@ -110,6 +110,18 @@ class MindMapMCPServer {
           case 'run_tool_suite':
             return await this.handleRunToolSuite(args as any);
           
+          case 'detect_enhanced_frameworks':
+            return await this.handleDetectEnhancedFrameworks(args as any);
+          
+          case 'get_framework_recommendations':
+            return await this.handleGetFrameworkRecommendations(args as any);
+          
+          case 'get_cache_stats':
+            return await this.handleGetCacheStats(args as any);
+          
+          case 'clear_cache':
+            return await this.handleClearCache(args as any);
+          
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -140,7 +152,7 @@ class MindMapMCPServer {
     this.validateLimit(limit);
     this.validateType(type);
     
-    const result = this.mindMap.query(query, {
+    const result = await this.mindMap.query(query, {
       type: type as any,
       limit,
       includeMetadata: include_metadata
@@ -286,7 +298,7 @@ class MindMapMCPServer {
 
       case 'recent_tasks':
         // Query for nodes with recent task metadata
-        const recentResults = this.mindMap.query('', { limit: limit * 2 });
+        const recentResults = await this.mindMap.query('', { limit: limit * 2 });
         const nodesWithTasks = recentResults.nodes
           .filter(node => node.metadata.tasks && node.metadata.tasks.length > 0)
           .slice(0, limit);
@@ -299,7 +311,7 @@ class MindMapMCPServer {
         break;
 
       case 'error_patterns':
-        const errorResults = this.mindMap.query('', { type: 'error', limit });
+        const errorResults = await this.mindMap.query('', { type: 'error', limit });
         contextText = `Error Patterns (${errorResults.nodes.length}):\n` +
           errorResults.nodes.map(node => 
             `- ${node.name}: ${node.metadata.message || 'No details'}`
@@ -307,7 +319,7 @@ class MindMapMCPServer {
         break;
 
       case 'success_patterns':
-        const successResults = this.mindMap.query('', { confidence: 0.8, limit });
+        const successResults = await this.mindMap.query('', { confidence: 0.8, limit });
         contextText = `Success Patterns (${successResults.nodes.length}):\n` +
           successResults.nodes.map(node => 
             `- ${node.name} (confidence: ${node.confidence.toFixed(2)})`
@@ -333,7 +345,7 @@ class MindMapMCPServer {
     const { task_description, current_location, exploration_type = 'files' } = args;
     
     // Use semantic search to find relevant nodes
-    const results = this.mindMap.query(task_description, { limit: 10 });
+    const results = await this.mindMap.query(task_description, { limit: 10 });
     
     let suggestions = '';
     
@@ -1547,6 +1559,228 @@ class MindMapMCPServer {
     } catch (error) {
       return {
         content: [{ type: 'text', text: `❌ Failed to run tool suite: ${error}` }]
+      };
+    }
+  }
+
+  // Enhanced Framework Detection Tool Handlers
+  private async handleDetectEnhancedFrameworks(args: {
+    force_refresh?: boolean;
+    categories?: string[];
+    min_confidence?: number;
+  }) {
+    const { force_refresh = false, categories, min_confidence = 0.3 } = args;
+
+    try {
+      const allFrameworks = await this.mindMap.detectEnhancedFrameworks(force_refresh);
+      
+      // Filter by categories if specified
+      let filteredFrameworks = allFrameworks;
+      if (categories && categories.length > 0) {
+        filteredFrameworks = new Map();
+        for (const category of categories) {
+          if (allFrameworks.has(category)) {
+            filteredFrameworks.set(category, allFrameworks.get(category)!);
+          }
+        }
+      }
+
+      let text = `🎯 **Enhanced Framework Detection Results:**\n\n`;
+      
+      if (filteredFrameworks.size === 0) {
+        text += 'No frameworks detected matching the specified criteria.';
+      } else {
+        let totalFrameworks = 0;
+        
+        for (const [category, frameworks] of filteredFrameworks) {
+          const filteredByConfidence = frameworks.filter(f => f.confidence >= min_confidence);
+          if (filteredByConfidence.length === 0) continue;
+          
+          totalFrameworks += filteredByConfidence.length;
+          
+          const categoryIcon = {
+            web: '🌐',
+            mobile: '📱',
+            desktop: '🖥️',
+            game: '🎮',
+            ml_ai: '🤖',
+            cloud: '☁️'
+          }[category] || '📦';
+          
+          text += `${categoryIcon} **${category.toUpperCase()} FRAMEWORKS (${filteredByConfidence.length}):**\n`;
+          
+          for (const framework of filteredByConfidence) {
+            const confidenceBar = '█'.repeat(Math.round(framework.confidence * 10));
+            const versionInfo = framework.version ? ` v${framework.version}` : '';
+            
+            text += `  ✅ **${framework.name}${versionInfo}** (${Math.round(framework.confidence * 100)}% confidence)\n`;
+            text += `     ${confidenceBar} ${framework.confidence.toFixed(2)}\n`;
+            
+            if (framework.evidence.length > 0) {
+              text += `     📋 Evidence: ${framework.evidence.slice(0, 3).join(', ')}`;
+              if (framework.evidence.length > 3) {
+                text += ` (+${framework.evidence.length - 3} more)`;
+              }
+              text += '\n';
+            }
+            
+            if (framework.patterns.length > 0) {
+              const highConfidencePatterns = framework.patterns.filter(p => p.confidence > 0.7);
+              if (highConfidencePatterns.length > 0) {
+                text += `     🔍 Patterns: ${highConfidencePatterns.map(p => p.description).slice(0, 2).join(', ')}\n`;
+              }
+            }
+            
+            if (framework.configurations.length > 0) {
+              text += `     ⚙️  Configs: ${framework.configurations.slice(0, 3).join(', ')}\n`;
+            }
+            
+            text += '\n';
+          }
+        }
+        
+        text += `\n📊 **Summary:** ${totalFrameworks} frameworks detected across ${filteredFrameworks.size} categories`;
+        
+        if (min_confidence > 0.3) {
+          text += ` (confidence ≥ ${Math.round(min_confidence * 100)}%)`;
+        }
+      }
+
+      return {
+        content: [{ type: 'text', text }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: `❌ Failed to detect frameworks: ${error}` }]
+      };
+    }
+  }
+
+  private async handleGetFrameworkRecommendations(args: {
+    framework_names?: string[];
+    recommendation_type?: string;
+  }) {
+    const { framework_names, recommendation_type = 'all' } = args;
+
+    try {
+      // Get all frameworks if specific ones not requested
+      let frameworksToAnalyze: any[] = [];
+      
+      if (framework_names && framework_names.length > 0) {
+        const allFrameworks = await this.mindMap.detectEnhancedFrameworks();
+        
+        for (const [category, frameworks] of allFrameworks) {
+          for (const framework of frameworks) {
+            if (framework_names.includes(framework.name)) {
+              frameworksToAnalyze.push(framework);
+            }
+          }
+        }
+      } else {
+        const allFrameworks = await this.mindMap.detectEnhancedFrameworks();
+        for (const [category, frameworks] of allFrameworks) {
+          frameworksToAnalyze.push(...frameworks.filter(f => f.confidence > 0.5));
+        }
+      }
+
+      if (frameworksToAnalyze.length === 0) {
+        return {
+          content: [{ type: 'text', text: '❌ No frameworks found matching the criteria for recommendations.' }]
+        };
+      }
+
+      const recommendations = this.mindMap.getFrameworkRecommendations(frameworksToAnalyze);
+      
+      let text = `💡 **Framework Recommendations:**\n\n`;
+      
+      if (recommendations.length === 0) {
+        text += 'No specific recommendations available for the detected frameworks. Your setup looks good!';
+      } else {
+        text += `Based on your detected frameworks: ${frameworksToAnalyze.map(f => f.name).join(', ')}\n\n`;
+        
+        for (let i = 0; i < recommendations.length; i++) {
+          text += `${i + 1}. ${recommendations[i]}\n`;
+        }
+        
+        // Add general framework recommendations
+        text += `\n🎯 **General Best Practices:**\n`;
+        text += `• Keep framework versions up-to-date for security patches\n`;
+        text += `• Use framework-specific linting and formatting tools\n`;
+        text += `• Follow framework conventions for project structure\n`;
+        text += `• Leverage framework-specific testing utilities\n`;
+        text += `• Use framework-specific performance optimization guides\n`;
+      }
+
+      return {
+        content: [{ type: 'text', text }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: `❌ Failed to get framework recommendations: ${error}` }]
+      };
+    }
+  }
+
+  private async handleGetCacheStats(args: any) {
+    try {
+      const stats = this.mindMap.getCacheStats();
+      
+      let text = `📊 **Query Cache Statistics**\n\n`;
+      text += `**Performance:**\n`;
+      text += `• Hit Rate: ${(stats.hitRate * 100).toFixed(1)}%\n`;
+      text += `• Total Queries: ${stats.totalQueries}\n`;
+      text += `• Cache Hits: ${stats.cacheHits}\n`;
+      text += `• Cache Misses: ${stats.cacheMisses}\n\n`;
+      
+      text += `**Memory Usage:**\n`;
+      text += `• Current Usage: ${(stats.memoryUsage / 1024 / 1024).toFixed(2)} MB\n`;
+      text += `• Max Usage: ${(stats.maxMemoryUsage / 1024 / 1024).toFixed(0)} MB\n`;
+      text += `• Memory Utilization: ${((stats.memoryUsage / stats.maxMemoryUsage) * 100).toFixed(1)}%\n\n`;
+      
+      text += `**Cache Management:**\n`;
+      text += `• Total Entries: ${stats.totalEntries}\n`;
+      text += `• Evictions: ${stats.evictionCount}\n`;
+
+      return {
+        content: [{ type: 'text', text }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: `❌ Failed to get cache stats: ${error}` }]
+      };
+    }
+  }
+
+  private async handleClearCache(args: { affected_paths?: string[] }) {
+    try {
+      let invalidatedCount: number;
+      
+      if (args.affected_paths && args.affected_paths.length > 0) {
+        invalidatedCount = await this.mindMap.invalidateCache(args.affected_paths);
+      } else {
+        await this.mindMap.clearCache();
+        invalidatedCount = -1; // All cache cleared
+      }
+      
+      let text = `🧹 **Cache Cleared**\n\n`;
+      
+      if (invalidatedCount === -1) {
+        text += `• All cache entries cleared\n`;
+        text += `• Memory freed: All cache memory\n`;
+      } else {
+        text += `• Entries invalidated: ${invalidatedCount}\n`;
+        text += `• Affected paths: ${args.affected_paths?.join(', ') || 'None specified'}\n`;
+      }
+      
+      text += `• Fresh query results will be computed\n`;
+      text += `• Cache will rebuild as queries are executed\n`;
+
+      return {
+        content: [{ type: 'text', text }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: `❌ Failed to clear cache: ${error}` }]
       };
     }
   }

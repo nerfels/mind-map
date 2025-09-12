@@ -225,3 +225,5 @@ The `test-server.js` is a standalone testing script that validates MCP protocol 
 - Error prediction accuracy: > 80%
 - Solution effectiveness: Track via confidence scores
 - Learning velocity: Measure improvement over sessions
+- add to memmory, use the mind map mcp for store new thing you learn, and to get ideas and structures you can use
+- Add to memorize, before each task read relevants from the mind map, and after each task update with new relevents. the idea that the explain of the project will be there, each problem we found and we dont want to repeat need to be there.

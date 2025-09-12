@@ -7,7 +7,11 @@ import { TemporalQueryEngine } from './TemporalQueryEngine.js';
 import { AggregateQueryEngine } from './AggregateQueryEngine.js';
 import { MultiLanguageIntelligence } from './MultiLanguageIntelligence.js';
 import { LanguageToolingDetector } from './LanguageToolingDetector.js';
-import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight } from '../types/index.js';
+import { EnhancedFrameworkDetector } from './EnhancedFrameworkDetector.js';
+import { ActivationNetwork, QueryContext } from './ActivationNetwork.js';
+import { QueryCache } from './QueryCache.js';
+import { ParallelFileProcessor } from './ParallelFileProcessor.js';
+import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight, CacheStats, ProcessingProgress } from '../types/index.js';
 import { join } from 'path';
 
 export class MindMapEngine {
@@ -20,6 +24,10 @@ export class MindMapEngine {
   private aggregateQueryEngine: AggregateQueryEngine;
   private multiLanguageIntelligence: MultiLanguageIntelligence;
   private languageToolingDetector: LanguageToolingDetector;
+  private enhancedFrameworkDetector: EnhancedFrameworkDetector;
+  private activationNetwork: ActivationNetwork;
+  private queryCache: QueryCache;
+  private parallelProcessor: ParallelFileProcessor;
   private projectRoot: string;
 
   constructor(projectRoot: string) {
@@ -33,13 +41,23 @@ export class MindMapEngine {
     this.aggregateQueryEngine = new AggregateQueryEngine(this.storage);
     this.multiLanguageIntelligence = new MultiLanguageIntelligence(this.storage);
     this.languageToolingDetector = new LanguageToolingDetector(this.storage);
+    this.enhancedFrameworkDetector = new EnhancedFrameworkDetector(this.storage);
+    this.activationNetwork = new ActivationNetwork(this.storage);
+    this.queryCache = new QueryCache();
+    this.parallelProcessor = new ParallelFileProcessor(this.projectRoot, {
+      chunkSize: 100,        // Larger chunks for better efficiency
+      maxWorkers: 3,         // Conservative worker count
+      timeoutMs: 45000,      // 45 second timeout
+      retryAttempts: 3,      // More retries for robustness
+      progressCallback: (progress) => this.onProgressUpdate(progress)
+    });
   }
 
   async initialize(): Promise<void> {
     await this.storage.load();
   }
 
-  async scanProject(forceRescan = false): Promise<void> {
+  async scanProject(forceRescan = false, useParallelProcessing = true): Promise<void> {
     const graph = this.storage.getGraph();
     const shouldScan = forceRescan || 
       graph.nodes.size === 0 || 
@@ -51,7 +69,20 @@ export class MindMapEngine {
     }
 
     console.log('Scanning project files...');
-    const files = await this.scanner.scanProject();
+    
+    let files: FileInfo[];
+    if (useParallelProcessing) {
+      // Get file paths first (lightweight operation)
+      const filePaths = await this.getFilePaths();
+      console.log(`🚀 Starting parallel processing of ${filePaths.length} files...`);
+      
+      // Process files in parallel
+      files = await this.parallelProcessor.processFiles(filePaths);
+      console.log(`✅ Parallel processing completed: ${files.length} files processed`);
+    } else {
+      // Fallback to sequential processing
+      files = await this.scanner.scanProject();
+    }
     
     // Clear existing file and directory nodes
     const existingNodes = this.storage.findNodes(node => 
@@ -256,14 +287,138 @@ export class MindMapEngine {
     graph.lastScan = new Date();
     await this.storage.save();
     
+    // Invalidate query cache since graph has changed
+    await this.queryCache.invalidate();
+    
     console.log(`Scanned ${files.length} files and created ${directoryNodes.size} directories`);
   }
 
-  query(query: string, options: QueryOptions = {}): QueryResult {
+  async query(query: string, options: QueryOptions = {}): Promise<QueryResult> {
     const startTime = Date.now();
     const queryLower = query.toLowerCase();
     const limit = options.limit || 10;
+    
+    // Create context for caching
+    const context = this.createQueryContext(options);
+    
+    // Try cache first (unless explicitly bypassed)
+    if (!options.bypassCache) {
+      const cachedResult = await this.queryCache.get(query, context);
+      if (cachedResult) {
+        console.log(`Cache hit for query: "${query}"`);
+        return cachedResult;
+      }
+    }
+    
+    // Enable activation spreading by default for better results
+    const useActivation = options.useActivation !== false;
+    const activationLevels = options.activationLevels || 3;
+    
+    let result: QueryResult;
+    if (useActivation) {
+      result = await this.queryWithActivation(query, queryLower, options, limit, startTime);
+    } else {
+      result = await this.queryLinear(query, queryLower, options, limit, startTime);
+    }
+    
+    // Cache the result
+    await this.queryCache.set(query, context, result);
+    
+    return result;
+  }
 
+  private async queryWithActivation(
+    query: string, 
+    queryLower: string, 
+    options: QueryOptions, 
+    limit: number, 
+    startTime: number
+  ): Promise<QueryResult> {
+    // Find initial seed nodes using traditional matching
+    const seedNodes = this.storage.findNodes(node => {
+      // Apply filters
+      if (options.type && node.type !== options.type) return false;
+      if (options.confidence && node.confidence < options.confidence) return false;
+      
+      // Pattern matching
+      if (options.pattern) {
+        const pattern = new RegExp(options.pattern, 'i');
+        return pattern.test(node.name) || pattern.test(node.path || '');
+      }
+
+      // Semantic matching
+      return this.matchesQuery(node, queryLower);
+    });
+
+    // If no seed nodes found, fallback to linear search
+    if (seedNodes.length === 0) {
+      console.log('No seed nodes found, falling back to linear search');
+      return this.queryLinear(query, queryLower, options, limit, startTime);
+    }
+
+    // Create query context for activation spreading
+    const context: QueryContext = {
+      currentTask: options.currentTask,
+      activeFiles: options.activeFiles || [],
+      recentErrors: options.recentErrors || [],
+      sessionGoals: options.sessionGoals || [],
+      frameworkContext: options.frameworkContext || [],
+      languageContext: options.languageContext || [],
+      timestamp: new Date()
+    };
+
+    // Use activation spreading from seed nodes
+    const seedNodeIds = seedNodes.slice(0, 5).map(n => n.id); // Limit initial seeds
+    const activationResults = await this.activationNetwork.spreadActivation(
+      seedNodeIds, 
+      context, 
+      options.activationLevels || 3
+    );
+
+    // Convert activation results to nodes, respecting limit
+    const resultNodes: MindMapNode[] = [];
+    const activationSummary: Array<{
+      nodeId: string;
+      activationStrength: number;
+      hopDistance: number;
+      contextRelevance: number;
+      totalScore: number;
+    }> = [];
+
+    for (const result of activationResults.slice(0, limit)) {
+      resultNodes.push(result.node);
+      activationSummary.push({
+        nodeId: result.nodeId,
+        activationStrength: result.activationStrength,
+        hopDistance: result.hopDistance,
+        contextRelevance: result.contextRelevance,
+        totalScore: result.totalScore
+      });
+    }
+
+    const relatedEdges = this.getRelatedEdges(resultNodes.map(n => n.id));
+
+    console.log(`Activation query: ${seedNodes.length} seeds → ${activationResults.length} activated nodes`);
+
+    return {
+      nodes: resultNodes,
+      edges: relatedEdges,
+      totalMatches: activationResults.length,
+      queryTime: Date.now() - startTime,
+      activationResults: activationSummary,
+      usedActivation: true,
+      activationLevels: options.activationLevels || 3
+    };
+  }
+
+  private queryLinear(
+    query: string, 
+    queryLower: string, 
+    options: QueryOptions, 
+    limit: number, 
+    startTime: number
+  ): QueryResult {
+    // Traditional linear search implementation
     let matchingNodes = this.storage.findNodes(node => {
       // Type filter
       if (options.type && node.type !== options.type) {
@@ -299,7 +454,8 @@ export class MindMapEngine {
       nodes: limitedNodes,
       edges: relatedEdges,
       totalMatches: matchingNodes.length,
-      queryTime: Date.now() - startTime
+      queryTime: Date.now() - startTime,
+      usedActivation: false
     };
   }
 
@@ -1577,6 +1733,83 @@ export class MindMapEngine {
     return this.advancedQueryEngine.getSavedQueries();
   }
 
+  /**
+   * Create context string for query caching
+   */
+  private createQueryContext(options: QueryOptions): string {
+    const contextParts: string[] = [];
+    
+    // Add basic options
+    if (options.type) contextParts.push(`type:${options.type}`);
+    if (options.pattern) contextParts.push(`pattern:${options.pattern}`);
+    if (options.confidence) contextParts.push(`confidence:${options.confidence}`);
+    if (options.limit) contextParts.push(`limit:${options.limit}`);
+    
+    // Add activation options
+    if (options.useActivation !== undefined) contextParts.push(`activation:${options.useActivation}`);
+    if (options.activationLevels) contextParts.push(`levels:${options.activationLevels}`);
+    if (options.contextBoost !== undefined) contextParts.push(`boost:${options.contextBoost}`);
+    
+    // Add context information
+    if (options.currentTask) contextParts.push(`task:${options.currentTask}`);
+    if (options.activeFiles?.length) contextParts.push(`files:${options.activeFiles.join(',')}`);
+    if (options.recentErrors?.length) contextParts.push(`errors:${options.recentErrors.join(',')}`);
+    if (options.sessionGoals?.length) contextParts.push(`goals:${options.sessionGoals.join(',')}`);
+    if (options.frameworkContext?.length) contextParts.push(`frameworks:${options.frameworkContext.join(',')}`);
+    if (options.languageContext?.length) contextParts.push(`languages:${options.languageContext.join(',')}`);
+    
+    return contextParts.join('|');
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): CacheStats {
+    return this.queryCache.getStats();
+  }
+
+  /**
+   * Clear query cache
+   */
+  async clearCache(): Promise<void> {
+    await this.queryCache.invalidate();
+  }
+
+  /**
+   * Invalidate cache for specific paths
+   */
+  async invalidateCache(affectedPaths?: string[]): Promise<number> {
+    return await this.queryCache.invalidate(affectedPaths);
+  }
+
+  /**
+   * Get file paths for parallel processing
+   */
+  private async getFilePaths(): Promise<string[]> {
+    // Use existing scanner to get paths efficiently
+    return await this.scanner.getFilePaths();
+  }
+
+  /**
+   * Progress callback for parallel processing
+   */
+  private onProgressUpdate(progress: ProcessingProgress): void {
+    const percentage = Math.round((progress.filesProcessed / progress.totalFiles) * 100);
+    const elapsed = Date.now() - progress.startTime;
+    const rate = progress.filesProcessed / (elapsed / 1000);
+    
+    console.log(
+      `📊 Processing: ${percentage}% (${progress.filesProcessed}/${progress.totalFiles}) ` +
+      `Rate: ${rate.toFixed(1)} files/sec, Chunks: ${progress.completedChunks}/${progress.totalChunks}`
+    );
+    
+    if (progress.errors.length > 0) {
+      const recoverableErrors = progress.errors.filter(e => e.recoverable).length;
+      const criticalErrors = progress.errors.length - recoverableErrors;
+      console.log(`⚠️ Errors: ${criticalErrors} critical, ${recoverableErrors} recoverable`);
+    }
+  }
+
   getQueryCacheStats(): any {
     return this.advancedQueryEngine.getCacheStats();
   }
@@ -1674,5 +1907,18 @@ export class MindMapEngine {
 
   getToolingStats() {
     return this.languageToolingDetector.getToolingStats();
+  }
+
+  // Enhanced Framework Detection Methods
+  async detectEnhancedFrameworks(forceRefresh = false) {
+    return await this.enhancedFrameworkDetector.detectFrameworks(this.projectRoot, forceRefresh);
+  }
+
+  getFrameworkRecommendations(frameworks: any[]) {
+    return this.enhancedFrameworkDetector.getFrameworkRecommendations(frameworks);
+  }
+
+  clearFrameworkCache() {
+    this.enhancedFrameworkDetector.clearCache();
   }
 }

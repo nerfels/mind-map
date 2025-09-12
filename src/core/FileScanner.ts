@@ -79,6 +79,24 @@ export class FileScanner {
     return files.sort((a, b) => a.path.localeCompare(b.path));
   }
 
+  /**
+   * Get file paths only (for parallel processing)
+   */
+  async getFilePaths(): Promise<string[]> {
+    try {
+      return await fastGlob('**/*', {
+        cwd: this.projectRoot,
+        ignore: this.ignorePatterns,
+        absolute: false,
+        onlyFiles: true,  // Only files, not directories for processing
+        dot: true
+      });
+    } catch (error) {
+      console.error('Error getting file paths:', error);
+      throw new Error(`Failed to get file paths: ${error}`);
+    }
+  }
+
   private getMimeType(extension: string): string {
     const mimeTypes: Record<string, string> = {
       'js': 'application/javascript',

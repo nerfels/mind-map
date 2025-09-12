@@ -706,6 +706,85 @@ export const RUN_TOOL_SUITE_TOOL: Tool = {
   }
 };
 
+export const DETECT_ENHANCED_FRAMEWORKS_TOOL: Tool = {
+  name: 'detect_enhanced_frameworks',
+  description: 'Comprehensive framework detection across web, mobile, desktop, game, ML/AI, and cloud categories',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      force_refresh: {
+        type: 'boolean',
+        description: 'Force a fresh scan instead of using cached results (default: false)',
+        default: false
+      },
+      categories: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['web', 'mobile', 'desktop', 'game', 'ml_ai', 'cloud']
+        },
+        description: 'Filter results by framework categories (optional - returns all if not specified)'
+      },
+      min_confidence: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'Minimum confidence threshold for framework detection (default: 0.3)',
+        default: 0.3
+      }
+    }
+  }
+};
+
+export const GET_FRAMEWORK_RECOMMENDATIONS_TOOL: Tool = {
+  name: 'get_framework_recommendations',
+  description: 'Get intelligent recommendations based on detected frameworks and project patterns',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      framework_names: {
+        type: 'array',
+        items: {
+          type: 'string'
+        },
+        description: 'Specific framework names to get recommendations for (optional - uses all detected if not specified)'
+      },
+      recommendation_type: {
+        type: 'string',
+        enum: ['best_practices', 'tooling', 'architecture', 'all'],
+        description: 'Type of recommendations to provide (default: all)',
+        default: 'all'
+      }
+    }
+  }
+};
+
+export const GET_CACHE_STATS_TOOL: Tool = {
+  name: 'get_cache_stats',
+  description: 'Get query cache statistics including hit rate, memory usage, and performance metrics',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const CLEAR_CACHE_TOOL: Tool = {
+  name: 'clear_cache',
+  description: 'Clear the query cache to free memory and force fresh results',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      affected_paths: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional list of file paths that were modified - only cache entries related to these paths will be cleared (clears all if not provided)'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -729,5 +808,9 @@ export const ALL_TOOLS: Tool[] = [
   DETECT_PROJECT_TOOLING_TOOL,
   RUN_LANGUAGE_TOOL_TOOL,
   GET_TOOLING_RECOMMENDATIONS_TOOL,
-  RUN_TOOL_SUITE_TOOL
+  RUN_TOOL_SUITE_TOOL,
+  DETECT_ENHANCED_FRAMEWORKS_TOOL,
+  GET_FRAMEWORK_RECOMMENDATIONS_TOOL,
+  GET_CACHE_STATS_TOOL,
+  CLEAR_CACHE_TOOL
 ];

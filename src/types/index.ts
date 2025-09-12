@@ -73,6 +73,19 @@ export interface QueryOptions {
   confidence?: number;
   limit?: number;
   includeMetadata?: boolean;
+  // Associative query options
+  useActivation?: boolean; // Enable activation spreading (default: true for better results)
+  activationLevels?: number; // Number of activation levels to spread (default: 3)
+  contextBoost?: boolean; // Enable context-aware relevance boosting (default: true)
+  // Caching options
+  bypassCache?: boolean; // Skip cache lookup (default: false)
+  // Context for activation spreading
+  currentTask?: string;
+  activeFiles?: string[];
+  recentErrors?: string[];
+  sessionGoals?: string[];
+  frameworkContext?: string[];
+  languageContext?: string[];
 }
 
 export interface QueryResult {
@@ -81,6 +94,16 @@ export interface QueryResult {
   totalMatches: number;
   queryTime: number;
   cached?: boolean;
+  // Activation-specific results
+  activationResults?: Array<{
+    nodeId: string;
+    activationStrength: number;
+    hopDistance: number;
+    contextRelevance: number;
+    totalScore: number;
+  }>;
+  usedActivation?: boolean;
+  activationLevels?: number;
 }
 
 // Predictive Error Detection Interfaces
@@ -157,6 +180,76 @@ export interface ArchitecturalInsight {
   evidence: string[]; // What led to this detection
   affectedFiles: string[]; // Files that demonstrate this pattern
   recommendations: string[]; // Suggestions for improving the pattern
+}
+
+// Parallel Processing Interfaces (Phase 6.1.3)
+export interface ProcessingChunk {
+  id: string;
+  files: string[];
+  startIndex: number;
+  endIndex: number;
+}
+
+export interface ChunkResult {
+  chunkId: string;
+  processedFiles: FileInfo[];
+  errors: ChunkError[];
+  processingTime: number;
+}
+
+export interface ChunkError {
+  filePath: string;
+  error: string;
+  recoverable: boolean;
+}
+
+export interface ProcessingProgress {
+  totalChunks: number;
+  completedChunks: number;
+  currentChunk?: string;
+  filesProcessed: number;
+  totalFiles: number;
+  errors: ChunkError[];
+  startTime: number;
+  estimatedCompletion?: number;
+}
+
+export interface ParallelProcessingConfig {
+  chunkSize: number;
+  maxWorkers: number;
+  timeoutMs: number;
+  retryAttempts: number;
+  progressCallback?: (progress: ProcessingProgress) => void;
+}
+
+// Query Caching Interfaces (Phase 6.1.2)
+export interface CacheEntry {
+  query: string;
+  context: string;
+  results: QueryResult;
+  timestamp: Date;
+  hitCount: number;
+  lastAccessed: Date;
+  contextHash: string; // For fast context similarity matching
+  resultSize: number; // For memory management
+}
+
+export interface CacheStats {
+  totalEntries: number;
+  hitRate: number;
+  memoryUsage: number; // bytes
+  maxMemoryUsage: number; // bytes
+  evictionCount: number;
+  totalQueries: number;
+  cacheHits: number;
+  cacheMisses: number;
+}
+
+export interface CacheConfig {
+  maxEntries: number;
+  maxMemoryMB: number;
+  contextSimilarityThreshold: number; // 0-1, for considering entries similar
+  ttlMinutes: number; // Time-to-live for cache entries
 }
 
 // Performance Monitoring Interfaces
