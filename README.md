@@ -1,12 +1,143 @@
-# Mind Map MCP Server v1.0.0
+# Mind Map MCP Server v1.0.1
 
 **Enterprise-Grade Multi-Language Intelligence Complete** - An advanced Model Context Protocol (MCP) server that creates and maintains a persistent knowledge graph of your codebase for Claude Code. Features comprehensive AST analysis, predictive error detection, intelligent learning systems, cross-language dependency analysis, and integrated development tooling for 6 programming languages.
 
-## 🚀 Current Status: Production Ready v1.0.0
+## 🚀 Current Status: Production Ready v1.0.1
 
 **✅ Complete Feature Set** | **✅ Brain-Inspired Intelligence** | **✅ 33 Advanced MCP Tools** | **✅ Enterprise Scalability** | **✅ User Customization** | **✅ Organized Test Suite**
 
-**Latest Update**: Project organization completed with clean test structure, path resolution fixes, and comprehensive documentation.
+**Latest Update**: Added comprehensive Claude Code integration guide with installation instructions, usage examples, and troubleshooting.
+
+## 📦 Installation & Setup
+
+### Quick Install from npm
+
+```bash
+# Install globally
+npm install -g mind-map-mcp
+
+# Or install locally in your project
+npm install mind-map-mcp
+```
+
+### Claude Code Integration
+
+#### 1. **Automatic Setup (Recommended)**
+
+The easiest way to set up Mind Map MCP with Claude Code:
+
+```bash
+# Run the automatic setup tool
+npx mind-map-mcp init-claude-code
+
+# Or if installed globally
+mind-map-mcp init-claude-code
+```
+
+This automatically:
+- ✅ Detects your operating system and Claude installation
+- ✅ Creates proper configuration files with correct paths
+- ✅ Provides platform-specific setup instructions
+- ✅ Includes verification commands and troubleshooting
+
+#### 2. **Manual Setup for Claude Desktop**
+
+If you prefer manual configuration, add this to your Claude Desktop config:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+**Linux**: `~/.config/claude-desktop/config.json`
+
+```json
+{
+  "mcpServers": {
+    "mind-map-mcp": {
+      "command": "npx",
+      "args": ["mind-map-mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+#### 3. **Verify Installation**
+
+After setup, restart Claude and verify the integration:
+
+1. **Check MCP Tools**: In Claude, you should see 33 new MCP tools available
+2. **Test Basic Functionality**: Try these commands in Claude:
+   ```
+   Please scan the current project and show me the statistics.
+   ```
+3. **Advanced Usage**: Test brain-inspired features:
+   ```
+   Please analyze the project architecture and predict potential errors.
+   ```
+
+### 🚀 Usage with Claude Code
+
+Once installed, you can use these powerful commands in Claude:
+
+#### **Essential Workflow**
+```
+# Start every coding session with:
+Please scan the project and get initial statistics.
+
+# Before making changes:
+Please predict potential errors in [filename] and suggest improvements.
+
+# After completing work:
+Please update the mind map with the successful completion of [task description].
+```
+
+#### **Advanced Intelligence Features**
+```
+# Get architectural insights
+Please analyze the project architecture and detect design patterns.
+
+# Find cross-language dependencies
+Please detect cross-language dependencies in this polyglot project.
+
+# Get intelligent refactoring suggestions
+Please generate multi-language refactoring suggestions focused on architecture.
+
+# Predict emerging code patterns
+Please analyze and predict what code patterns are likely to emerge.
+```
+
+#### **Development Tool Integration**
+```
+# Detect available tools
+Please detect all development tools available in this project.
+
+# Run comprehensive analysis
+Please run the full tool suite and provide aggregated results.
+
+# Get tool recommendations
+Please recommend missing development tools that would benefit this project.
+```
+
+### 📋 Verification Checklist
+
+✅ **Installation**: `npm list -g mind-map-mcp` shows the package
+✅ **Claude Integration**: 33 MCP tools visible in Claude
+✅ **Basic Functionality**: `scan_project` command works
+✅ **Advanced Features**: Brain-inspired tools respond correctly
+✅ **Multi-language Support**: AST analysis works for your languages
+
+### 🔧 Troubleshooting
+
+**Common Issues:**
+
+1. **"No MCP tools visible"** → Restart Claude after configuration
+2. **"Command not found"** → Ensure npm global install path is in PATH
+3. **"Permission denied"** → Run `npm config get prefix` and check permissions
+4. **"Server not responding"** → Check Claude Desktop config file syntax
+
+**Get Help:**
+- 📖 Check `QUICK_USAGE.md` for workflow examples
+- 📖 Read `CLAUDE_CODE_SETUP.md` for detailed setup
+- 🐛 Report issues: https://github.com/nerfels/mind-map/issues
 
 ## Features
 
@@ -328,6 +459,24 @@ The server consists of several key components:
 ## 📋 Version History
 
 ### v1.0.0 (Current)
+- ✅ Complete brain-inspired intelligence system
+- ✅ Enterprise scalability and user customization
+- ✅ Organized test suite with proper structure
+- ✅ 33 advanced MCP tools fully functional
+- ✅ Multi-language support (6 languages)
+- ✅ 80+ development tools integration
+- ✅ Project organization and cleanup completed
+
+## 📋 Version History
+
+### v1.0.1 (Current)
+- ✅ Enhanced README with comprehensive Claude Code integration guide
+- ✅ Added step-by-step installation instructions
+- ✅ Included usage examples and workflow guides
+- ✅ Added troubleshooting section and verification checklist
+- ✅ Improved npm package documentation
+
+### v1.0.0
 - ✅ Complete brain-inspired intelligence system
 - ✅ Enterprise scalability and user customization
 - ✅ Organized test suite with proper structure
