@@ -20,6 +20,7 @@ import { PatternPredictionEngine, PatternPrediction, EmergingPattern, Prediction
 import { ScalabilityManager } from './ScalabilityManager.js';
 import { UserConfigurationManager } from './UserConfigurationManager.js';
 import { CustomPatternEngine } from './CustomPatternEngine.js';
+import { MultiModalConfidenceFusion, MultiModalConfidence, ConfidenceEvidence, FusedConfidence } from './MultiModalConfidenceFusion.js';
 import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight, CacheStats, ProcessingProgress, InhibitionResult, ScalabilityConfig, ProjectScale, ResourceUsage, UserPreferences, CustomPatternRule, ProjectLearningConfig, PrivacySettings, UserFeedback } from '../types/index.js';
 import { join } from 'path';
 
@@ -46,6 +47,7 @@ export class MindMapEngine {
   private scalabilityManager: ScalabilityManager;
   private userConfigManager: UserConfigurationManager;
   private customPatternEngine: CustomPatternEngine;
+  private multiModalFusion: MultiModalConfidenceFusion;
   private projectRoot: string;
 
   constructor(projectRoot: string) {
@@ -139,6 +141,20 @@ export class MindMapEngine {
     });
     this.userConfigManager = new UserConfigurationManager(this.projectRoot);
     this.customPatternEngine = new CustomPatternEngine(this.storage, this.userConfigManager);
+    this.multiModalFusion = new MultiModalConfidenceFusion({
+      modalityWeights: {
+        semantic: 0.30,      // High weight for semantic similarity
+        structural: 0.25,    // Code structure patterns
+        historical: 0.20,    // Past performance data
+        temporal: 0.15,      // Recency and stability
+        contextual: 0.08,    // Project/user context
+        collaborative: 0.02  // Community patterns (minimal initially)
+      },
+      adaptiveWeighting: true,
+      enableCalibration: true,
+      uncertaintyDiscount: 0.25,
+      conflictThreshold: 0.35
+    });
   }
 
   async initialize(): Promise<void> {
@@ -620,6 +636,21 @@ export class MindMapEngine {
           );
         }
       }
+    }
+
+    // Apply Multi-Modal Confidence Fusion (unless bypassed)
+    if (result.nodes.length > 0 && !options.bypassMultiModalFusion) {
+      const fusionContext = {
+        currentTask: context,
+        activeFiles: options.activeFiles || [],
+        query: query,
+        sessionGoals: options.sessionGoals || []
+      };
+
+      result.nodes = await this.applyMultiModalConfidenceFusion(result.nodes, fusionContext);
+
+      // Re-sort by fused confidence
+      result.nodes.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
     }
 
     // Cache the result
@@ -2862,5 +2893,40 @@ export class MindMapEngine {
     activationStrength: number = 1.0
   ): Promise<void> {
     await this.hebbianLearning.recordCoActivation(primaryNodeId, coActivatedNodeIds, context, activationStrength);
+  }
+
+  // Multi-Modal Confidence Fusion Methods
+  fuseNodeConfidence(node: MindMapNode, context: any = {}): FusedConfidence {
+    const evidence = MultiModalConfidenceFusion.createNodeEvidence(node, context);
+    return this.multiModalFusion.fuseConfidence(evidence);
+  }
+
+  getMultiModalFusionStats() {
+    return this.multiModalFusion.getStatistics();
+  }
+
+  updateConfidenceWithOutcome(fusionId: number, success: boolean): void {
+    this.multiModalFusion.updateWithOutcome(fusionId, success);
+  }
+
+  /**
+   * Apply multi-modal confidence fusion to query results
+   */
+  async applyMultiModalConfidenceFusion(
+    nodes: MindMapNode[],
+    context: any = {}
+  ): Promise<MindMapNode[]> {
+    return nodes.map(node => {
+      const fusedConfidence = this.fuseNodeConfidence(node, context);
+
+      return {
+        ...node,
+        confidence: fusedConfidence.finalConfidence,
+        multiModalConfidence: fusedConfidence.confidence,
+        confidenceExplanation: fusedConfidence.explanation,
+        confidenceReliability: fusedConfidence.reliability,
+        confidenceUncertainty: fusedConfidence.uncertainty
+      };
+    });
   }
 }

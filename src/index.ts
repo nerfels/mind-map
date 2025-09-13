@@ -128,7 +128,10 @@ class MindMapMCPServer {
           
           case 'get_hebbian_stats':
             return await this.handleGetHebbianStats(args as any);
-          
+
+          case 'get_multi_modal_fusion_stats':
+            return await this.handleGetMultiModalFusionStats(args as any);
+
           case 'get_hierarchical_context_stats':
             return await this.handleGetHierarchicalContextStats(args as any);
           
@@ -1887,34 +1890,34 @@ class MindMapMCPServer {
 
   private async handleGetHebbianStats(args: any) {
     try {
-      const stats = this.mindMap.getHebbianLearningStats();
+      const stats = await this.mindMap.getHebbianStats();
       
       let text = `🧠 **Hebbian Learning Statistics** - "Neurons that fire together, wire together"\n\n`;
       text += `**Connection Overview:**\n`;
       text += `• Total Connections: ${stats.totalConnections}\n`;
-      text += `• Strong Connections (≥0.6): ${stats.strongConnections}\n`;
+      text += `• Strong Connections (≥0.6): ${stats.strengthDistribution.strong}\n`;
       text += `• Average Strength: ${stats.averageStrength.toFixed(3)}\n`;
-      text += `• Recent Activations: ${stats.recentActivations}\n\n`;
-      
+      text += `• Recent Activity: ${stats.recentActivity}\n\n`;
+
       text += `**Learning Configuration:**\n`;
       text += `• Learning Rate: ${stats.learningRate} (connection strengthening speed)\n`;
       text += `• Decay Rate: ${stats.decayRate} (unused connection weakening)\n`;
-      text += `• Connections Created Today: ${stats.connectionsCreatedToday}\n\n`;
-      
+      text += `• Active Connections: ${stats.activeConnections}\n\n`;
+
       if (stats.totalConnections === 0) {
         text += `📝 **Status**: No associative connections learned yet\n`;
         text += `• Connections form when code elements are co-activated in queries\n`;
         text += `• Strengthens relationships between frequently used together items\n`;
         text += `• Enables brain-like associative memory for code intelligence\n`;
       } else {
-        const strengthenedPercent = ((stats.strongConnections / stats.totalConnections) * 100).toFixed(1);
+        const strengthenedPercent = ((stats.strengthDistribution.strong / stats.totalConnections) * 100).toFixed(1);
         text += `🔗 **Associative Memory**: ${strengthenedPercent}% of connections are well-established\n\n`;
-        
-        text += `**Top Co-Activation Patterns:**\n`;
-        stats.topConnections.forEach((conn, index) => {
-          text += `${index + 1}. ${conn.source} ↔ ${conn.target} (strength: ${conn.strength})\n`;
-        });
-        
+
+        text += `**Connection Distribution:**\n`;
+        text += `• Weak (0.0-0.3): ${stats.strengthDistribution.weak}\n`;
+        text += `• Medium (0.3-0.7): ${stats.strengthDistribution.medium}\n`;
+        text += `• Strong (0.7-1.0): ${stats.strengthDistribution.strong}\n\n`;
+
         text += `\n🧠 **Brain-Inspired Features Active:**\n`;
         text += `• ✅ Co-activation detection and strengthening\n`;
         text += `• ✅ Automatic relationship discovery\n`;
@@ -1930,6 +1933,61 @@ class MindMapMCPServer {
     } catch (error) {
       return {
         content: [{ type: 'text', text: `❌ Failed to get Hebbian learning stats: ${error}` }]
+      };
+    }
+  }
+
+  private async handleGetMultiModalFusionStats(args: any) {
+    try {
+      const stats = await this.mindMap.getMultiModalFusionStats();
+
+      let text = `🔀 **Multi-Modal Confidence Fusion Statistics** - Advanced confidence signal combination\n\n`;
+      text += `**Fusion Overview:**\n`;
+      text += `• Total Fusions: ${stats.totalFusions}\n`;
+      text += `• Fusions with Outcome: ${stats.fusionsWithOutcome}\n`;
+      text += `• Success Rate: ${(stats.successRate * 100).toFixed(1)}%\n`;
+      text += `• Average Confidence: ${(stats.avgConfidence * 100).toFixed(1)}%\n`;
+      text += `• Average Reliability: ${(stats.avgReliability * 100).toFixed(1)}%\n\n`;
+
+      text += `**Modality Reliability:**\n`;
+      Object.entries(stats.modalityReliability).forEach(([modality, reliability]) => {
+        const reliabilityPercent = ((reliability as number) * 100).toFixed(1);
+        text += `• ${modality}: ${reliabilityPercent}%\n`;
+      });
+      text += `\n`;
+
+      if (stats.calibrationBuckets.length > 0) {
+        text += `**Confidence Calibration:**\n`;
+        stats.calibrationBuckets.forEach((bucket: any) => {
+          text += `• ${bucket.confidenceRange}: Expected ${(bucket.expectedAccuracy * 100).toFixed(1)}% accuracy (${bucket.sampleSize} samples)\n`;
+        });
+        text += `\n`;
+      }
+
+      text += `**Fusion Configuration:**\n`;
+      text += `• Semantic Weight: ${(stats.config.modalityWeights.semantic * 100).toFixed(1)}%\n`;
+      text += `• Structural Weight: ${(stats.config.modalityWeights.structural * 100).toFixed(1)}%\n`;
+      text += `• Historical Weight: ${(stats.config.modalityWeights.historical * 100).toFixed(1)}%\n`;
+      text += `• Temporal Weight: ${(stats.config.modalityWeights.temporal * 100).toFixed(1)}%\n`;
+      text += `• Contextual Weight: ${(stats.config.modalityWeights.contextual * 100).toFixed(1)}%\n`;
+      text += `• Collaborative Weight: ${(stats.config.modalityWeights.collaborative * 100).toFixed(1)}%\n\n`;
+
+      text += `🧠 **Brain-Inspired Features:**\n`;
+      text += `• Multi-modal evidence fusion (semantic, structural, temporal, contextual)\n`;
+      text += `• Uncertainty quantification and discounting\n`;
+      text += `• Conflict detection and resolution\n`;
+      text += `• Adaptive weighting based on modality performance\n`;
+      text += `• Confidence calibration for improved accuracy\n`;
+      text += `• Bayesian-inspired evidence combination\n\n`;
+
+      text += `📈 **Expected Impact**: Enhanced confidence accuracy through multi-modal fusion`;
+
+      return {
+        content: [{ type: 'text', text }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: `❌ Failed to get Multi-Modal Fusion stats: ${error}` }]
       };
     }
   }

@@ -288,6 +288,8 @@ export interface QueryOptions {
   bypassAttention?: boolean; // Skip attention system application (default: false)
   // Bi-temporal system options
   bypassBiTemporal?: boolean; // Skip bi-temporal processing (default: false)
+  // Multi-modal confidence fusion options
+  bypassMultiModalFusion?: boolean; // Skip multi-modal confidence fusion (default: false)
   // Hierarchical context options
   contextLevel?: 1 | 2 | 3 | 4; // 1=immediate, 2=session, 3=project, 4=domain
   includeParentContext?: boolean; // Include higher-level context (default: true)

@@ -805,6 +805,16 @@ export const GET_HEBBIAN_STATS_TOOL: Tool = {
   }
 };
 
+export const GET_MULTI_MODAL_FUSION_STATS_TOOL: Tool = {
+  name: 'get_multi_modal_fusion_stats',
+  description: 'Get multi-modal confidence fusion statistics showing evidence combination, modality reliability, and advanced confidence calibration',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
 export const GET_HIERARCHICAL_CONTEXT_STATS_TOOL: Tool = {
   name: 'get_hierarchical_context_stats',
   description: 'Get hierarchical context system statistics showing multi-level context awareness, context distribution, and brain-inspired context management',
@@ -1159,6 +1169,7 @@ export const ALL_TOOLS: Tool[] = [
   CLEAR_CACHE_TOOL,
   GET_INHIBITORY_STATS_TOOL,
   GET_HEBBIAN_STATS_TOOL,
+  GET_MULTI_MODAL_FUSION_STATS_TOOL,
   GET_HIERARCHICAL_CONTEXT_STATS_TOOL,
   GET_CONTEXT_SUMMARY_TOOL,
   GET_ATTENTION_STATS_TOOL,
