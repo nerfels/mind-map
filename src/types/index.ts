@@ -15,11 +15,16 @@ export interface MindMapEdge {
   id: string;
   source: string;
   target: string;
-  type: 'contains' | 'imports' | 'calls' | 'fixes' | 'relates_to' | 'depends_on' | 'detects';
+  type: 'contains' | 'imports' | 'calls' | 'fixes' | 'relates_to' | 'depends_on' | 'detects' | 'co_activates';
   weight?: number;
   confidence: number;
   metadata?: Record<string, any>;
+  created?: Date;
+  lastUpdated?: Date;
   createdAt?: Date;
+  // Compatibility properties for Hebbian system
+  sourceId?: string;
+  targetId?: string;
 }
 
 export interface MindMapGraph {
@@ -28,6 +33,202 @@ export interface MindMapGraph {
   projectRoot: string;
   lastScan: Date;
   version: string;
+}
+
+export interface ScalabilityConfig {
+  // Project size thresholds
+  smallProjectThreshold: number;    // < 1000 files
+  mediumProjectThreshold: number;   // < 10000 files
+  largeProjectThreshold: number;    // < 100000 files
+
+  // Scanning limits
+  maxFilesPerScan: number;          // Maximum files to scan at once
+  maxDepth: number;                 // Maximum directory depth
+  maxFileSize: number;              // Maximum file size to analyze (bytes)
+
+  // Memory limits
+  maxNodesInMemory: number;         // Maximum nodes to keep in memory
+  maxEdgesInMemory: number;         // Maximum edges to keep in memory
+  maxCacheSize: number;             // Maximum cache size (bytes)
+
+  // Performance thresholds
+  scanTimeoutMs: number;            // Timeout for individual scans
+  queryTimeoutMs: number;           // Timeout for individual queries
+  memoryPressureThreshold: number;  // Memory usage percentage to trigger cleanup
+
+  // Partitioning strategy
+  enablePartitioning: boolean;      // Enable graph partitioning
+  partitionSize: number;            // Target nodes per partition
+  partitionOverlap: number;         // Overlap percentage between partitions
+
+  // Incremental analysis
+  enableIncrementalAnalysis: boolean; // Enable incremental updates
+  changeThreshold: number;          // Percentage of changes to trigger full rescan
+  watchModeEnabled: boolean;        // Enable file system watching
+}
+
+export interface ProjectScale {
+  scale: 'small' | 'medium' | 'large' | 'enterprise';
+  fileCount: number;
+  directoryCount: number;
+  totalSize: number;
+  estimatedMemoryUsage: number;
+  recommendedConfig: Partial<ScalabilityConfig>;
+}
+
+export interface ResourceUsage {
+  memoryUsage: {
+    used: number;
+    total: number;
+    percentage: number;
+  };
+  nodeCount: number;
+  edgeCount: number;
+  cacheUsage: {
+    size: number;
+    hitRate: number;
+    evictions: number;
+  };
+  performanceMetrics: {
+    avgScanTime: number;
+    avgQueryTime: number;
+    slowOperations: number;
+  };
+}
+
+// Phase 4.4: User Customization Types
+export interface UserPreferences {
+  // General preferences
+  theme: 'light' | 'dark' | 'auto';
+  language: string;
+  timezone: string;
+
+  // Analysis preferences
+  enableIntelligentSuggestions: boolean;
+  confidenceThreshold: number;
+  maxResults: number;
+  autoScanOnChange: boolean;
+
+  // Learning preferences
+  enableLearning: boolean;
+  learningRate: number;
+  rememberFailures: boolean;
+  adaptToWorkflow: boolean;
+
+  // Privacy preferences
+  collectTelemetry: boolean;
+  shareUsageData: boolean;
+  localStorageOnly: boolean;
+
+  // Performance preferences
+  maxMemoryUsage: number;
+  enableCaching: boolean;
+  parallelProcessing: boolean;
+  backgroundScanning: boolean;
+}
+
+export interface CustomPatternRule {
+  id: string;
+  name: string;
+  description: string;
+  pattern: string | RegExp;
+  category: 'architectural' | 'design' | 'code_quality' | 'security' | 'performance';
+  severity: 'info' | 'warning' | 'error';
+  confidence: number;
+  enabled: boolean;
+  fileTypes: string[];
+  languages: string[];
+  frameworks: string[];
+  metadata: Record<string, any>;
+  created: Date;
+  lastModified: Date;
+}
+
+export interface ProjectLearningConfig {
+  projectId: string;
+  projectName: string;
+
+  // Learning behavior
+  enableHebbianLearning: boolean;
+  enableInhibitoryLearning: boolean;
+  enablePatternLearning: boolean;
+
+  // Learning parameters
+  learningRate: number;
+  decayRate: number;
+  confidenceThreshold: number;
+
+  // Pattern recognition
+  customPatterns: CustomPatternRule[];
+  disabledPatterns: string[];
+
+  // File and directory preferences
+  ignorePatterns: string[];
+  priorityDirectories: string[];
+  excludeDirectories: string[];
+
+  // Framework-specific settings
+  frameworkOverrides: Record<string, any>;
+
+  // Feedback and ratings
+  enableFeedbackCollection: boolean;
+  autoRating: boolean;
+}
+
+export interface PrivacySettings {
+  // Data collection
+  collectUsageStatistics: boolean;
+  collectErrorReports: boolean;
+  collectPerformanceMetrics: boolean;
+
+  // Data storage
+  encryptLocalData: boolean;
+  localOnlyMode: boolean;
+  dataRetentionDays: number;
+
+  // Data sharing
+  shareAnonymizedData: boolean;
+  shareWithTeam: boolean;
+  exportDataEnabled: boolean;
+
+  // Security
+  requireAuthentication: boolean;
+  sessionTimeout: number;
+  auditLogging: boolean;
+}
+
+export interface UserFeedback {
+  id: string;
+  type: 'suggestion_rating' | 'feature_request' | 'bug_report' | 'general';
+  rating: number; // 1-5 scale
+  comment: string;
+  context: {
+    feature: string;
+    query?: string;
+    suggestions?: any[];
+    timestamp: Date;
+    sessionId: string;
+  };
+  metadata: {
+    version: string;
+    projectScale: string;
+    userExperience: 'beginner' | 'intermediate' | 'expert';
+  };
+  status: 'new' | 'reviewed' | 'addressed' | 'dismissed';
+  created: Date;
+  lastModified: Date;
+}
+
+export interface UserConfiguration {
+  version: string;
+  userId: string;
+  preferences: UserPreferences;
+  projectConfigs: Map<string, ProjectLearningConfig>;
+  customPatterns: CustomPatternRule[];
+  privacySettings: PrivacySettings;
+  feedback: UserFeedback[];
+  created: Date;
+  lastModified: Date;
 }
 
 export interface FileInfo {
@@ -79,6 +280,18 @@ export interface QueryOptions {
   contextBoost?: boolean; // Enable context-aware relevance boosting (default: true)
   // Caching options
   bypassCache?: boolean; // Skip cache lookup (default: false)
+  // Inhibitory learning options
+  bypassInhibition?: boolean; // Skip inhibitory learning application (default: false)
+  // Hebbian learning options
+  bypassHebbianLearning?: boolean; // Skip Hebbian co-activation recording (default: false)
+  // Attention system options
+  bypassAttention?: boolean; // Skip attention system application (default: false)
+  // Bi-temporal system options
+  bypassBiTemporal?: boolean; // Skip bi-temporal processing (default: false)
+  // Hierarchical context options
+  contextLevel?: 1 | 2 | 3 | 4; // 1=immediate, 2=session, 3=project, 4=domain
+  includeParentContext?: boolean; // Include higher-level context (default: true)
+  includeChildContext?: boolean; // Include lower-level context (default: false)
   // Context for activation spreading
   currentTask?: string;
   activeFiles?: string[];
@@ -86,6 +299,9 @@ export interface QueryOptions {
   sessionGoals?: string[];
   frameworkContext?: string[];
   languageContext?: string[];
+  // Bi-temporal query options
+  validAt?: Date; // Query relationships valid at this point in time
+  includeHistory?: boolean; // Include revision history in results
 }
 
 export interface QueryResult {
@@ -94,6 +310,10 @@ export interface QueryResult {
   totalMatches: number;
   queryTime: number;
   cached?: boolean;
+  // Inhibitory learning results
+  inhibitionApplied?: boolean;
+  inhibitionScore?: number; // 0-1, how much was inhibited
+  originalResultCount?: number; // Count before inhibition
   // Activation-specific results
   activationResults?: Array<{
     nodeId: string;
@@ -220,6 +440,53 @@ export interface ParallelProcessingConfig {
   timeoutMs: number;
   retryAttempts: number;
   progressCallback?: (progress: ProcessingProgress) => void;
+}
+
+// Inhibitory Learning Interfaces (Phase 6.2.1)
+export interface TaskOutcome {
+  taskDescription: string;
+  outcome: 'success' | 'error' | 'partial';
+  timestamp: Date;
+  errorDetails?: any;
+  involvedFiles: string[];
+  context: string;
+}
+
+export interface InhibitoryPattern {
+  id: string;
+  triggerConditions: string[];
+  inhibitedNodes: string[];
+  strength: number; // 0-1, strength of inhibition
+  basedOnFailures: TaskOutcome[];
+  created: Date;
+  lastReinforced: Date;
+  reinforcementCount: number;
+  decayRate: number; // How fast the pattern weakens over time
+  context: string; // Context in which this pattern applies
+}
+
+export interface FailureSignature {
+  errorType: string;
+  errorMessage: string;
+  contextHash: string;
+  involvedFiles: string[];
+  failureConditions: string[];
+  extractedKeywords: string[];
+}
+
+export interface InhibitionResult {
+  originalResults: MindMapNode[];
+  inhibitedResults: MindMapNode[];
+  appliedPatterns: InhibitoryPattern[];
+  inhibitionScore: number; // How much was inhibited (0-1)
+}
+
+export interface InhibitoryLearningConfig {
+  maxPatterns: number;
+  strengthThreshold: number; // Minimum strength to apply inhibition
+  decayInterval: number; // How often to apply decay (milliseconds)
+  reinforcementMultiplier: number; // How much to strengthen on repeated failures
+  contextSimilarityThreshold: number; // For matching similar contexts
 }
 
 // Query Caching Interfaces (Phase 6.1.2)

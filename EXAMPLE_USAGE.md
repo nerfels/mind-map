@@ -1,4 +1,4 @@
-# Mind Map MCP - Example Usage
+# Mind Map MCP v1.0.0 - Example Usage
 
 This document shows practical examples of how the Mind Map MCP server enhances Claude Code's understanding of your projects.
 

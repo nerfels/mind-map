@@ -11,7 +11,16 @@ import { EnhancedFrameworkDetector } from './EnhancedFrameworkDetector.js';
 import { ActivationNetwork, QueryContext } from './ActivationNetwork.js';
 import { QueryCache } from './QueryCache.js';
 import { ParallelFileProcessor } from './ParallelFileProcessor.js';
-import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight, CacheStats, ProcessingProgress } from '../types/index.js';
+import { InhibitoryLearningSystem } from './InhibitoryLearningSystem.js';
+import { HebbianLearningSystem } from './HebbianLearningSystem.js';
+import { HierarchicalContextSystem, ContextLevel, ContextQuery } from './HierarchicalContextSystem.js';
+import { AttentionSystem, AttentionType, AttentionContext, AttentionAllocation } from './AttentionSystem.js';
+import { BiTemporalKnowledgeModel, BiTemporalEdge, ContextWindow, TemporalQuery, BiTemporalStats } from './BiTemporalKnowledgeModel.js';
+import { PatternPredictionEngine, PatternPrediction, EmergingPattern, PredictionEngine } from './PatternPredictionEngine.js';
+import { ScalabilityManager } from './ScalabilityManager.js';
+import { UserConfigurationManager } from './UserConfigurationManager.js';
+import { CustomPatternEngine } from './CustomPatternEngine.js';
+import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight, CacheStats, ProcessingProgress, InhibitionResult, ScalabilityConfig, ProjectScale, ResourceUsage, UserPreferences, CustomPatternRule, ProjectLearningConfig, PrivacySettings, UserFeedback } from '../types/index.js';
 import { join } from 'path';
 
 export class MindMapEngine {
@@ -28,6 +37,15 @@ export class MindMapEngine {
   private activationNetwork: ActivationNetwork;
   private queryCache: QueryCache;
   private parallelProcessor: ParallelFileProcessor;
+  private inhibitoryLearning: InhibitoryLearningSystem;
+  private hebbianLearning: HebbianLearningSystem;
+  private hierarchicalContext: HierarchicalContextSystem;
+  private attentionSystem: AttentionSystem;
+  private biTemporalModel: BiTemporalKnowledgeModel;
+  private patternPrediction: PatternPredictionEngine;
+  private scalabilityManager: ScalabilityManager;
+  private userConfigManager: UserConfigurationManager;
+  private customPatternEngine: CustomPatternEngine;
   private projectRoot: string;
 
   constructor(projectRoot: string) {
@@ -51,16 +69,138 @@ export class MindMapEngine {
       retryAttempts: 3,      // More retries for robustness
       progressCallback: (progress) => this.onProgressUpdate(progress)
     });
+    this.inhibitoryLearning = new InhibitoryLearningSystem(this.storage, {
+      maxPatterns: 500,      // Reasonable limit for inhibitory patterns
+      strengthThreshold: 0.2, // Lower threshold for more aggressive inhibition
+      decayInterval: 2 * 60 * 60 * 1000, // 2 hours decay interval
+      reinforcementMultiplier: 1.3,      // Moderate reinforcement
+      contextSimilarityThreshold: 0.6    // More lenient context matching
+    });
+    this.hebbianLearning = new HebbianLearningSystem(this.storage, {
+      learningRate: 0.05,    // Moderate learning rate for stable convergence
+      decayRate: 0.002,      // Slow decay to maintain long-term associations
+      activationThreshold: 0.2, // Conservative threshold for stable connections
+      maxConnections: 150,   // Allow rich associative networks
+      contextWindow: 5000,   // 5 second co-activation window
+      strengthenThreshold: 0.6, // Higher threshold for edge creation
+      pruningThreshold: 0.05 // Prune very weak connections
+    });
+    this.hierarchicalContext = new HierarchicalContextSystem(this.storage, {
+      immediateDecayRate: 0.1 / 60000,    // 0.1 per minute
+      sessionDecayRate: 0.01 / 60000,     // 0.01 per minute  
+      projectDecayRate: 0.001 / 3600000,  // 0.001 per hour
+      domainDecayRate: 0.0001 / 86400000, // 0.0001 per day
+      maxContextItems: {
+        immediate: 15,  // More immediate context for active development
+        session: 75,    // Extended session context
+        project: 300,   // Rich project context
+        domain: 1500    // Comprehensive domain knowledge
+      },
+      contextWeights: {
+        immediate: 1.0, // Full weight for immediate context
+        session: 0.8,   // Strong weight for session context
+        project: 0.6,   // Moderate weight for project context
+        domain: 0.4     // Background weight for domain context
+      }
+    });
+    this.attentionSystem = new AttentionSystem(this.storage, {
+      maxTargets: 7,                    // Cognitive load limit
+      totalCapacity: 1.0,               // Full attention capacity
+      decayInterval: 30000,             // 30 second decay updates
+      minAttentionThreshold: 0.05,      // 5% minimum attention
+      reinforcementFactor: 1.2,         // 20% boost on reinforcement
+      sustainedAttentionDuration: 300000, // 5 minutes sustained
+      executiveOverrideThreshold: 0.8   // 80% threshold for override
+    });
+    this.biTemporalModel = new BiTemporalKnowledgeModel(this.storage, {
+      maxRevisionHistory: 50,      // Keep last 50 revisions per edge
+      confidenceDecayRate: 0.01,   // 1% confidence decay per day
+      automaticInvalidation: true,  // Auto-invalidate on code changes
+      retentionPeriod: 31536000000, // 1 year retention
+      snapshotInterval: 86400000   // Daily snapshots
+    });
+    this.patternPrediction = new PatternPredictionEngine(this.storage, {
+      minDataPoints: 5,             // Need at least 5 data points
+      confidenceThreshold: 0.7,     // 70% confidence minimum
+      predictionHorizon: 2592000000, // 30 days ahead
+      updateInterval: 3600000,       // Update every hour
+      maxPatterns: 100,             // Track up to 100 patterns
+      correlationThreshold: 0.6     // 60% correlation minimum
+    });
+    this.scalabilityManager = new ScalabilityManager(this.storage, this.scanner, this.projectRoot, {
+      enablePartitioning: true,      // Enable for large projects
+      enableIncrementalAnalysis: true, // Optimize repeated scans
+      maxFilesPerScan: 5000,        // Conservative batch size
+      maxNodesInMemory: 50000,      // Memory limit for nodes
+      maxEdgesInMemory: 100000,     // Memory limit for edges
+      memoryPressureThreshold: 75,  // Trigger cleanup at 75% memory usage
+      partitionSize: 10000,         // Partition size for large projects
+      scanTimeoutMs: 300000         // 5 minute timeout per scan
+    });
+    this.userConfigManager = new UserConfigurationManager(this.projectRoot);
+    this.customPatternEngine = new CustomPatternEngine(this.storage, this.userConfigManager);
   }
 
   async initialize(): Promise<void> {
     await this.storage.load();
+    await this.userConfigManager.initialize();
   }
 
-  async scanProject(forceRescan = false, useParallelProcessing = true): Promise<void> {
+  async scanProject(forceRescan = false, useParallelProcessing = true): Promise<{
+    summary: string;
+    scannedFiles: number;
+    totalFiles: number;
+    partitions: number;
+    scanTime: number;
+    projectScale: ProjectScale;
+  }> {
+    console.log('🔍 Starting scalable project scan...');
+
+    // First, analyze project scale for adaptive configuration
+    const projectScale = await this.scalabilityManager.analyzeProjectScale();
+    console.log(`📏 Project scale: ${projectScale.scale} (${projectScale.fileCount} files)`);
+
+    // Apply recommended configuration based on project scale
+    this.scalabilityManager.applyConfiguration(projectScale.recommendedConfig);
+
     const graph = this.storage.getGraph();
-    const shouldScan = forceRescan || 
-      graph.nodes.size === 0 || 
+    const shouldScan = forceRescan ||
+      graph.nodes.size === 0 ||
+      (Date.now() - graph.lastScan.getTime()) > 24 * 60 * 60 * 1000; // 24 hours
+
+    if (!shouldScan && !forceRescan) {
+      console.log('✅ Using cached project scan (use forceRescan=true to override)');
+      return {
+        summary: 'Used cached scan',
+        scannedFiles: graph.nodes.size,
+        totalFiles: graph.nodes.size,
+        partitions: 0,
+        scanTime: 0,
+        projectScale
+      };
+    }
+
+    // Use scalability manager for adaptive scanning
+    const scanResult = await this.scalabilityManager.adaptiveScan(forceRescan);
+
+    const summary = `Scanned ${scanResult.scannedFiles}/${scanResult.totalFiles} files ` +
+                   `(${scanResult.partitions} partitions) in ${scanResult.scanTime}ms - ` +
+                   `${projectScale.scale} project scale`;
+
+    return {
+      summary,
+      ...scanResult,
+      projectScale
+    };
+  }
+
+  /**
+   * Legacy scan method for backward compatibility
+   */
+  async scanProjectLegacy(forceRescan = false, useParallelProcessing = true): Promise<void> {
+    const graph = this.storage.getGraph();
+    const shouldScan = forceRescan ||
+      graph.nodes.size === 0 ||
       (Date.now() - graph.lastScan.getTime()) > 24 * 60 * 60 * 1000; // 24 hours
 
     if (!shouldScan) {
@@ -297,10 +437,10 @@ export class MindMapEngine {
     const startTime = Date.now();
     const queryLower = query.toLowerCase();
     const limit = options.limit || 10;
-    
+
     // Create context for caching
     const context = this.createQueryContext(options);
-    
+
     // Try cache first (unless explicitly bypassed)
     if (!options.bypassCache) {
       const cachedResult = await this.queryCache.get(query, context);
@@ -309,16 +449,154 @@ export class MindMapEngine {
         return cachedResult;
       }
     }
-    
+
     // Enable activation spreading by default for better results
     const useActivation = options.useActivation !== false;
     const activationLevels = options.activationLevels || 3;
-    
+
     let result: QueryResult;
     if (useActivation) {
       result = await this.queryWithActivation(query, queryLower, options, limit, startTime);
     } else {
       result = await this.queryLinear(query, queryLower, options, limit, startTime);
+    }
+    
+    // Apply inhibitory learning (unless explicitly bypassed)
+    if (!options.bypassInhibition) {
+      const inhibitionResult = await this.inhibitoryLearning.applyInhibition(
+        result.nodes, 
+        query, 
+        context
+      );
+      
+      // Update result with inhibited nodes
+      result.nodes = inhibitionResult.inhibitedResults;
+      result.inhibitionApplied = inhibitionResult.appliedPatterns.length > 0;
+      result.inhibitionScore = inhibitionResult.inhibitionScore;
+      result.originalResultCount = inhibitionResult.originalResults.length;
+    }
+    
+    // Apply hierarchical context weighting for enhanced relevance
+    if (options.contextLevel || options.includeParentContext || options.includeChildContext) {
+      const contextQuery: ContextQuery = {
+        text: query,
+        level: (options.contextLevel as ContextLevel) || ContextLevel.IMMEDIATE,
+        includeParents: options.includeParentContext !== false, // Default true
+        includeChildren: options.includeChildContext || false,   // Default false
+        maxItems: limit * 2, // Get more candidates for context filtering
+        minRelevance: 0.1
+      };
+      
+      // Get context-enhanced scores
+      const contextScores = this.hierarchicalContext.getContextScores(result.nodes, contextQuery);
+      
+      // Re-sort nodes based on context-enhanced scores
+      const contextMap = new Map(contextScores.map(score => [score.nodeId, score]));
+      result.nodes = result.nodes
+        .map(node => {
+          const contextScore = contextMap.get(node.id);
+          return {
+            ...node,
+            confidence: contextScore ? 
+              Math.min(1.0, node.confidence + (contextScore.contextBoost * 0.3)) : 
+              node.confidence,
+            contextScore: contextScore?.finalScore || node.confidence
+          };
+        })
+        .sort((a, b) => (b as any).contextScore - (a as any).contextScore)
+        .slice(0, limit);
+    }
+
+    // Update hierarchical context with query activity
+    this.hierarchicalContext.updateFromActivity({
+      type: 'query',
+      data: { query, results: result.nodes },
+      files: result.nodes.filter(n => n.type === 'file').map(n => n.path || n.name),
+      functions: result.nodes.filter(n => n.type === 'function').map(n => n.name),
+      timestamp: new Date()
+    });
+
+    // Apply attention mechanisms for dynamic result focusing (unless bypassed)
+    if (result.nodes.length > 0 && !options.bypassAttention) {
+      const attentionContext: AttentionContext = {
+        currentTask: context,
+        activeFiles: options.activeFiles || [],
+        recentQueries: [query],
+        userGoals: options.sessionGoals || [],
+        frameworkContext: options.frameworkContext || [],
+        timeContext: {
+          sessionStart: new Date(Date.now() - 300000), // Assume 5 min session
+          lastActivity: new Date(),
+          taskDuration: Date.now() - startTime
+        }
+      };
+
+      // Apply attention-based result focusing
+      result = this.attentionSystem.applyAttentionToResults(result, attentionContext);
+      
+      // Allocate attention to top results for future queries
+      const attentionType = this.inferAttentionType(options, result);
+      this.attentionSystem.allocateAttention(result.nodes.slice(0, 3), attentionContext, attentionType);
+      
+      // Update attention from query activity
+      this.attentionSystem.updateAttentionFromActivity({
+        nodeIds: result.nodes.slice(0, 3).map(n => n.id),
+        queryText: query,
+        actionType: 'query',
+        timestamp: new Date(),
+        context: attentionContext
+      });
+    }
+
+    // Apply bi-temporal knowledge enhancement for temporal reasoning (unless bypassed)
+    if (result.nodes.length > 0 && !options.bypassBiTemporal) {
+      const queryTime = options.validAt || new Date();
+      result.nodes = this.biTemporalModel.enhanceQueryWithBiTemporal(
+        result.nodes,
+        queryTime,
+        options.includeHistory || false
+      );
+
+      // Create bi-temporal edges for newly discovered relationships
+      if (result.nodes.length > 1) {
+        for (let i = 0; i < result.nodes.length - 1; i++) {
+          for (let j = i + 1; j < Math.min(result.nodes.length, i + 3); j++) {
+            const sourceNode = result.nodes[i];
+            const targetNode = result.nodes[j];
+            
+            // Only create if confidence is high enough and no existing relationship
+            if (sourceNode.confidence > 0.7 && targetNode.confidence > 0.7) {
+              try {
+                await this.biTemporalModel.createBiTemporalEdge(
+                  sourceNode.id,
+                  targetNode.id,
+                  'relates_to',
+                  queryTime,
+                  [`Co-appeared in query: "${query}"`],
+                  'query_co_occurrence'
+                );
+              } catch (error) {
+                // Edge might already exist, ignore duplicate creation errors
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Apply Hebbian learning - record co-activation of returned nodes
+    if (result.nodes.length > 1 && !options.bypassHebbianLearning) {
+      const nodeIds = result.nodes.map(node => node.id);
+      const primaryNode = nodeIds[0]; // Most relevant result as primary
+      const coActivatedNodes = nodeIds.slice(1); // Rest as co-activated
+      
+      // Record co-activation for Hebbian strengthening
+      await this.hebbianLearning.recordCoActivation(
+        primaryNode,
+        coActivatedNodes,
+        `query:${query}`, // Context includes the query
+        1.0 / result.nodes.length // Strength inversely proportional to result set size
+      );
     }
     
     // Cache the result
@@ -412,10 +690,10 @@ export class MindMapEngine {
   }
 
   private queryLinear(
-    query: string, 
-    queryLower: string, 
-    options: QueryOptions, 
-    limit: number, 
+    query: string,
+    queryLower: string,
+    options: QueryOptions,
+    limit: number,
     startTime: number
   ): QueryResult {
     // Traditional linear search implementation
@@ -495,6 +773,61 @@ export class MindMapEngine {
       }
     }
 
+    // Learn from failure using inhibitory learning
+    if (outcome === 'error' && details?.errorDetails) {
+      // Create inhibitory pattern from failure
+      this.inhibitoryLearning.learnFromFailure(
+        taskDescription,
+        details.errorDetails,
+        filesInvolved,
+        this.createTaskContext(taskDescription, filesInvolved)
+      ).then(pattern => {
+        if (pattern) {
+          console.log(`🧠 Created inhibitory pattern from failure: ${pattern.id}`);
+        }
+      }).catch(error => {
+        console.warn('Failed to create inhibitory pattern:', error);
+      });
+    }
+
+    // Apply Hebbian learning for successful task outcomes
+    if (outcome === 'success' && filesInvolved.length > 1) {
+      // Record co-activation between successful files to strengthen associations
+      const fileIds = filesInvolved.map(filePath => `file:${filePath}`);
+      const primaryFileId = fileIds[0]; // First file as primary
+      const coActivatedFileIds = fileIds.slice(1); // Rest as co-activated
+
+      // Record co-activation with task context for Hebbian strengthening
+      this.hebbianLearning.recordCoActivation(
+        primaryFileId,
+        coActivatedFileIds,
+        `task_success:${taskDescription}`, // Context includes task description
+        1.0 // Strong activation strength for successful outcomes
+      ).then(() => {
+        console.log(`🧠 Recorded Hebbian co-activation for successful task: ${taskDescription}`);
+      }).catch(error => {
+        console.warn('Failed to record Hebbian co-activation:', error);
+      });
+    }
+
+    // Record Hebbian learning for solution patterns
+    if (details?.solutionDetails && filesInvolved.length > 0) {
+      // Strengthen associations between solution patterns and involved files
+      const solutionContext = `solution:${details.solutionDetails.approach || 'generic'}`;
+      const fileIds = filesInvolved.map(filePath => `file:${filePath}`);
+
+      if (fileIds.length > 1) {
+        this.hebbianLearning.recordCoActivation(
+          fileIds[0],
+          fileIds.slice(1),
+          solutionContext,
+          0.8 // High strength for solution patterns
+        ).catch(error => {
+          console.warn('Failed to record solution pattern co-activation:', error);
+        });
+      }
+    }
+
     // Create error nodes if needed
     if (outcome === 'error' && details?.errorDetails) {
       this.createErrorNode(details.errorDetails, filesInvolved);
@@ -514,6 +847,228 @@ export class MindMapEngine {
 
   getStats() {
     return this.storage.getStats();
+  }
+
+  /**
+   * Get comprehensive resource usage statistics
+   */
+  getResourceUsage(): ResourceUsage {
+    return this.scalabilityManager.getResourceUsage();
+  }
+
+  /**
+   * Get current scalability configuration
+   */
+  getScalabilityConfig(): ScalabilityConfig {
+    return this.scalabilityManager.getConfiguration();
+  }
+
+  /**
+   * Update scalability configuration
+   */
+  updateScalabilityConfig(config: Partial<ScalabilityConfig>): void {
+    this.scalabilityManager.applyConfiguration(config);
+    console.log('⚙️ Updated scalability configuration');
+  }
+
+  /**
+   * Analyze current project scale
+   */
+  async analyzeProjectScale(): Promise<ProjectScale> {
+    return this.scalabilityManager.analyzeProjectScale();
+  }
+
+  // ===== Phase 4.4: User Customization Methods =====
+
+  /**
+   * Get user preferences
+   */
+  getUserPreferences(): UserPreferences {
+    return this.userConfigManager.getPreferences();
+  }
+
+  /**
+   * Update user preferences
+   */
+  async updateUserPreferences(updates: Partial<UserPreferences>): Promise<void> {
+    await this.userConfigManager.updatePreferences(updates);
+
+    // Apply learning preferences to brain-inspired systems
+    const effectiveConfig = this.userConfigManager.getEffectiveLearningConfig();
+    this.applyLearningConfiguration(effectiveConfig);
+  }
+
+  /**
+   * Get privacy settings
+   */
+  getPrivacySettings(): PrivacySettings {
+    return this.userConfigManager.getPrivacySettings();
+  }
+
+  /**
+   * Update privacy settings
+   */
+  async updatePrivacySettings(updates: Partial<PrivacySettings>): Promise<void> {
+    await this.userConfigManager.updatePrivacySettings(updates);
+  }
+
+  /**
+   * Get project-specific learning configuration
+   */
+  getProjectLearningConfig(): ProjectLearningConfig | undefined {
+    return this.userConfigManager.getProjectConfig();
+  }
+
+  /**
+   * Update project-specific learning configuration
+   */
+  async updateProjectLearningConfig(config: Partial<ProjectLearningConfig>): Promise<void> {
+    await this.userConfigManager.updateProjectConfig(config);
+
+    // Apply updated configuration
+    const effectiveConfig = this.userConfigManager.getEffectiveLearningConfig();
+    this.applyLearningConfiguration(effectiveConfig);
+  }
+
+  /**
+   * Apply learning configuration to brain-inspired systems
+   */
+  private applyLearningConfiguration(config: {
+    enableHebbianLearning: boolean;
+    enableInhibitoryLearning: boolean;
+    learningRate: number;
+    decayRate: number;
+    confidenceThreshold: number;
+  }): void {
+    // Update Hebbian learning system configuration
+    // (Note: HebbianLearningSystem would need configuration update methods)
+    console.log('🧠 Applied learning configuration:', {
+      hebbian: config.enableHebbianLearning,
+      inhibitory: config.enableInhibitoryLearning,
+      learningRate: config.learningRate,
+      decayRate: config.decayRate
+    });
+  }
+
+  /**
+   * Add custom pattern rule
+   */
+  async addCustomPattern(pattern: Omit<CustomPatternRule, 'id' | 'created' | 'lastModified'>): Promise<string> {
+    const validation = this.customPatternEngine.validatePattern(pattern);
+    if (!validation.valid) {
+      throw new Error(`Invalid pattern: ${validation.errors.join(', ')}`);
+    }
+
+    return await this.userConfigManager.addCustomPattern(pattern);
+  }
+
+  /**
+   * Update custom pattern rule
+   */
+  async updateCustomPattern(id: string, updates: Partial<CustomPatternRule>): Promise<void> {
+    await this.userConfigManager.updateCustomPattern(id, updates);
+  }
+
+  /**
+   * Remove custom pattern rule
+   */
+  async removeCustomPattern(id: string): Promise<void> {
+    await this.userConfigManager.removeCustomPattern(id);
+  }
+
+  /**
+   * Get custom pattern rules
+   */
+  getCustomPatterns(enabled?: boolean): CustomPatternRule[] {
+    return this.userConfigManager.getCustomPatterns(enabled);
+  }
+
+  /**
+   * Analyze files with custom patterns
+   */
+  async analyzeWithCustomPatterns(filePaths?: string[]) {
+    const files = filePaths
+      ? filePaths.map(path => ({ path, name: path.split('/').pop() || '', type: 'file' as const, size: 0, lastModified: new Date(), isIgnored: false }))
+      : Array.from(this.storage.getGraph().nodes.values())
+          .filter(node => node.type === 'file' && node.path)
+          .map(node => ({
+            path: node.path!,
+            name: node.name,
+            type: 'file' as const,
+            size: 0,
+            lastModified: new Date(),
+            isIgnored: false
+          }));
+
+    return await this.customPatternEngine.analyzeFiles(files);
+  }
+
+  /**
+   * Test pattern against sample text
+   */
+  testCustomPattern(pattern: CustomPatternRule, sampleText: string) {
+    return this.customPatternEngine.testPattern(pattern, sampleText);
+  }
+
+  /**
+   * Submit user feedback
+   */
+  async submitFeedback(feedback: Omit<UserFeedback, 'id' | 'status' | 'created' | 'lastModified'>): Promise<string> {
+    return await this.userConfigManager.submitFeedback(feedback);
+  }
+
+  /**
+   * Get user feedback
+   */
+  getUserFeedback(status?: UserFeedback['status']): UserFeedback[] {
+    return this.userConfigManager.getFeedback(status);
+  }
+
+  /**
+   * Update feedback status
+   */
+  async updateFeedbackStatus(id: string, status: UserFeedback['status']): Promise<void> {
+    await this.userConfigManager.updateFeedbackStatus(id, status);
+  }
+
+  /**
+   * Export user configuration
+   */
+  async exportUserConfiguration(): Promise<string> {
+    return await this.userConfigManager.exportConfiguration();
+  }
+
+  /**
+   * Import user configuration
+   */
+  async importUserConfiguration(configData: string, merge: boolean = false): Promise<void> {
+    await this.userConfigManager.importConfiguration(configData, merge);
+
+    // Apply imported configuration
+    const effectiveConfig = this.userConfigManager.getEffectiveLearningConfig();
+    this.applyLearningConfiguration(effectiveConfig);
+  }
+
+  /**
+   * Reset user configuration to defaults
+   */
+  async resetUserConfiguration(): Promise<void> {
+    await this.userConfigManager.resetToDefaults();
+  }
+
+  /**
+   * Get user configuration statistics
+   */
+  getUserConfigurationStats() {
+    const configStats = this.userConfigManager.getConfigurationStats();
+    const patternStats = this.customPatternEngine.getPatternStatistics();
+
+    return {
+      configuration: configStats,
+      patterns: patternStats,
+      privacyMode: configStats.privacyMode,
+      learningEnabled: this.userConfigManager.isFeatureEnabled('enableLearning')
+    };
   }
 
   private addContainsEdge(parentId: string, childId: string): void {
@@ -589,30 +1144,84 @@ export class MindMapEngine {
       node.properties?.framework
     ].filter(Boolean).join(' ').toLowerCase();
 
-    if (searchableText.includes(queryLower)) {
-      return true;
+    // Handle multi-word queries - split by spaces and check if all words match
+    const queryWords = queryLower.trim().split(/\s+/).filter(word => word.length > 0);
+
+    if (queryWords.length === 1) {
+      // Single word - use simple includes
+      if (searchableText.includes(queryLower)) {
+        return true;
+      }
+    } else {
+      // Multi-word - check if all words are present
+      const allWordsMatch = queryWords.every(word => searchableText.includes(word));
+      if (allWordsMatch) {
+        return true;
+      }
+
+      // Also check for combined camelCase matching (split camelCase into words)
+      const expandedText = searchableText.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+      const camelCaseMatch = queryWords.every(word => expandedText.includes(word));
+      if (camelCaseMatch) {
+        return true;
+      }
     }
 
     // Enhanced search for functions and classes
     if (node.type === 'function' && node.metadata.parameters) {
       const paramsString = node.metadata.parameters.join(' ').toLowerCase();
-      if (paramsString.includes(queryLower)) {
-        return true;
+      if (queryWords.length === 1) {
+        if (paramsString.includes(queryLower)) {
+          return true;
+        }
+      } else {
+        const allWordsMatch = queryWords.every(word => paramsString.includes(word));
+        if (allWordsMatch) {
+          return true;
+        }
       }
     }
 
     if (node.type === 'class' && (node.metadata.methods || node.metadata.properties)) {
       const methodsString = (node.metadata.methods || []).join(' ').toLowerCase();
       const propsString = (node.metadata.properties || []).join(' ').toLowerCase();
-      if (methodsString.includes(queryLower) || propsString.includes(queryLower)) {
-        return true;
+      const combinedString = methodsString + ' ' + propsString;
+
+      if (queryWords.length === 1) {
+        if (combinedString.includes(queryLower)) {
+          return true;
+        }
+      } else {
+        const allWordsMatch = queryWords.every(word => combinedString.includes(word));
+        if (allWordsMatch) {
+          return true;
+        }
       }
     }
 
-    // Generic metadata search
-    const metadataString = JSON.stringify(node.metadata).toLowerCase();
-    if (metadataString.includes(queryLower)) {
-      return true;
+    // Generic metadata search (safe JSON stringify to avoid circular references)
+    try {
+      const metadataString = JSON.stringify(node.metadata, (key, value) => {
+        // Skip potentially circular references
+        if (key === 'parent' || key === 'children' || key === 'references' || typeof value === 'function') {
+          return undefined;
+        }
+        return value;
+      }).toLowerCase();
+
+      if (queryWords.length === 1) {
+        if (metadataString.includes(queryLower)) {
+          return true;
+        }
+      } else {
+        const allWordsMatch = queryWords.every(word => metadataString.includes(word));
+        if (allWordsMatch) {
+          return true;
+        }
+      }
+    } catch (error) {
+      // If JSON.stringify fails due to circular reference, skip metadata search
+      console.warn('Metadata search skipped due to circular reference:', (error as Error).message);
     }
 
     return false;
@@ -1683,20 +2292,109 @@ export class MindMapEngine {
     minConfidence = 0.5,
     actionableOnly = false
   ): Promise<any[]> {
-    let insights = await this.aggregateQueryEngine.generateProjectInsights();
+    const insights: any[] = [];
+    const stats = await this.getStats();
     
-    if (categories) {
-      insights = insights.filter(insight => 
-        categories.some(cat => insight.category.toLowerCase().includes(cat.toLowerCase()))
-      );
+    // Category: Architecture Insights
+    if (!categories || categories.includes('architecture')) {
+      const patterns = this.architecturalAnalyzer.analyzeProjectArchitecture();
+      if (patterns.length > 0) {
+        const topPattern = patterns[0];
+        insights.push({
+          category: 'architecture',
+          title: `${topPattern.name} Pattern Detected`,
+          description: topPattern.description,
+          value: `${topPattern.confidence * 100}% confidence`,
+          confidence: topPattern.confidence,
+          trend: 'stable',
+          actionable: topPattern.recommendations?.length > 0,
+          recommendation: topPattern.recommendations?.[0]
+        });
+      }
     }
-    
+
+    // Category: Code Quality Insights
+    if (!categories || categories.includes('code_quality')) {
+      const lowConfidenceNodes = this.storage.findNodes(n => n.confidence < 0.5);
+      if (lowConfidenceNodes.length > 5) {
+        insights.push({
+          category: 'code_quality',
+          title: 'Low Confidence Code Areas',
+          description: `${lowConfidenceNodes.length} code elements have low confidence scores`,
+          value: `${lowConfidenceNodes.length} nodes`,
+          confidence: 0.8,
+          trend: 'stable',
+          actionable: true,
+          recommendation: 'Review and refactor low-confidence code areas'
+        });
+      }
+    }
+
+    // Category: Learning Insights
+    if (!categories || categories.includes('learning')) {
+      const inhibitoryStats = this.inhibitoryLearning.getStats();
+      if (inhibitoryStats.totalPatterns > 0) {
+        insights.push({
+          category: 'learning',
+          title: 'System Learning from Failures',
+          description: `System has learned ${inhibitoryStats.totalPatterns} failure patterns`,
+          value: `${inhibitoryStats.averageStrength * 100}% avg strength`,
+          confidence: 0.85,
+          trend: 'up',
+          actionable: false
+        });
+      }
+
+      const hebbianStats = this.hebbianLearning.getStats();
+      if (hebbianStats.totalConnections > 0) {
+        insights.push({
+          category: 'learning',
+          title: 'Hebbian Relationship Discovery',
+          description: `${hebbianStats.totalConnections} neural connections formed (${hebbianStats.activeConnections} active)`,
+          value: `${(hebbianStats.averageStrength * 100).toFixed(1)}% avg strength`,
+          confidence: 0.75,
+          trend: hebbianStats.recentActivity > 0 ? 'up' : 'stable',
+          actionable: hebbianStats.averageStrength < 0.3
+        });
+      }
+
+      if (hebbianStats.strengthDistribution.strong > 10) {
+        insights.push({
+          category: 'learning',
+          title: 'Strong Neural Patterns Detected',
+          description: `${hebbianStats.strengthDistribution.strong} strong connections indicate well-learned patterns`,
+          value: `${hebbianStats.contextualConnections} contextual`,
+          confidence: 0.85,
+          trend: 'up',
+          actionable: false
+        });
+      }
+    }
+
+    // Category: Performance Insights
+    if (!categories || categories.includes('performance')) {
+      const cacheStats = this.queryCache.getStats();
+      if (cacheStats.hitRate < 0.3) {
+        insights.push({
+          category: 'performance',
+          title: 'Low Cache Hit Rate',
+          description: `Cache hit rate is ${(cacheStats.hitRate * 100).toFixed(1)}%`,
+          value: `${(cacheStats.hitRate * 100).toFixed(1)}%`,
+          confidence: 0.9,
+          trend: 'down',
+          actionable: true,
+          recommendation: 'Consider query optimization'
+        });
+      }
+    }
+
+    // Filter by confidence and actionable flag
     if (minConfidence > 0) {
-      insights = insights.filter(insight => insight.confidence >= minConfidence);
+      return insights.filter(insight => insight.confidence >= minConfidence);
     }
     
     if (actionableOnly) {
-      insights = insights.filter(insight => insight.actionable);
+      return insights.filter(insight => insight.actionable);
     }
     
     return insights;
@@ -1791,6 +2489,19 @@ export class MindMapEngine {
   }
 
   /**
+   * Create task context for inhibitory learning
+   */
+  private createTaskContext(taskDescription: string, filesInvolved: string[]): string {
+    const contextParts = [
+      `task:${taskDescription.toLowerCase()}`,
+      `files:${filesInvolved.join(',')}`,
+      `timestamp:${Date.now()}`
+    ];
+    
+    return contextParts.join('|');
+  }
+
+  /**
    * Progress callback for parallel processing
    */
   private onProgressUpdate(progress: ProcessingProgress): void {
@@ -1812,6 +2523,43 @@ export class MindMapEngine {
 
   getQueryCacheStats(): any {
     return this.advancedQueryEngine.getCacheStats();
+  }
+
+  /**
+   * Get inhibitory learning statistics
+   */
+  getInhibitoryLearningStats(): any {
+    return this.inhibitoryLearning.getStats();
+  }
+
+  /**
+   * Get Hebbian learning statistics for monitoring associative learning
+   */
+  getHebbianLearningStats(): any {
+    return this.hebbianLearning.getStatistics();
+  }
+
+  /**
+   * Get hierarchical context statistics for monitoring multi-level context awareness
+   */
+  getHierarchicalContextStats(): any {
+    return this.hierarchicalContext.getContextStatistics();
+  }
+
+  /**
+   * Get current context summary across all hierarchical levels
+   */
+  getContextSummary(): any {
+    return this.hierarchicalContext.getContextSummary();
+  }
+
+  /**
+   * Cleanup resources
+   */
+  cleanup(): void {
+    if (this.inhibitoryLearning) {
+      this.inhibitoryLearning.cleanup();
+    }
   }
 
   // Utility method to record temporal changes
@@ -1920,5 +2668,119 @@ export class MindMapEngine {
 
   clearFrameworkCache() {
     this.enhancedFrameworkDetector.clearCache();
+  }
+
+  // Attention System Methods
+  private inferAttentionType(options: QueryOptions, result: QueryResult): AttentionType {
+    // If user specified contextLevel or has specific session goals, use executive attention
+    if (options.contextLevel === 4 || (options.sessionGoals && options.sessionGoals.length > 0)) {
+      return AttentionType.EXECUTIVE;
+    }
+    
+    // If looking for specific patterns or types, use selective attention
+    if (options.type || options.pattern) {
+      return AttentionType.SELECTIVE;
+    }
+    
+    // If many results and broad query, use divided attention
+    if (result.nodes.length > 5) {
+      return AttentionType.DIVIDED;
+    }
+    
+    // Default to sustained attention for focused work
+    return AttentionType.SUSTAINED;
+  }
+
+  getAttentionStats() {
+    return this.attentionSystem.getAttentionStats();
+  }
+
+  allocateAttention(nodes: MindMapNode[], context: AttentionContext, type: AttentionType = AttentionType.SELECTIVE): AttentionAllocation {
+    return this.attentionSystem.allocateAttention(nodes, context, type);
+  }
+
+  updateAttentionFromActivity(activity: {
+    nodeIds?: string[];
+    queryText?: string;
+    actionType: 'query' | 'file_access' | 'edit' | 'error' | 'success';
+    timestamp?: Date;
+    context?: AttentionContext;
+  }) {
+    this.attentionSystem.updateAttentionFromActivity(activity);
+  }
+
+  // Bi-temporal Knowledge Model Methods
+  getBiTemporalStats(): BiTemporalStats {
+    return this.biTemporalModel.getBiTemporalStats();
+  }
+
+  async createContextWindow(
+    name: string,
+    validTimeStart: Date,
+    validTimeEnd: Date | null = null,
+    description: string = '',
+    frameworkVersions: Record<string, string> = {}
+  ): Promise<ContextWindow> {
+    return this.biTemporalModel.createContextWindow(
+      name, 
+      validTimeStart, 
+      validTimeEnd, 
+      description, 
+      frameworkVersions
+    );
+  }
+
+  setCurrentContextWindow(contextId: string): void {
+    this.biTemporalModel.setCurrentContextWindow(contextId);
+  }
+
+  queryBiTemporal(query: TemporalQuery): {
+    edges: BiTemporalEdge[];
+    nodes: any[];
+    contextWindows: ContextWindow[];
+  } {
+    return this.biTemporalModel.queryBiTemporal(query);
+  }
+
+  async invalidateRelationship(
+    edgeId: string,
+    invalidationDate: Date = new Date(),
+    reason: string = 'manual',
+    evidence: string[] = []
+  ): Promise<void> {
+    await this.biTemporalModel.invalidateRelationship(edgeId, invalidationDate, reason, evidence);
+  }
+
+  createTemporalSnapshot(name?: string) {
+    return this.biTemporalModel.createTemporalSnapshot(name);
+  }
+
+  exportTemporalData() {
+    return this.biTemporalModel.exportTemporalData();
+  }
+
+  async onFileChanged(filePath: string, changeType: 'modified' | 'deleted' | 'renamed'): Promise<void> {
+    await this.biTemporalModel.onFileChanged(filePath, changeType);
+  }
+
+  // Pattern Prediction Engine Methods
+  getPredictionEngineStats(): PredictionEngine {
+    return this.patternPrediction.getPredictionEngineStats();
+  }
+
+  getPatternPredictions(patternType?: string): PatternPrediction[] {
+    return this.patternPrediction.getPatternPredictions(patternType);
+  }
+
+  getEmergingPatterns(stage?: EmergingPattern['emergenceStage']): EmergingPattern[] {
+    return this.patternPrediction.getEmergingPatterns(stage);
+  }
+
+  predictPatternEmergence(patternType: string): PatternPrediction | null {
+    return this.patternPrediction.predictPatternEmergence(patternType);
+  }
+
+  async analyzeAndPredict(): Promise<void> {
+    await this.patternPrediction.analyzeAndPredict();
   }
 }

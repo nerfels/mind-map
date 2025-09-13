@@ -785,6 +785,350 @@ export const CLEAR_CACHE_TOOL: Tool = {
   }
 };
 
+export const GET_INHIBITORY_STATS_TOOL: Tool = {
+  name: 'get_inhibitory_stats',
+  description: 'Get brain-inspired inhibitory learning statistics including pattern counts, strength distribution, and learning effectiveness',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const GET_HEBBIAN_STATS_TOOL: Tool = {
+  name: 'get_hebbian_stats',
+  description: 'Get Hebbian learning statistics showing associative connections, co-activation patterns, and neural-inspired relationship strengthening',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const GET_HIERARCHICAL_CONTEXT_STATS_TOOL: Tool = {
+  name: 'get_hierarchical_context_stats',
+  description: 'Get hierarchical context system statistics showing multi-level context awareness, context distribution, and brain-inspired context management',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const GET_CONTEXT_SUMMARY_TOOL: Tool = {
+  name: 'get_context_summary',
+  description: 'Get current context summary across all hierarchical levels (immediate, session, project, domain) with most relevant context items',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      level: {
+        type: 'number',
+        enum: [1, 2, 3, 4],
+        description: 'Filter by specific context level: 1=immediate, 2=session, 3=project, 4=domain (optional - returns all levels if not specified)'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
+export const GET_ATTENTION_STATS_TOOL: Tool = {
+  name: 'get_attention_stats',
+  description: 'Get brain-inspired attention system statistics showing attention allocation, modality distribution, focus efficiency, and cognitive load metrics',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const ALLOCATE_ATTENTION_TOOL: Tool = {
+  name: 'allocate_attention',
+  description: 'Dynamically allocate attention to specific nodes based on context and cognitive load theory',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      node_ids: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Node IDs to allocate attention to'
+      },
+      attention_type: {
+        type: 'string',
+        enum: ['selective', 'divided', 'sustained', 'executive'],
+        description: 'Type of attention to allocate',
+        default: 'selective'
+      },
+      context: {
+        type: 'object',
+        properties: {
+          current_task: {
+            type: 'string',
+            description: 'Current task or focus area'
+          },
+          active_files: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Currently active files'
+          },
+          user_goals: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Current user goals or objectives'
+          }
+        },
+        description: 'Attention context for dynamic allocation'
+      }
+    },
+    required: ['node_ids'],
+    additionalProperties: false
+  }
+};
+
+export const UPDATE_ATTENTION_TOOL: Tool = {
+  name: 'update_attention',
+  description: 'Update attention system from user activity (file access, edits, errors, successes) for dynamic attention learning',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      node_ids: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Node IDs involved in the activity'
+      },
+      action_type: {
+        type: 'string',
+        enum: ['query', 'file_access', 'edit', 'error', 'success'],
+        description: 'Type of activity performed'
+      },
+      query_text: {
+        type: 'string',
+        description: 'Query text if action_type is query'
+      }
+    },
+    required: ['action_type'],
+    additionalProperties: false
+  }
+};
+
+export const GET_BI_TEMPORAL_STATS_TOOL: Tool = {
+  name: 'get_bi_temporal_stats',
+  description: 'Get bi-temporal knowledge model statistics showing valid time vs transaction time tracking, context windows, and temporal relationship analysis',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const CREATE_CONTEXT_WINDOW_TOOL: Tool = {
+  name: 'create_context_window',
+  description: 'Create a temporal context window for grouping related changes and relationships within a specific time period',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      name: {
+        type: 'string',
+        description: 'Name of the context window (e.g., "React v16 Migration", "Python 3.8 Upgrade")'
+      },
+      valid_time_start: {
+        type: 'string',
+        format: 'date-time',
+        description: 'When this context window started (ISO 8601 format)'
+      },
+      valid_time_end: {
+        type: 'string',
+        format: 'date-time',
+        description: 'When this context window ended (optional, null for ongoing)'
+      },
+      description: {
+        type: 'string',
+        description: 'Description of what this context window represents'
+      },
+      framework_versions: {
+        type: 'object',
+        additionalProperties: { type: 'string' },
+        description: 'Framework versions during this period (e.g., {"react": "16.8.0", "node": "14.0.0"})'
+      }
+    },
+    required: ['name', 'valid_time_start'],
+    additionalProperties: false
+  }
+};
+
+export const QUERY_BI_TEMPORAL_TOOL: Tool = {
+  name: 'query_bi_temporal',
+  description: 'Query relationships with temporal constraints - valid time, transaction time, and context windows',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      as_of: {
+        type: 'string',
+        format: 'date-time',
+        description: 'Query state as of this transaction time'
+      },
+      valid_at: {
+        type: 'string',
+        format: 'date-time', 
+        description: 'Query relationships valid at this point in time'
+      },
+      valid_during_start: {
+        type: 'string',
+        format: 'date-time',
+        description: 'Start of validity interval'
+      },
+      valid_during_end: {
+        type: 'string',
+        format: 'date-time',
+        description: 'End of validity interval'
+      },
+      context_window: {
+        type: 'string',
+        description: 'Query within specific context window ID'
+      },
+      include_history: {
+        type: 'boolean',
+        description: 'Include revision history in results',
+        default: false
+      }
+    },
+    additionalProperties: false
+  }
+};
+
+export const TEMPORAL_SNAPSHOT_TOOL: Tool = {
+  name: 'create_temporal_snapshot',
+  description: 'Create a temporal snapshot of the current knowledge state for analysis and comparison',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      name: {
+        type: 'string',
+        description: 'Optional name for the snapshot'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
+export const INVALIDATE_RELATIONSHIP_TOOL: Tool = {
+  name: 'invalidate_relationship',
+  description: 'Mark a relationship as no longer valid (set valid time end)',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      edge_id: {
+        type: 'string',
+        description: 'ID of the edge/relationship to invalidate'
+      },
+      invalidation_date: {
+        type: 'string',
+        format: 'date-time',
+        description: 'When the relationship became invalid (defaults to now)'
+      },
+      reason: {
+        type: 'string',
+        description: 'Reason for invalidation (e.g., "code_refactor", "dependency_removed")',
+        default: 'manual'
+      },
+      evidence: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Evidence supporting this invalidation'
+      }
+    },
+    required: ['edge_id'],
+    additionalProperties: false
+  }
+};
+
+export const GET_PREDICTION_ENGINE_STATS_TOOL: Tool = {
+  name: 'get_prediction_engine_stats',
+  description: 'Get pattern prediction engine statistics showing emerging patterns, predictions, and trend analysis',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const GET_PATTERN_PREDICTIONS_TOOL: Tool = {
+  name: 'get_pattern_predictions',
+  description: 'Get specific pattern predictions with probability, timeframe, and confidence analysis',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      pattern_type: {
+        type: 'string',
+        description: 'Filter predictions by pattern type (optional)'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
+export const GET_EMERGING_PATTERNS_TOOL: Tool = {
+  name: 'get_emerging_patterns',
+  description: 'Get patterns that are emerging but not yet fully established, with emergence stage and confidence',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      emergence_stage: {
+        type: 'string',
+        enum: ['nascent', 'developing', 'emerging', 'established'],
+        description: 'Filter by emergence stage (optional)'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
+export const PREDICT_PATTERN_EMERGENCE_TOOL: Tool = {
+  name: 'predict_pattern_emergence',
+  description: 'Predict when a specific pattern will emerge with detailed analysis and alternatives',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      pattern_type: {
+        type: 'string',
+        description: 'Pattern type to predict (e.g., "framework_react", "architectural_complexity")'
+      }
+    },
+    required: ['pattern_type'],
+    additionalProperties: false
+  }
+};
+
+export const ANALYZE_AND_PREDICT_TOOL: Tool = {
+  name: 'analyze_and_predict',
+  description: 'Trigger immediate pattern analysis and prediction generation based on current project state',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const INIT_CLAUDE_CODE_TOOL: Tool = {
+  name: 'init_claude_code',
+  description: 'Get comprehensive setup instructions and configuration guidance for integrating Mind Map MCP with Claude Code',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      setup_type: {
+        type: 'string',
+        enum: ['desktop', 'cli', 'full_guide'],
+        description: 'Type of setup instructions needed (default: full_guide)'
+      },
+      platform: {
+        type: 'string',
+        enum: ['windows', 'macos', 'linux'],
+        description: 'Operating system platform (optional - provides platform-specific instructions)'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -812,5 +1156,23 @@ export const ALL_TOOLS: Tool[] = [
   DETECT_ENHANCED_FRAMEWORKS_TOOL,
   GET_FRAMEWORK_RECOMMENDATIONS_TOOL,
   GET_CACHE_STATS_TOOL,
-  CLEAR_CACHE_TOOL
+  CLEAR_CACHE_TOOL,
+  GET_INHIBITORY_STATS_TOOL,
+  GET_HEBBIAN_STATS_TOOL,
+  GET_HIERARCHICAL_CONTEXT_STATS_TOOL,
+  GET_CONTEXT_SUMMARY_TOOL,
+  GET_ATTENTION_STATS_TOOL,
+  ALLOCATE_ATTENTION_TOOL,
+  UPDATE_ATTENTION_TOOL,
+  GET_BI_TEMPORAL_STATS_TOOL,
+  CREATE_CONTEXT_WINDOW_TOOL,
+  QUERY_BI_TEMPORAL_TOOL,
+  TEMPORAL_SNAPSHOT_TOOL,
+  INVALIDATE_RELATIONSHIP_TOOL,
+  GET_PREDICTION_ENGINE_STATS_TOOL,
+  GET_PATTERN_PREDICTIONS_TOOL,
+  GET_EMERGING_PATTERNS_TOOL,
+  PREDICT_PATTERN_EMERGENCE_TOOL,
+  ANALYZE_AND_PREDICT_TOOL,
+  INIT_CLAUDE_CODE_TOOL
 ];

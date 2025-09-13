@@ -1,4 +1,4 @@
-# Setting Up Mind Map MCP in Claude Code
+# Setting Up Mind Map MCP v1.0.0 in Claude Code
 
 ## 🚀 Quick Setup
 

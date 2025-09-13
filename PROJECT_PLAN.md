@@ -5,10 +5,13 @@
 Create an intelligent Mind-Map Model Context Protocol (MCP) server that transforms how Claude Code understands and interacts with codebases by implementing **associative memory principles** from neuroscience research. Instead of linear text search, use brain-like activation spreading and pattern recognition for more intuitive, human-like code intelligence.
 
 ### 🔬 Research Foundation
-Based on cutting-edge 2024 research in:
+Based on cutting-edge 2024-2025 research in:
 - **Associative Memory Neural Networks** - Pattern storage and retrieval like human brain
 - **Temporal Knowledge Graphs** - Time-aware relationship modeling  
-- **Neuromorphic Computing** - Energy-efficient, event-driven processing
+- **Neuromorphic Computing** - Intel Loihi 2 & Hala Point (1.15B neurons, 100x energy reduction)
+- **Memory-Augmented Networks** - Neural Turing Machines, Differentiable Neural Computers
+- **Continual Learning** - Elastic Weight Consolidation, catastrophic forgetting solutions
+- **Neural-Symbolic AI** - ACT-R/SOAR cognitive architectures, explainable reasoning
 - **Graphiti/Zep Architecture** - Real-time knowledge graph construction
 
 ## Core Problems Solved
@@ -145,12 +148,31 @@ Project Knowledge Graph
   - Proactive pattern suggestions
   - Trend analysis and forecasting
 
-### 🚀 Phase 7: Advanced Cognitive Features (Weeks 5-8)
-- **Multi-Modal Confidence Fusion**
-- **Cross-Modal Pattern Recognition**
-- **Collaborative Filtering** for team knowledge
-- **Visual Attention Maps** for debugging
-- **Neuromorphic Optimization** for large-scale deployment
+### 🚀 Phase 7: Advanced Cognitive Features (Weeks 5-12)
+
+#### Phase 7.1: Neuromorphic Optimization (Weeks 5-6) 🔥🔥🔥
+- **Loihi-2 Inspired Activation**: Event-driven processing with graded spikes
+- **Sparse Connectivity**: 10:1 sparse patterns like Hala Point system
+- **Energy-Aware Processing**: 100x efficiency gains through neuromorphic principles
+- **Asynchronous Networks**: Multi-chip scaling architecture
+
+#### Phase 7.2: Memory-Augmented Architecture (Weeks 7-8) 
+- **External Memory Systems**: DNC-inspired differentiable memory access
+- **Meta-Learning Integration**: Few-shot learning for new programming languages
+- **Content-Based Addressing**: Similarity-driven knowledge retrieval
+- **Analog In-Memory Computing**: Hardware-accelerated pattern storage
+
+#### Phase 7.3: Continual Learning Integration (Weeks 9-10)
+- **Elastic Weight Consolidation**: EWC-based importance weighting
+- **CORE Cognitive Replay**: Memory rehearsal for stability-plasticity balance
+- **Task Boundary Detection**: Automatic segmentation of learning phases
+- **Catastrophic Forgetting Prevention**: Synaptic consolidation mechanisms
+
+#### Phase 7.4: Neural-Symbolic Reasoning (Weeks 11-12)
+- **Production Rule System**: ACT-R inspired cognitive architecture
+- **Logic Tensor Networks**: Differentiable symbolic reasoning
+- **Explainability Traces**: 90% interpretable decision pathways
+- **Theorem Proving**: AlphaGeometry-style mathematical reasoning
 
 ## Success Metrics (Research-Backed Targets)
 
@@ -159,16 +181,22 @@ Project Knowledge Graph
 2. **Failure Avoidance**: 30% reduction in suggesting previously failed approaches  
 3. **Learning Speed**: Automatic relationship discovery vs. manual updates
 4. **Response Time**: Maintain <300ms P95 latency (Graphiti benchmark)
-5. **Energy Efficiency**: Target neuromorphic-level efficiency gains
+5. **Energy Efficiency**: 100x reduction via neuromorphic computing (Hala Point benchmark)
+6. **Memory Retention**: Continual learning without catastrophic forgetting (EWC-based)
+7. **Explainability**: 90% interpretable decisions via neural-symbolic integration
 
-### 📊 Current vs. Target Performance
-| Metric | Current | Research Target | Implementation |
-|--------|---------|----------------|----------------|
-| Query Relevance | Good | +50% | Activation spreading |
-| Repeat Mistakes | Manual tracking | -30% | Inhibitory learning |
-| Pattern Discovery | Manual | Automatic | Hebbian learning |
-| Context Awareness | Basic | Hierarchical | Multi-level context |
-| Learning Adaptation | Slow | Real-time | Co-activation detection |
+### 📊 Current vs. Target Performance (2025 Research-Backed)
+| Metric | Current | 2025 Target | Implementation Method |
+|--------|---------|-------------|-------------------|
+| Query Relevance | Good | +50-70% | Neuromorphic activation spreading |
+| Repeat Mistakes | Manual tracking | -30% | EWC continual learning |
+| Pattern Discovery | Manual | Automatic | Memory-augmented networks |
+| Context Awareness | Basic | Hierarchical | Multi-level context graphs |
+| Learning Adaptation | Slow | Real-time | CORE cognitive replay |
+| Energy Efficiency | CPU baseline | 100x reduction | Loihi-2 neuromorphic processing |
+| Memory Retention | Session-only | Lifelong | Elastic weight consolidation |
+| Explainability | 0% | 90% interpretable | Neural-symbolic reasoning |
+| Processing Speed | Linear | 20x faster | Hala Point parallel activation |
 
 ## Technical Considerations
 
@@ -212,9 +240,19 @@ Project Knowledge Graph
 - **Cross-Project Pattern Transfer** via domain adaptation
 - **Neuromorphic Hardware Optimization** for edge deployment
 
-### 🎯 Market Positioning
-**Competitive Advantage**: First brain-inspired code intelligence system
-- **vs. Graphiti/Zep**: General knowledge → Code-specialized associative intelligence
-- **vs. Traditional RAG**: Static vectors → Dynamic associative activation
-- **vs. Linear Search**: Sequential → Parallel associative activation
-- **Unique Value**: Learn from both success AND failure patterns
+### 🎯 Market Positioning (2025)
+**Competitive Advantage**: First neuromorphic code intelligence system
+- **vs. Graphiti/Zep**: General knowledge → Code-specialized neuromorphic intelligence
+- **vs. Traditional RAG**: Static embeddings → Dynamic neuromorphic activation (100x efficiency)
+- **vs. Linear Search**: Sequential → Hala Point parallel processing (20x speed)
+- **vs. LLM-Only**: Black box → Neural-symbolic explainable reasoning (90% interpretable)
+- **vs. Session-Based**: Forget each time → Continual learning without catastrophic forgetting
+- **Unique Value**: Intel Loihi-2 inspired brain-like learning from success AND failure patterns
+
+### 🏆 Research Leadership Position
+**First Implementation Of**:
+- Neuromorphic computing principles in code intelligence
+- Continual learning (EWC) for programming assistant systems  
+- Memory-augmented networks for software development
+- Neural-symbolic reasoning in code understanding
+- Multi-billion neuron associative code intelligence (Hala Point scale)

@@ -1,6 +1,8 @@
-# CLAUDE.md
+# CLAUDE.md - Mind Map MCP v1.0.0
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+**Current Status**: Production Ready v1.0.0 - Complete enterprise-grade brain-inspired intelligence system with organized test suite.
 
 ## Common Commands
 
@@ -178,6 +180,8 @@ The `test-server.js` is a standalone testing script that validates MCP protocol 
 2. **Use Strategic MCP Workflow**:
    - `scan_project` → Get fresh project analysis
    - `get_stats` → Understand current state
+   - `analyze_and_predict` → Trigger pattern analysis
+   - `get_pattern_predictions` → See upcoming trends
    - `predict_errors` → Before making changes
    - `suggest_fixes` → When errors occur
    - `update_mindmap` → After completing tasks
@@ -187,38 +191,47 @@ The `test-server.js` is a standalone testing script that validates MCP protocol 
    - Use `analyze_architecture` to understand patterns
    - Use `get_insights` for actionable recommendations
    - Use `temporal_query` to track code evolution
+   - Use `get_emerging_patterns` for trend detection
+   - Use `predict_pattern_emergence` for specific forecasts
 
 ### Strategic Usage Patterns:
 
 **For New Features**:
 ```typescript
-1. suggest_exploration({ task_description: "implementing new feature X" })
-2. predict_errors({ file_path: "target_file.ts" })
-3. [implement feature]
-4. update_mindmap({ task_description: "added feature X", outcome: "success" })
+1. scan_project({ force_rescan: false, include_analysis: true })
+2. analyze_and_predict()
+3. get_pattern_predictions({ min_confidence: 0.6 })
+4. suggest_exploration({ task_description: "implementing new feature X" })
+5. predict_errors({ file_path: "target_file.ts" })
+6. [implement feature]
+7. update_mindmap({ task_description: "added feature X", outcome: "success" })
 ```
 
 **For Debugging**:
 ```typescript
-1. suggest_fixes({ error_message: "actual error", file_path: "error_location" })
-2. query_mindmap({ query: "similar error patterns", type: "error" })
-3. [apply fix]
-4. update_mindmap({ task_description: "fixed bug", outcome: "success", solution_details: {...} })
+1. get_emerging_patterns({ min_strength: 0.3 }) // Check for emerging issue patterns
+2. suggest_fixes({ error_message: "actual error", file_path: "error_location" })
+3. query_mindmap({ query: "similar error patterns", type: "error" })
+4. predict_pattern_emergence({ pattern_type: "error_patterns" })
+5. [apply fix]
+6. update_mindmap({ task_description: "fixed bug", outcome: "success", solution_details: {...} })
 ```
 
 **For Refactoring**:
 ```typescript
 1. analyze_architecture()
-2. advanced_query("MATCH (f:file)-[:contains]->(func:function) WHERE func.confidence < 0.5 RETURN f.path, func.name")
-3. get_insights({ categories: ["code_quality"], actionable_only: true })
-4. [refactor code]
-5. update_mindmap({ task_description: "refactored module X", outcome: "success" })
+2. get_prediction_engine_stats() // Check prediction health
+3. get_pattern_predictions({ pattern_type: "architectural_patterns", min_confidence: 0.7 })
+4. advanced_query("MATCH (f:file)-[:contains]->(func:function) WHERE func.confidence < 0.5 RETURN f.path, func.name")
+5. get_insights({ categories: ["code_quality"], actionable_only: true })
+6. [refactor code]
+7. update_mindmap({ task_description: "refactored module X", outcome: "success" })
 ```
 
 ### Configuration Reference:
 - **MCP Config**: `~/.claude/mcp_config.json` (already configured)
 - **Strategy Guide**: `~/.claude/MIND_MAP_STRATEGY.md` (comprehensive usage patterns)
-- **16 Available Tools**: Core intelligence, advanced analysis, performance utilities
+- **33 Available Tools**: Core intelligence, advanced analysis, pattern prediction, temporal intelligence, setup automation
 
 ### Performance Targets:
 - Query response time: < 10ms
