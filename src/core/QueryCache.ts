@@ -54,13 +54,13 @@ export class QueryCache {
       this.updateAccess(exactKey, entry);
       this.stats.cacheHits++;
       this.stats.hitRate = this.stats.cacheHits / this.stats.totalQueries;
-      
+
       return entry.results;
     }
-    
+
     this.stats.cacheMisses++;
     this.stats.hitRate = this.stats.cacheHits / this.stats.totalQueries;
-    
+
     return null;
   }
 
@@ -97,6 +97,7 @@ export class QueryCache {
     this.accessOrder.push(key);
     this.stats.memoryUsage += resultSize;
     this.stats.totalEntries = this.cache.size;
+
   }
 
   /**

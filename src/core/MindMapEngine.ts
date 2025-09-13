@@ -445,7 +445,6 @@ export class MindMapEngine {
     if (!options.bypassCache) {
       const cachedResult = await this.queryCache.get(query, context);
       if (cachedResult) {
-        console.log(`Cache hit for query: "${query}"`);
         return cachedResult;
       }
     }
@@ -2436,27 +2435,66 @@ export class MindMapEngine {
    */
   private createQueryContext(options: QueryOptions): string {
     const contextParts: string[] = [];
-    
-    // Add basic options
+
+    // Add stable cache-friendly options (these should be consistent for similar queries)
     if (options.type) contextParts.push(`type:${options.type}`);
     if (options.pattern) contextParts.push(`pattern:${options.pattern}`);
-    if (options.confidence) contextParts.push(`confidence:${options.confidence}`);
-    if (options.limit) contextParts.push(`limit:${options.limit}`);
-    
-    // Add activation options
+
+    // Normalize confidence to ranges for better cache hits
+    if (options.confidence) {
+      const confidenceRange = Math.floor(options.confidence * 10) / 10; // Round to 0.1 precision
+      contextParts.push(`confidence:${confidenceRange}`);
+    }
+
+    // Normalize limit to common ranges for better cache hits
+    if (options.limit) {
+      const limitRange = options.limit <= 5 ? '5' :
+                        options.limit <= 10 ? '10' :
+                        options.limit <= 20 ? '20' : '20+';
+      contextParts.push(`limit:${limitRange}`);
+    }
+
+    // Add stable activation options
     if (options.useActivation !== undefined) contextParts.push(`activation:${options.useActivation}`);
     if (options.activationLevels) contextParts.push(`levels:${options.activationLevels}`);
-    if (options.contextBoost !== undefined) contextParts.push(`boost:${options.contextBoost}`);
-    
-    // Add context information
-    if (options.currentTask) contextParts.push(`task:${options.currentTask}`);
-    if (options.activeFiles?.length) contextParts.push(`files:${options.activeFiles.join(',')}`);
-    if (options.recentErrors?.length) contextParts.push(`errors:${options.recentErrors.join(',')}`);
-    if (options.sessionGoals?.length) contextParts.push(`goals:${options.sessionGoals.join(',')}`);
+
+    // Add only stable context information (avoid frequently changing data)
     if (options.frameworkContext?.length) contextParts.push(`frameworks:${options.frameworkContext.join(',')}`);
     if (options.languageContext?.length) contextParts.push(`languages:${options.languageContext.join(',')}`);
-    
+
+    // For cache efficiency, group session goals into categories rather than specific tasks
+    if (options.sessionGoals?.length) {
+      const goalCategories = this.categorizeGoals(options.sessionGoals);
+      contextParts.push(`goal-categories:${goalCategories.join(',')}`);
+    }
+
     return contextParts.join('|');
+  }
+
+  /**
+   * Categorize session goals for better cache efficiency
+   */
+  private categorizeGoals(goals: string[]): string[] {
+    const categories = new Set<string>();
+
+    for (const goal of goals) {
+      const lowerGoal = goal.toLowerCase();
+      if (lowerGoal.includes('debug') || lowerGoal.includes('fix') || lowerGoal.includes('error')) {
+        categories.add('debugging');
+      } else if (lowerGoal.includes('implement') || lowerGoal.includes('add') || lowerGoal.includes('feature')) {
+        categories.add('development');
+      } else if (lowerGoal.includes('refactor') || lowerGoal.includes('improve') || lowerGoal.includes('optimize')) {
+        categories.add('refactoring');
+      } else if (lowerGoal.includes('test') || lowerGoal.includes('spec')) {
+        categories.add('testing');
+      } else if (lowerGoal.includes('document') || lowerGoal.includes('comment')) {
+        categories.add('documentation');
+      } else {
+        categories.add('general');
+      }
+    }
+
+    return Array.from(categories).sort(); // Sort for consistency
   }
 
   /**

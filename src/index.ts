@@ -218,7 +218,7 @@ class MindMapMCPServer {
       bypassBiTemporal: true,  // Skip bi-temporal processing for basic queries
       includeParentContext: false,  // Skip hierarchical context
       includeChildContext: false,   // Skip hierarchical context
-      bypassCache: true  // Force fresh query to ensure search logic runs
+      bypassCache: false  // Enable caching for better performance
     });
 
     const responseText = this.formatQueryResults(result, include_metadata);
