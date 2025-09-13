@@ -44,5 +44,20 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "CLAUDE.md",
+    "QUICK_USAGE.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nerfels/mind-map.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nerfels/mind-map/issues"
+  },
+  "homepage": "https://github.com/nerfels/mind-map#readme"
 }
