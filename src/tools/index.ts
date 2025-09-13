@@ -2,13 +2,13 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 export const QUERY_MINDMAP_TOOL: Tool = {
   name: 'query_mindmap',
-  description: 'Query the project mind map for relevant files, functions, or patterns based on a task description',
+  description: 'Query the project mind map with enhanced semantic search, context-aware relevance scoring, and intelligent routing. Supports file path queries, function/class name searches, semantic concept matching, and multi-modal confidence fusion.',
   inputSchema: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'Natural language description of what you\'re looking for (e.g., "authentication logic", "database models", "error handling")'
+        description: 'Enhanced search query supporting: 1) File path queries (e.g., "src/core/MindMapEngine.ts") return all functions/classes in files with high confidence, 2) Function/class name searches (e.g., "calculateRelevanceScore", "MindMapEngine") with semantic expansion, 3) Semantic concept searches (e.g., "auth" finds authentication-related code, "validation" finds checking functions), 4) Multi-word and camelCase matching with context-aware boosting, 5) Automatic query routing to specialized engines (temporal, aggregate, advanced) based on intent.'
       },
       type: {
         type: 'string',

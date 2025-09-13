@@ -454,6 +454,69 @@ export class MindMapEngine {
     const queryLower = query.toLowerCase();
     const limit = options.limit || 10;
 
+    // Special handling for file path queries - return contents of the file
+    if (this.isFilePathQuery(query)) {
+      return await this.queryFileContents(query, options, limit, startTime);
+    }
+
+    // Smart query routing - automatically route to optimal engine
+    const queryRoute = this.determineQueryRoute(query, options);
+
+    // Route to specialized engines for optimal results
+    if (queryRoute.engine === 'advanced') {
+      return await this.advancedQueryEngine.executeQuery(queryRoute.optimizedQuery || query, queryRoute.parameters || {});
+    } else if (queryRoute.engine === 'temporal') {
+      const timeRange = queryRoute.timeRange || {
+        start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        end: new Date()
+      };
+      const temporalResult = await this.temporalQueryEngine.executeTemporalQuery({
+        timeRange: {
+          start: typeof timeRange.start === 'string' ? new Date(timeRange.start) : timeRange.start,
+          end: typeof timeRange.end === 'string' ? new Date(timeRange.end) : timeRange.end,
+          granularity: 'day'
+        },
+        evolution: {
+          entity: queryRoute.entity || '*',
+          trackChanges: true,
+          includeRelationships: true
+        },
+        aggregation: {
+          metric: 'confidence_avg',
+          groupBy: 'time'
+        }
+      });
+
+      // Convert temporal result to QueryResult format
+      const nodes: any[] = temporalResult.timeline.flatMap(snapshot => snapshot.nodes);
+      return {
+        nodes: nodes.slice(0, limit),
+        edges: [],
+        totalMatches: nodes.length,
+        queryTime: Date.now() - startTime,
+        usedActivation: false,
+        temporalData: temporalResult
+      } as any;
+    } else if (queryRoute.engine === 'aggregate') {
+      const aggregateResult = await this.aggregateQueryEngine.executeAggregate({
+        aggregation: queryRoute.aggregation || { function: 'count', field: 'name' },
+        groupBy: queryRoute.groupBy,
+        filter: queryRoute.filter,
+        orderBy: [{ field: 'aggregation_result', direction: 'DESC' }],
+        limit: limit
+      });
+
+      // Convert aggregate result to QueryResult format
+      return {
+        nodes: [],
+        edges: [],
+        totalMatches: aggregateResult.groups.length,
+        queryTime: Date.now() - startTime,
+        usedActivation: false,
+        aggregateData: aggregateResult
+      } as any;
+    }
+
     // Create context for caching
     const context = this.createQueryContext(options);
 
@@ -774,8 +837,8 @@ export class MindMapEngine {
 
     // Sort by relevance score
     matchingNodes.sort((a, b) => {
-      const scoreA = this.calculateRelevanceScore(a, queryLower);
-      const scoreB = this.calculateRelevanceScore(b, queryLower);
+      const scoreA = this.calculateRelevanceScore(a, queryLower, options);
+      const scoreB = this.calculateRelevanceScore(b, queryLower, options);
       return scoreB - scoreA;
     });
 
@@ -1189,47 +1252,68 @@ export class MindMapEngine {
   }
 
   private matchesQuery(node: MindMapNode, queryLower: string): boolean {
-    // Basic text search
+    // First try original query without semantic expansion for exact matches
+    const originalWords = queryLower.trim().split(/\s+/).filter(word => word.length > 0);
+
+    // Enhanced searchable text including function purposes and semantic tags
     const searchableText = [
       node.name,
       node.path,
       node.metadata.extension,
       node.properties?.language,
-      node.properties?.framework
+      node.properties?.framework,
+      this.inferFunctionPurpose(node), // Add semantic purpose
+      this.extractSemanticTags(node)   // Add contextual tags
     ].filter(Boolean).join(' ').toLowerCase();
 
-    // Handle multi-word queries - split by spaces and check if all words match
-    const queryWords = queryLower.trim().split(/\s+/).filter(word => word.length > 0);
-
-    if (queryWords.length === 1) {
-      // Single word - use simple includes
+    // Check original query first (most important)
+    if (originalWords.length === 1) {
       if (searchableText.includes(queryLower)) {
         return true;
       }
     } else {
-      // Multi-word - check if all words are present
-      const allWordsMatch = queryWords.every(word => searchableText.includes(word));
-      if (allWordsMatch) {
+      // For multi-word original queries, require all original words
+      const originalMatch = originalWords.every(word => searchableText.includes(word));
+      if (originalMatch) {
         return true;
       }
+    }
 
-      // Also check for combined camelCase matching (split camelCase into words)
-      const expandedText = searchableText.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
-      const camelCaseMatch = queryWords.every(word => expandedText.includes(word));
+    // Also try camelCase matching for original query
+    const expandedText = searchableText.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+    if (originalWords.length === 1) {
+      if (expandedText.includes(queryLower)) {
+        return true;
+      }
+    } else {
+      const camelCaseMatch = originalWords.every(word => expandedText.includes(word));
       if (camelCaseMatch) {
         return true;
       }
     }
 
-    // Enhanced search for functions and classes
+    // Then try semantic expansion for broader matches (but only require ANY match, not ALL)
+    const expandedQuery = this.expandSemanticQuery(queryLower);
+    const allQueryWords = expandedQuery.trim().split(/\s+/).filter(word => word.length > 0);
+    const semanticWords = allQueryWords.filter(word => !originalWords.includes(word)); // Only new words from expansion
+
+    // For semantic matches, require ANY of the semantic words to match (more permissive)
+    if (semanticWords.length > 0) {
+      const semanticMatch = semanticWords.some(word => searchableText.includes(word) || expandedText.includes(word));
+      if (semanticMatch) {
+        return true;
+      }
+    }
+
+    // Enhanced search for functions and classes using original query
     if (node.type === 'function' && node.metadata.parameters) {
       const paramsString = node.metadata.parameters.join(' ').toLowerCase();
-      if (queryWords.length === 1) {
+      if (originalWords.length === 1) {
         if (paramsString.includes(queryLower)) {
           return true;
         }
       } else {
-        const allWordsMatch = queryWords.every(word => paramsString.includes(word));
+        const allWordsMatch = originalWords.every(word => paramsString.includes(word));
         if (allWordsMatch) {
           return true;
         }
@@ -1241,12 +1325,12 @@ export class MindMapEngine {
       const propsString = (node.metadata.properties || []).join(' ').toLowerCase();
       const combinedString = methodsString + ' ' + propsString;
 
-      if (queryWords.length === 1) {
+      if (originalWords.length === 1) {
         if (combinedString.includes(queryLower)) {
           return true;
         }
       } else {
-        const allWordsMatch = queryWords.every(word => combinedString.includes(word));
+        const allWordsMatch = originalWords.every(word => combinedString.includes(word));
         if (allWordsMatch) {
           return true;
         }
@@ -1263,12 +1347,12 @@ export class MindMapEngine {
         return value;
       }).toLowerCase();
 
-      if (queryWords.length === 1) {
+      if (originalWords.length === 1) {
         if (metadataString.includes(queryLower)) {
           return true;
         }
       } else {
-        const allWordsMatch = queryWords.every(word => metadataString.includes(word));
+        const allWordsMatch = originalWords.every(word => metadataString.includes(word));
         if (allWordsMatch) {
           return true;
         }
@@ -1281,47 +1365,514 @@ export class MindMapEngine {
     return false;
   }
 
-  private calculateRelevanceScore(node: MindMapNode, queryLower: string): number {
+  /**
+   * Expand semantic queries with related terms for better natural language understanding
+   */
+  private expandSemanticQuery(query: string): string {
+    const semanticMap: Record<string, string[]> = {
+      'auth': ['authentication', 'login', 'security', 'user', 'session', 'token', 'credential'],
+      'authentication': ['auth', 'login', 'security', 'user', 'session', 'token'],
+      'database': ['db', 'storage', 'data', 'persist', 'save', 'load', 'query', 'sql'],
+      'error': ['exception', 'fail', 'catch', 'try', 'throw', 'debug', 'log', 'warn'],
+      'test': ['spec', 'unit', 'integration', 'mock', 'assert', 'expect', 'describe'],
+      'config': ['configuration', 'settings', 'options', 'preference', 'setup', 'env'],
+      'api': ['endpoint', 'service', 'request', 'response', 'http', 'rest', 'graphql'],
+      'validate': ['validation', 'check', 'verify', 'ensure', 'confirm', 'sanitize'],
+      'parse': ['parsing', 'decode', 'serialize', 'deserialize', 'transform', 'convert'],
+      'cache': ['caching', 'memory', 'store', 'buffer', 'temp', 'temporary'],
+      'network': ['http', 'request', 'fetch', 'api', 'client', 'server', 'connection'],
+      'file': ['filesystem', 'path', 'directory', 'folder', 'read', 'write', 'save', 'load'],
+      'ui': ['interface', 'view', 'component', 'render', 'display', 'show'],
+      'util': ['utility', 'helper', 'common', 'shared', 'tool', 'function']
+    };
+
+    const words = query.toLowerCase().split(/\s+/);
+    const expandedWords = [...words];
+
+    for (const word of words) {
+      if (semanticMap[word]) {
+        expandedWords.push(...semanticMap[word]);
+      }
+    }
+
+    return expandedWords.join(' ');
+  }
+
+  /**
+   * Infer the purpose/category of a function based on its name and context
+   */
+  private inferFunctionPurpose(node: MindMapNode): string {
+    if (node.type !== 'function') return '';
+
+    const name = node.name.toLowerCase();
+    const purposes: string[] = [];
+
+    // Common patterns
+    if (name.includes('test') || name.includes('spec')) purposes.push('testing');
+    if (name.includes('validate') || name.includes('check')) purposes.push('validation');
+    if (name.includes('parse') || name.includes('decode')) purposes.push('parsing');
+    if (name.includes('auth') || name.includes('login')) purposes.push('authentication');
+    if (name.includes('save') || name.includes('store') || name.includes('persist')) purposes.push('storage');
+    if (name.includes('load') || name.includes('get') || name.includes('fetch')) purposes.push('retrieval');
+    if (name.includes('render') || name.includes('display') || name.includes('show')) purposes.push('ui');
+    if (name.includes('error') || name.includes('exception') || name.includes('handle')) purposes.push('error-handling');
+    if (name.includes('config') || name.includes('setup') || name.includes('init')) purposes.push('configuration');
+    if (name.includes('util') || name.includes('helper') || name.includes('format')) purposes.push('utility');
+
+    // Action-based patterns
+    if (name.startsWith('create') || name.startsWith('make')) purposes.push('creation');
+    if (name.startsWith('update') || name.startsWith('modify')) purposes.push('modification');
+    if (name.startsWith('delete') || name.startsWith('remove')) purposes.push('deletion');
+    if (name.startsWith('find') || name.startsWith('search') || name.startsWith('query')) purposes.push('search');
+
+    return purposes.join(' ');
+  }
+
+  /**
+   * Extract contextual semantic tags from node metadata and relationships
+   */
+  private extractSemanticTags(node: MindMapNode): string {
+    const tags: string[] = [];
+
+    // File-based tags
+    if (node.path) {
+      if (node.path.includes('test')) tags.push('testing');
+      if (node.path.includes('config')) tags.push('configuration');
+      if (node.path.includes('util')) tags.push('utility');
+      if (node.path.includes('auth')) tags.push('authentication');
+      if (node.path.includes('api')) tags.push('api');
+      if (node.path.includes('db') || node.path.includes('storage')) tags.push('database');
+      if (node.path.includes('ui') || node.path.includes('component')) tags.push('interface');
+    }
+
+    // Language-specific tags
+    if (node.properties?.language) {
+      tags.push(node.properties.language);
+    }
+
+    // Framework-specific tags
+    if (node.properties?.framework) {
+      tags.push(node.properties.framework);
+    }
+
+    // Class method tags
+    if (node.type === 'class' && node.metadata.methods) {
+      const methods = node.metadata.methods as string[];
+      if (methods.some(m => m.includes('test'))) tags.push('testing');
+      if (methods.some(m => m.includes('validate'))) tags.push('validation');
+      if (methods.some(m => m.includes('parse'))) tags.push('parsing');
+    }
+
+    return tags.join(' ');
+  }
+
+  /**
+   * Detect if a query is asking for a specific file path
+   */
+  private isFilePathQuery(query: string): boolean {
+    // Check if query looks like a file path
+    const trimmed = query.trim();
+
+    // Has file extension
+    if (/\.\w+$/.test(trimmed)) return true;
+
+    // Has path separators and ends with common code file extensions
+    if (trimmed.includes('/') && /\.(js|ts|tsx|jsx|py|java|go|rs|cpp|c|h|hpp)$/i.test(trimmed)) return true;
+
+    return false;
+  }
+
+  /**
+   * Query for contents of a specific file (functions, classes, etc.)
+   */
+  private async queryFileContents(query: string, options: QueryOptions, limit: number, startTime: number): Promise<any> {
+    const queryLower = query.toLowerCase();
+
+    // Find all nodes that belong to this file
+    const fileNodes = this.storage.findNodes(node => {
+      if (!node.path) return false;
+
+      // Exact path match
+      if (node.path.toLowerCase() === queryLower) return true;
+
+      // Partial path match (for cases like "MindMapEngine.ts" matching "src/core/MindMapEngine.ts")
+      if (node.path.toLowerCase().endsWith(queryLower)) return true;
+
+      // Also check if the file path contains the query as filename
+      const fileName = node.path.split('/').pop()?.toLowerCase();
+      if (fileName === queryLower) return true;
+
+      return false;
+    });
+
+    // Separate file nodes from content nodes (functions, classes)
+    const contentNodes = fileNodes.filter(node =>
+      node.type === 'function' || node.type === 'class'
+    );
+
+    const fileMetadataNodes = fileNodes.filter(node => node.type === 'file');
+
+    // If we have content nodes, return them; otherwise return the file node
+    const resultNodes = contentNodes.length > 0 ? contentNodes : fileMetadataNodes;
+
+    // Sort by relevance
+    resultNodes.sort((a, b) => {
+      const scoreA = this.calculateRelevanceScore(a, queryLower, options);
+      const scoreB = this.calculateRelevanceScore(b, queryLower, options);
+      return scoreB - scoreA;
+    });
+
+    const limitedNodes = resultNodes.slice(0, limit);
+    const relatedEdges = this.getRelatedEdges(limitedNodes.map(n => n.id));
+
+    return {
+      nodes: limitedNodes,
+      edges: relatedEdges,
+      totalMatches: resultNodes.length,
+      queryTime: Date.now() - startTime,
+      usedActivation: false,
+      fileQuery: true // Flag to indicate this was a file-specific query
+    };
+  }
+
+  /**
+   * Intelligent query routing - determines optimal engine based on query characteristics
+   */
+  private determineQueryRoute(query: string, options: QueryOptions): {
+    engine: 'standard' | 'advanced' | 'temporal' | 'aggregate';
+    optimizedQuery?: string;
+    parameters?: any;
+    timeRange?: { start: string; end: string };
+    entity?: string;
+    analysisType?: string;
+    aggregation?: any;
+    groupBy?: any[];
+    filter?: any;
+  } {
+    const queryLower = query.toLowerCase();
+
+    // Temporal query patterns
+    if (this.isTemporalQuery(queryLower)) {
+      return {
+        engine: 'temporal',
+        entity: this.extractEntityFromQuery(query),
+        analysisType: this.extractTemporalAnalysisType(queryLower),
+        timeRange: this.extractTimeRange(queryLower)
+      };
+    }
+
+    // Aggregate query patterns (count, statistics, metrics)
+    if (this.isAggregateQuery(queryLower)) {
+      return {
+        engine: 'aggregate',
+        aggregation: this.extractAggregation(queryLower),
+        groupBy: this.extractGroupBy(queryLower),
+        filter: this.extractFilter(queryLower, options)
+      };
+    }
+
+    // Advanced query patterns (complex relationships, graph patterns)
+    if (this.isAdvancedQuery(queryLower)) {
+      return {
+        engine: 'advanced',
+        optimizedQuery: this.convertToAdvancedQuery(query),
+        parameters: this.extractQueryParameters(query, options)
+      };
+    }
+
+    // Default to standard brain-inspired query with activation spreading
+    return { engine: 'standard' };
+  }
+
+  private isTemporalQuery(query: string): boolean {
+    const temporalKeywords = [
+      'recent', 'last', 'since', 'before', 'after', 'changed', 'modified',
+      'updated', 'evolution', 'history', 'timeline', 'trend', 'over time',
+      'yesterday', 'week', 'month', 'day', 'ago', 'latest', 'newest'
+    ];
+    return temporalKeywords.some(keyword => query.includes(keyword));
+  }
+
+  private isAggregateQuery(query: string): boolean {
+    const aggregateKeywords = [
+      'count', 'how many', 'total', 'sum', 'average', 'max', 'min',
+      'statistics', 'stats', 'metrics', 'distribution', 'breakdown',
+      'group by', 'aggregate', 'summary'
+    ];
+    return aggregateKeywords.some(keyword => query.includes(keyword));
+  }
+
+  private isAdvancedQuery(query: string): boolean {
+    const advancedKeywords = [
+      'related to', 'connected to', 'depends on', 'imports', 'uses',
+      'calls', 'extends', 'implements', 'contains', 'pattern',
+      'match', 'where', 'return', 'cypher', 'graph'
+    ];
+    return advancedKeywords.some(keyword => query.includes(keyword));
+  }
+
+  private extractTemporalAnalysisType(query: string): string {
+    if (query.includes('evolution') || query.includes('history')) return 'evolution';
+    if (query.includes('trend')) return 'trend';
+    if (query.includes('compare') || query.includes('vs')) return 'comparison';
+    return 'evolution';
+  }
+
+  private extractTimeRange(query: string): { start: string; end: string } | undefined {
+    const now = new Date();
+
+    if (query.includes('today')) {
+      const start = new Date(now.setHours(0, 0, 0, 0));
+      return { start: start.toISOString(), end: new Date().toISOString() };
+    }
+
+    if (query.includes('week')) {
+      const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return { start: start.toISOString(), end: new Date().toISOString() };
+    }
+
+    if (query.includes('month')) {
+      const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return { start: start.toISOString(), end: new Date().toISOString() };
+    }
+
+    return undefined;
+  }
+
+  private extractEntityFromQuery(query: string): string {
+    // Extract specific file/class/function names from query
+    const words = query.split(/\s+/);
+    for (const word of words) {
+      if (word.includes('.') || word.includes('/') || /^[A-Z][a-zA-Z0-9]*$/.test(word)) {
+        return word;
+      }
+    }
+    return '*';
+  }
+
+  private extractAggregation(query: string): any {
+    if (query.includes('count') || query.includes('how many')) {
+      return { function: 'count', field: 'name' };
+    }
+    if (query.includes('average')) {
+      return { function: 'avg', field: 'confidence' };
+    }
+    if (query.includes('sum')) {
+      return { function: 'sum', field: 'confidence' };
+    }
+    return { function: 'count', field: 'name' };
+  }
+
+  private extractGroupBy(query: string): any[] | undefined {
+    if (query.includes('by type') || query.includes('by node type')) {
+      return [{ field: 'type' }];
+    }
+    if (query.includes('by language')) {
+      return [{ field: 'properties.language' }];
+    }
+    if (query.includes('by file')) {
+      return [{ field: 'path' }];
+    }
+    return undefined;
+  }
+
+  private extractFilter(query: string, options: QueryOptions): any | undefined {
+    const conditions: any[] = [];
+
+    if (options.type) {
+      conditions.push({ field: 'type', operator: 'eq', value: options.type });
+    }
+
+    if (query.includes('function')) {
+      conditions.push({ field: 'type', operator: 'eq', value: 'function' });
+    }
+
+    if (query.includes('class')) {
+      conditions.push({ field: 'type', operator: 'eq', value: 'class' });
+    }
+
+    return conditions.length > 0 ? { conditions, operator: 'AND' } : undefined;
+  }
+
+  private convertToAdvancedQuery(query: string): string {
+    // Convert natural language to Cypher-like syntax
+    let cypherQuery = query;
+
+    // Replace common patterns
+    cypherQuery = cypherQuery.replace(/related to (\w+)/gi, 'MATCH (n)-[:RELATES_TO]->(m {name: "$1"})');
+    cypherQuery = cypherQuery.replace(/depends on (\w+)/gi, 'MATCH (n)-[:DEPENDS_ON]->(m {name: "$1"})');
+    cypherQuery = cypherQuery.replace(/functions in (\w+)/gi, 'MATCH (f:file {name: "$1"})-[:CONTAINS]->(func:function)');
+
+    return cypherQuery;
+  }
+
+  private extractQueryParameters(query: string, options: QueryOptions): any {
+    return {
+      limit: options.limit || 10,
+      type: options.type,
+      confidence: options.confidence
+    };
+  }
+
+  private calculateRelevanceScore(node: MindMapNode, queryLower: string, options: QueryOptions = {}): number {
     let score = 0;
 
+    // Use original query terms for primary scoring
+    const originalTerms = queryLower.trim().split(/\s+/).filter(word => word.length > 0);
+
+    // Enhanced searchable text with semantic information
+    const searchableContent = [
+      node.name,
+      node.path,
+      this.inferFunctionPurpose(node),
+      this.extractSemanticTags(node)
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    // Primary matching score using original query
+    let originalMatches = 0;
+    for (const term of originalTerms) {
+      if (searchableContent.includes(term)) {
+        originalMatches++;
+      }
+    }
+    const originalRatio = originalMatches / originalTerms.length;
+    score += originalRatio * 12; // Strong score for original matches
+
     // Exact name match gets highest score
-    if (node.name.toLowerCase() === queryLower) score += 10;
-    else if (node.name.toLowerCase().includes(queryLower)) score += 5;
+    if (node.name.toLowerCase() === queryLower) score += 15;
+    else if (node.name.toLowerCase().includes(queryLower)) score += 8;
 
-    // Path matching
-    if (node.path?.toLowerCase().includes(queryLower)) score += 3;
+    // Path matching (important for file queries)
+    if (node.path && originalTerms.length === 1) {
+      if (node.path.toLowerCase().includes(queryLower)) {
+        score += 10; // High score for path matches
+      }
+    } else if (node.path && originalTerms.every(term => node.path!.toLowerCase().includes(term))) {
+      score += 10; // High score for multi-term path matches
+    }
 
-    // Extension/language matching
-    if (node.metadata.extension === queryLower) score += 4;
-    if (node.properties?.language === queryLower) score += 4;
+    // Semantic expansion for broader matches (lower weight)
+    const expandedQuery = this.expandSemanticQuery(queryLower);
+    const allQueryTerms = expandedQuery.toLowerCase().split(/\s+/);
+    const semanticTerms = allQueryTerms.filter(term => !originalTerms.includes(term));
 
-    // Framework matching
-    if (node.properties?.framework === queryLower) score += 4;
+    if (semanticTerms.length > 0) {
+      const semanticMatches = semanticTerms.filter(term => searchableContent.includes(term)).length;
+      const semanticRatio = semanticMatches / semanticTerms.length;
+      score += semanticRatio * 4; // Lower weight for semantic matches
+    }
 
-    // Type-specific scoring
+    // Context-aware boosting
+    score += this.calculateContextBoost(node, options);
+
+    // Hierarchical context integration
+    if (this.hierarchicalContext && typeof (this.hierarchicalContext as any).getRelevanceBoost === 'function') {
+      const contextBoost = (this.hierarchicalContext as any).getRelevanceBoost(node.id, queryLower);
+      score += contextBoost * 5; // Context-aware relevance boost
+    }
+
+    // Directory context awareness (additional boost)
+    if (options.activeFiles && options.activeFiles.some(f =>
+        node.path && f.includes(node.path.split('/').slice(0, -1).join('/')))) {
+      score += 2; // Boost if in current working directory context
+    }
+
+    // Language/Framework matching
+    if (node.properties?.language === queryLower) score += 6;
+    if (node.properties?.framework === queryLower) score += 6;
+
+    // Type-specific scoring with purpose matching
     if (node.type === 'function') {
-      score += 2; // Boost for functions
+      score += 3;
+      const purpose = this.inferFunctionPurpose(node);
+      if (purpose && originalTerms.some(term => purpose.includes(term))) {
+        score += 4; // Boost for purpose match
+      }
       if (node.metadata.parameters && node.metadata.parameters.length > 0) {
-        score += 1; // Extra for functions with parameters
+        score += 1;
       }
     }
 
     if (node.type === 'class') {
-      score += 3; // Higher boost for classes
+      score += 4;
       if (node.metadata.methods && node.metadata.methods.length > 0) {
-        score += 1; // Extra for classes with methods
+        score += 2;
+        // Check if query matches any method names
+        const methods = node.metadata.methods as string[];
+        if (methods.some(m => m.toLowerCase().includes(queryLower))) {
+          score += 3;
+        }
       }
     }
 
-    // Confidence boost
+    // Multi-modal confidence fusion
     score *= node.confidence;
 
-    // Recent activity boost
+    // Temporal relevance - boost recent and frequently accessed nodes
     const daysSinceUpdate = (Date.now() - node.lastUpdated.getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSinceUpdate < 1) score *= 1.5;
+    if (daysSinceUpdate < 1) score *= 1.8;
+    else if (daysSinceUpdate < 3) score *= 1.4;
     else if (daysSinceUpdate < 7) score *= 1.2;
 
-    return score;
+    // Hebbian learning boost - nodes that were co-activated get preference
+    if (this.hebbianLearning && typeof (this.hebbianLearning as any).getAssociationStrength === 'function') {
+      const hebbianBoost = (this.hebbianLearning as any).getAssociationStrength(node.id, queryLower);
+      score += hebbianBoost * 3;
+    }
+
+    return Math.max(0, score);
+  }
+
+  /**
+   * Calculate context-aware boost based on current session and task context
+   */
+  private calculateContextBoost(node: MindMapNode, options: QueryOptions): number {
+    let contextBoost = 0;
+
+    // Active files context - boost nodes from files currently being worked on
+    if (options.activeFiles && options.activeFiles.length > 0) {
+      const isInActiveFile = options.activeFiles.some(activeFile =>
+        node.path && (node.path === activeFile || node.path.includes(activeFile))
+      );
+      if (isInActiveFile) {
+        contextBoost += 5;
+      }
+    }
+
+    // Current task context - boost nodes related to current task
+    if (options.currentTask) {
+      const taskTerms = options.currentTask.toLowerCase().split(/\s+/);
+      const nodeContent = [node.name, node.path, this.inferFunctionPurpose(node)]
+        .filter(Boolean).join(' ').toLowerCase();
+
+      const taskRelevance = taskTerms.filter(term => nodeContent.includes(term)).length / taskTerms.length;
+      contextBoost += taskRelevance * 4;
+    }
+
+    // Framework/Language context matching
+    if (options.frameworkContext && node.properties?.framework) {
+      if (options.frameworkContext.includes(node.properties.framework)) {
+        contextBoost += 3;
+      }
+    }
+
+    if (options.languageContext && node.properties?.language) {
+      if (options.languageContext.includes(node.properties.language)) {
+        contextBoost += 2;
+      }
+    }
+
+    // Recent errors context - boost nodes that might help with recent errors
+    if (options.recentErrors && options.recentErrors.length > 0) {
+      const isErrorRelated = options.recentErrors.some(error =>
+        node.path && error.toLowerCase().includes(node.path.toLowerCase())
+      );
+      if (isErrorRelated) {
+        contextBoost += 4;
+      }
+    }
+
+    return contextBoost;
   }
 
   private getRelatedEdges(nodeIds: string[]): MindMapEdge[] {
