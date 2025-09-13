@@ -1,8 +1,8 @@
-# CLAUDE.md - Mind Map MCP v1.0.0
+# CLAUDE.md - Mind Map MCP v1.0.1
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Current Status**: Production Ready v1.0.0 - Complete enterprise-grade brain-inspired intelligence system with organized test suite.
+**Current Status**: Production Ready v1.0.1 - Published on npm with comprehensive Claude Code integration documentation and enhanced README.
 
 ## Common Commands
 
@@ -28,8 +28,22 @@ npm run test:coverage
 
 ### Testing the MCP Server
 ```bash
-# Test the server functionality
-node test-server.js
+# Test core MCP functionality (main integration test)
+node tests/integration/test-server.js
+
+# Test brain-inspired intelligence features
+node tests/brain-inspired/test-attention-system.js
+node tests/brain-inspired/test-hebbian-complete.js
+node tests/brain-inspired/test-inhibitory-simple.js
+
+# Test multi-language AST analysis
+node tests/language-ast/test-python-ast.js
+node tests/language-ast/test-java-ast.js
+node tests/language-ast/test-rust-ast.js
+
+# Test performance and scalability
+node tests/performance/test-scalability.js
+node tests/performance/test-caching.js
 
 # Start the server directly
 npm start
@@ -43,6 +57,21 @@ node dist/index.js
 - Built files are output to `dist/` directory
 - The main entry point is `dist/index.js`
 
+### npm Package Information
+- **Package Name**: `mind-map-mcp`
+- **Current Version**: v1.0.1
+- **npm Registry**: https://www.npmjs.com/package/mind-map-mcp
+- **Install Globally**: `npm install -g mind-map-mcp`
+- **Auto Setup**: `npx mind-map-mcp init-claude-code`
+- **GitHub Repository**: https://github.com/nerfels/mind-map
+
+### Claude Code Integration Status
+- **33 Advanced MCP Tools** available when integrated with Claude
+- **Brain-Inspired Intelligence** with associative memory, Hebbian learning, inhibitory patterns
+- **Multi-Language Support** for TypeScript, JavaScript, Python, Java, Go, Rust, C++
+- **Development Tooling** with 80+ integrated tools across all supported languages
+- **Enterprise Features** including scalability management and user customization
+
 ## Architecture Overview
 
 This is a **Model Context Protocol (MCP) server** that provides intelligent project analysis and learning capabilities for Claude Code. The architecture follows a layered approach:
@@ -53,7 +82,7 @@ This is a **Model Context Protocol (MCP) server** that provides intelligent proj
 - Main MCP server class implementing the MCP protocol
 - Handles stdio transport communication with Claude Code
 - Routes tool calls to appropriate handlers
-- Manages 6 MCP tools: `scan_project`, `query_mindmap`, `update_mindmap`, `get_context`, `suggest_exploration`, `get_stats`
+- Manages 33 MCP tools including core tools like `scan_project`, `query_mindmap`, advanced tools like `analyze_architecture`, `predict_errors`, and brain-inspired tools like `get_attention_stats`, `allocate_attention`
 
 **MindMapEngine** (`src/core/MindMapEngine.ts`)
 - Core intelligence layer that orchestrates all operations
@@ -238,5 +267,44 @@ The `test-server.js` is a standalone testing script that validates MCP protocol 
 - Error prediction accuracy: > 80%
 - Solution effectiveness: Track via confidence scores
 - Learning velocity: Measure improvement over sessions
-- add to memmory, use the mind map mcp for store new thing you learn, and to get ideas and structures you can use
+
+## v1.0.1 Current State and Achievements
+
+### 📦 Published npm Package Status
+- **Production Ready**: Published and available on npm registry
+- **Easy Installation**: `npm install -g mind-map-mcp` or `npx mind-map-mcp`
+- **Auto Setup**: Automated Claude Code integration setup
+- **Documentation Complete**: Comprehensive README with setup guides
+
+### 🧪 Test Suite Organization (v1.0.1)
+The project now has a completely organized test structure:
+- `tests/brain-inspired/` (12 tests) - Brain intelligence system validation
+- `tests/integration/` (3 tests) - MCP protocol and Claude integration
+- `tests/language-ast/` (6 tests) - Multi-language AST parsing
+- `tests/performance/` (6 tests) - Performance and scalability
+- `tests/core-features/` (4 tests) - Core functionality validation
+- `tests/example-files/` (5 files) - Example source code files
+
+### 🧠 Advanced System Integration
+All brain-inspired features are fully operational:
+- **Hebbian Learning**: Co-activation strengthening working correctly
+- **Inhibitory Learning**: Failure pattern avoidance system active
+- **Attention System**: Multi-modal attention allocation functional
+- **Pattern Prediction**: Emerging pattern detection and forecasting
+- **Bi-temporal Knowledge**: Complete audit trail and time-based analysis
+
+### 🚀 Deployment and Distribution
+- **GitHub**: Source code and issues at https://github.com/nerfels/mind-map
+- **npm**: Global package distribution ready for widespread use
+- **Claude Integration**: Production-ready MCP server for Claude Code
+- **Documentation**: Complete user guides and troubleshooting
+
+### 📈 Usage Recommendations
+**For Development Sessions with Claude:**
+1. Always start with: "Please scan the project and get statistics"
+2. Use predictive features: "Please predict potential errors before I make changes"
+3. Leverage intelligence: "Please analyze architecture and suggest improvements"
+4. Update learning: "Please update mind map with [successful task completion]"
+
+**Memory and Learning Note**: Use the mind map MCP to store new learnings, ideas, and structural insights discovered during development. The system learns and improves with each interaction.
 - Add to memorize, before each task read relevants from the mind map, and after each task update with new relevents. the idea that the explain of the project will be there, each problem we found and we dont want to repeat need to be there.
