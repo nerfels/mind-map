@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.0.1
+# Mind Map MCP Server v1.1.0 🧠
 
-**Enterprise-Grade Multi-Language Intelligence Complete** - An advanced Model Context Protocol (MCP) server that creates and maintains a persistent knowledge graph of your codebase for Claude Code. Features comprehensive AST analysis, predictive error detection, intelligent learning systems, cross-language dependency analysis, and integrated development tooling for 6 programming languages.
+**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, and pattern prediction for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.0.1
+## 🚀 Current Status: Production Ready v1.1.0
 
-**✅ Complete Feature Set** | **✅ Brain-Inspired Intelligence** | **✅ 33 Advanced MCP Tools** | **✅ Enterprise Scalability** | **✅ User Customization** | **✅ Organized Test Suite**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction**
 
-**Latest Update**: Added comprehensive Claude Code integration guide with installation instructions, usage examples, and troubleshooting.
+**🧠 Latest Update v1.1.0**: Complete brain-inspired intelligence implementation with Hebbian learning, hierarchical context, attention mechanisms, bi-temporal knowledge tracking, and pattern prediction engine.
 
 ## 📦 Installation & Setup
 
@@ -88,6 +88,24 @@ Please predict potential errors in [filename] and suggest improvements.
 
 # After completing work:
 Please update the mind map with the successful completion of [task description].
+```
+
+#### **🧠 Brain-Inspired Intelligence Features**
+```
+# Hebbian Learning - "Neurons that fire together, wire together"
+Please show me the Hebbian learning statistics and top co-activation patterns.
+
+# Hierarchical Context - Multi-level awareness
+Please get the hierarchical context stats and most relevant context items.
+
+# Attention System - Dynamic focus allocation
+Please show the attention system statistics and allocate attention to important nodes.
+
+# Bi-temporal Knowledge - Valid vs Transaction time tracking
+Please get bi-temporal statistics and create a context window for this session.
+
+# Pattern Prediction - Anticipatory intelligence
+Please get pattern predictions and show emerging patterns.
 ```
 
 #### **Advanced Intelligence Features**

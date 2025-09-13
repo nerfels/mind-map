@@ -597,10 +597,34 @@ export class MindMapEngine {
         1.0 / result.nodes.length // Strength inversely proportional to result set size
       );
     }
-    
+
+    // Record Hebbian co-activation for top results (brain-inspired learning)
+    if (result.nodes.length > 1 && !options.bypassHebbianLearning) {
+      const topNodes = result.nodes.slice(0, Math.min(5, result.nodes.length));
+
+      // Record co-activation for each primary node with others
+      for (let i = 0; i < topNodes.length; i++) {
+        const primaryNode = topNodes[i];
+        const coActivatedNodes = topNodes.filter((_, idx) => idx !== i).map(n => n.id);
+
+        if (coActivatedNodes.length > 0) {
+          // Calculate activation strength based on result position and confidence
+          const positionWeight = 1.0 - (i * 0.15); // Decay by position
+          const activationStrength = Math.min(1.0, primaryNode.confidence * positionWeight);
+
+          await this.hebbianLearning.recordCoActivation(
+            primaryNode.id,
+            coActivatedNodes,
+            context || query, // Use context or query as learning context
+            activationStrength
+          );
+        }
+      }
+    }
+
     // Cache the result
     await this.queryCache.set(query, context, result);
-    
+
     return result;
   }
 
@@ -2820,5 +2844,23 @@ export class MindMapEngine {
 
   async analyzeAndPredict(): Promise<void> {
     await this.patternPrediction.analyzeAndPredict();
+  }
+
+  // Hebbian Learning System Methods
+  async getHebbianStats() {
+    return this.hebbianLearning.getStats();
+  }
+
+  getHebbianConnections(nodeId?: string) {
+    return this.hebbianLearning.getConnections(nodeId);
+  }
+
+  async recordCoActivation(
+    primaryNodeId: string,
+    coActivatedNodeIds: string[],
+    context: string = '',
+    activationStrength: number = 1.0
+  ): Promise<void> {
+    await this.hebbianLearning.recordCoActivation(primaryNodeId, coActivatedNodeIds, context, activationStrength);
   }
 }

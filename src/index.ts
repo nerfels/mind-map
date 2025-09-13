@@ -213,7 +213,7 @@ class MindMapMCPServer {
       includeMetadata: include_metadata,
       useActivation: false,  // Use simple linear query for stability
       bypassInhibition: true,  // Skip inhibitory learning for basic queries
-      bypassHebbianLearning: true,  // Skip Hebbian learning for basic queries
+      bypassHebbianLearning: false,  // Enable Hebbian learning for associative intelligence
       bypassAttention: true,  // Skip attention system for basic queries
       bypassBiTemporal: true,  // Skip bi-temporal processing for basic queries
       includeParentContext: false,  // Skip hierarchical context

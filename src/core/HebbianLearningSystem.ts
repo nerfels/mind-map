@@ -25,7 +25,7 @@ interface CoActivationEvent {
   activationStrength: number;
 }
 
-interface HebbianConnection {
+export interface HebbianConnection {
   id: string;
   sourceNodeId: string;
   targetNodeId: string;

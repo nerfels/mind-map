@@ -1,7 +1,7 @@
 {
   "name": "mind-map-mcp",
-  "version": "1.0.2",
-  "description": "Mind Map Model Context Protocol server for Claude Code - intelligent project knowledge graph",
+  "version": "1.1.0",
+  "description": "Mind Map Model Context Protocol server for Claude Code - intelligent project knowledge graph with brain-inspired intelligence",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -23,7 +23,11 @@
     "mind-map",
     "project-analysis",
     "knowledge-graph",
-    "code-intelligence"
+    "code-intelligence",
+    "brain-inspired",
+    "hebbian-learning",
+    "associative-memory",
+    "neural-networks"
   ],
   "author": "Mind Map MCP Team",
   "license": "MIT",
