@@ -21,6 +21,7 @@ import { ScalabilityManager } from './ScalabilityManager.js';
 import { UserConfigurationManager } from './UserConfigurationManager.js';
 import { CustomPatternEngine } from './CustomPatternEngine.js';
 import { MultiModalConfidenceFusion, MultiModalConfidence, ConfidenceEvidence, FusedConfidence } from './MultiModalConfidenceFusion.js';
+import { EpisodicMemory, Episode, EpisodeContext, EpisodeAction, SimilarityMatch, EpisodeStats } from './EpisodicMemory.js';
 import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight, CacheStats, ProcessingProgress, InhibitionResult, ScalabilityConfig, ProjectScale, ResourceUsage, UserPreferences, CustomPatternRule, ProjectLearningConfig, PrivacySettings, UserFeedback } from '../types/index.js';
 import { join } from 'path';
 
@@ -48,6 +49,7 @@ export class MindMapEngine {
   private userConfigManager: UserConfigurationManager;
   private customPatternEngine: CustomPatternEngine;
   private multiModalFusion: MultiModalConfidenceFusion;
+  private episodicMemory: EpisodicMemory;
   private projectRoot: string;
 
   constructor(projectRoot: string) {
@@ -155,6 +157,7 @@ export class MindMapEngine {
       uncertaintyDiscount: 0.25,
       conflictThreshold: 0.35
     });
+    this.episodicMemory = new EpisodicMemory(this.storage);
   }
 
   async initialize(): Promise<void> {
@@ -3479,5 +3482,59 @@ export class MindMapEngine {
         confidenceUncertainty: fusedConfidence.uncertainty
       };
     });
+  }
+
+  // ========================================
+  // EPISODIC MEMORY METHODS
+  // ========================================
+
+  /**
+   * Store an episode with rich context for future similarity matching
+   */
+  async storeEpisode(
+    taskDescription: string,
+    context: Partial<EpisodeContext>,
+    actions: EpisodeAction[],
+    outcome: 'success' | 'failure' | 'partial'
+  ): Promise<string> {
+    return await this.episodicMemory.storeEpisode(taskDescription, context, actions, outcome);
+  }
+
+  /**
+   * Find similar past episodes for a given context
+   */
+  async findSimilarEpisodes(
+    context: Partial<EpisodeContext>,
+    limit: number = 5,
+    minSimilarity: number = 0.3
+  ): Promise<SimilarityMatch[]> {
+    return await this.episodicMemory.findSimilarEpisodes(context, limit, minSimilarity);
+  }
+
+  /**
+   * Get episode-based suggestions for current task
+   */
+  async getEpisodeBasedSuggestions(
+    currentContext: Partial<EpisodeContext>
+  ): Promise<{
+    suggestions: string[];
+    basedOnEpisodes: string[];
+    confidence: number;
+  }> {
+    return await this.episodicMemory.getEpisodeBasedSuggestions(currentContext);
+  }
+
+  /**
+   * Get episodic memory statistics
+   */
+  getEpisodicStats(): EpisodeStats {
+    return this.episodicMemory.getStats();
+  }
+
+  /**
+   * Consolidate episodic memories - strengthen frequently accessed patterns
+   */
+  async consolidateEpisodicMemories(): Promise<void> {
+    await this.episodicMemory.consolidateMemories();
   }
 }

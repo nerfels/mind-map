@@ -1,6 +1,6 @@
 export interface MindMapNode {
   id: string;
-  type: 'file' | 'directory' | 'function' | 'class' | 'error' | 'pattern';
+  type: 'file' | 'directory' | 'function' | 'class' | 'error' | 'pattern' | 'episodic_memory';
   name: string;
   path?: string;
   metadata: Record<string, any>;

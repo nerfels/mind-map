@@ -39,7 +39,9 @@ Brain-Inspired Knowledge Graph
 ```
 Project Knowledge Graph
 ├── File Structure Layer (directories, files, sizes, types)
-├── Code Structure Layer (classes, functions, imports, exports)  
+├── Code Structure Layer (classes, functions, imports, exports)
+├── 📚 Documentation Layer (markdown, configs, schemas, metadata)
+├── 🔗 Link Layer (internal refs, external deps, cross-references)
 ├── Dependency Layer (internal/external dependencies, data flow)
 ├── Pattern Layer (conventions, frameworks, architectural patterns)
 ├── History Layer (changes, fixes, errors, solutions)
@@ -62,13 +64,18 @@ Project Knowledge Graph
 #### B. MCP Server Interface
 - **Associative Tools**:
   - `query_mindmap`: **Associative search** with activation spreading
-  - `update_mindmap`: Add knowledge + **Hebbian learning** updates  
+  - `update_mindmap`: Add knowledge + **Hebbian learning** updates
   - `get_context`: Hierarchical context (immediate → session → project → domain)
   - `suggest_exploration`: **Brain-like** recommendations via activation patterns
   - `predict_errors`: Proactive error prediction via pattern matching
   - `suggest_fixes`: **Inhibitory learning** - avoid previously failed solutions
   - `analyze_architecture`: Pattern recognition with confidence scoring
-  - **16 total tools** including advanced querying and multi-language intelligence
+- **Document Intelligence Tools**:
+  - `analyze_documentation`: Extract structure, links, and relationships from docs
+  - `trace_documentation_links`: Follow reference chains across document network
+  - `detect_doc_code_gaps`: Find missing documentation and implementation gaps
+  - `suggest_documentation_updates`: Proactive doc maintenance recommendations
+  - **20+ total tools** including advanced querying, multi-language intelligence, and document analysis
 
 #### C. Brain-Inspired Learning System
 - **Hebbian Learning**: "Neurons that fire together, wire together" - automatic relationship strengthening
@@ -174,16 +181,52 @@ Project Knowledge Graph
 - **Explainability Traces**: 90% interpretable decision pathways
 - **Theorem Proving**: AlphaGeometry-style mathematical reasoning
 
+#### Phase 7.5: Document Intelligence Integration (Weeks 13-14) 📚 COMPREHENSIVE KNOWLEDGE
+**Research Basis**: Multi-modal knowledge graphs combining code + documentation + configuration
+**Expected Impact**: Complete project understanding through unified document-code intelligence
+
+##### 7.5.1 Markdown & Documentation Analysis 🔥🔥🔥 HIGH ROI
+- **MarkdownAnalyzer**: Extract structure, headers, links, code blocks
+- **Link Graph Analysis**: Internal/external link mapping with relationship types
+- **Documentation Relationships**: Map README ↔ code, API docs ↔ implementations
+- **Semantic Link Scoring**: Context-based link strength and relevance weighting
+
+##### 7.5.2 Multi-Format Document Support
+- **Configuration Intelligence**: JSON Schema, OpenAPI, YAML configs, TOML dependencies
+- **Structured Data**: CSV schemas, XML configs, Protocol Buffers, GraphQL schemas
+- **Documentation Formats**: ReStructuredText, AsciiDoc, Wiki markup, LaTeX
+- **Project Metadata**: LICENSE analysis, CHANGELOG patterns, CONTRIBUTING workflows
+
+##### 7.5.3 Brain-Inspired Document Learning
+- **Document-Code Hebbian Learning**: Strengthen relationships via co-reference patterns
+- **Documentation Context Hierarchy**: Extend existing 4-level context with doc layer
+- **Link Pattern Prediction**: Predict missing docs, outdated content, documentation debt
+- **Inhibitory Documentation Learning**: Avoid suggesting previously failed doc patterns
+
+##### 7.5.4 Advanced Document Intelligence
+- **Cross-Document Association**: Semantic clustering via link traversal patterns
+- **Broken Link Detection**: Find orphaned references with confidence scoring
+- **Implementation Gap Analysis**: Code without docs, docs without implementations
+- **Temporal Documentation Tracking**: Bi-temporal model for doc evolution vs. code changes
+
 ## Success Metrics (Research-Backed Targets)
 
 ### 🧠 Associative Performance
 1. **Query Relevance**: 50-70% improvement via activation spreading
-2. **Failure Avoidance**: 30% reduction in suggesting previously failed approaches  
+2. **Failure Avoidance**: 30% reduction in suggesting previously failed approaches
 3. **Learning Speed**: Automatic relationship discovery vs. manual updates
 4. **Response Time**: Maintain <300ms P95 latency (Graphiti benchmark)
 5. **Energy Efficiency**: 100x reduction via neuromorphic computing (Hala Point benchmark)
 6. **Memory Retention**: Continual learning without catastrophic forgetting (EWC-based)
 7. **Explainability**: 90% interpretable decisions via neural-symbolic integration
+
+### 📚 Document Intelligence Performance
+1. **Documentation Coverage**: 90% doc-code relationship mapping accuracy
+2. **Link Analysis**: <1% broken link false positive rate via semantic validation
+3. **Gap Detection**: 80% precision in identifying missing documentation
+4. **Cross-Format Support**: 15+ document formats with unified intelligence
+5. **Temporal Tracking**: Bi-temporal model for doc evolution patterns
+6. **Context Integration**: Documentation layer seamlessly integrated with existing 4-level hierarchy
 
 ### 📊 Current vs. Target Performance (2025 Research-Backed)
 | Metric | Current | 2025 Target | Implementation Method |
@@ -197,6 +240,9 @@ Project Knowledge Graph
 | Memory Retention | Session-only | Lifelong | Elastic weight consolidation |
 | Explainability | 0% | 90% interpretable | Neural-symbolic reasoning |
 | Processing Speed | Linear | 20x faster | Hala Point parallel activation |
+| **Documentation Coverage** | **Code-only** | **90% doc-code mapping** | **Document intelligence integration** |
+| **Link Analysis** | **Manual** | **<1% broken link FP** | **Semantic link validation** |
+| **Cross-Format Support** | **0 formats** | **15+ document formats** | **Multi-format analyzers** |
 
 ## Technical Considerations
 

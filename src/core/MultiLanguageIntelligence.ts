@@ -167,12 +167,15 @@ export class MultiLanguageIntelligence {
     const filesByLanguage = new Map<string, MindMapNode[]>();
     
     for (const [_, node] of graph.nodes) {
-      if (node.type === 'file' && node.metadata.language) {
-        const language = node.metadata.language;
-        if (!filesByLanguage.has(language)) {
-          filesByLanguage.set(language, []);
+      if (node.type === 'file') {
+        // Check both metadata.language and properties.language for compatibility
+        const language = node.metadata.language || node.properties?.language;
+        if (language) {
+          if (!filesByLanguage.has(language)) {
+            filesByLanguage.set(language, []);
+          }
+          filesByLanguage.get(language)!.push(node);
         }
-        filesByLanguage.get(language)!.push(node);
       }
     }
 
@@ -213,37 +216,39 @@ export class MultiLanguageIntelligence {
 
     // Collect language statistics
     for (const [_, node] of graph.nodes) {
-      if (node.type === 'file' && node.metadata.language) {
-        const lang = node.metadata.language;
-        
-        if (!languages.has(lang)) {
-          languages.set(lang, {
-            fileCount: 0,
-            primaryFrameworks: [],
-            entryPoints: [],
-            buildTools: []
-          });
-        }
-
-        const langData = languages.get(lang)!;
-        langData.fileCount++;
-
-        // Detect frameworks
-        if (node.metadata.framework) {
-          if (!langData.primaryFrameworks.includes(node.metadata.framework)) {
-            langData.primaryFrameworks.push(node.metadata.framework);
+      if (node.type === 'file') {
+        // Check both metadata.language and properties.language for compatibility
+        const lang = node.metadata.language || node.properties?.language;
+        if (lang) {
+          if (!languages.has(lang)) {
+            languages.set(lang, {
+              fileCount: 0,
+              primaryFrameworks: [],
+              entryPoints: [],
+              buildTools: []
+            });
           }
-        }
 
-        // Detect entry points
-        if (this.isEntryPoint(node)) {
-          langData.entryPoints.push(node.path || node.name);
-        }
+          const langData = languages.get(lang)!;
+          langData.fileCount++;
 
-        // Detect build tools
-        const buildTool = this.detectBuildTool(node);
-        if (buildTool && !langData.buildTools.includes(buildTool)) {
-          langData.buildTools.push(buildTool);
+          // Detect frameworks - check both metadata and properties
+          const framework = node.metadata.framework || node.properties?.framework;
+          if (framework) {
+            if (!langData.primaryFrameworks.includes(framework)) {
+              langData.primaryFrameworks.push(framework);
+            }
+          }
+          // Detect entry points
+          if (this.isEntryPoint(node)) {
+            langData.entryPoints.push(node.path || node.name);
+          }
+
+          // Detect build tools
+          const buildTool = this.detectBuildTool(node);
+          if (buildTool && !langData.buildTools.includes(buildTool)) {
+            langData.buildTools.push(buildTool);
+          }
         }
       }
     }
@@ -473,8 +478,10 @@ export class MultiLanguageIntelligence {
       for (const [_, node] of graph.nodes) {
         if (node.type === 'file' && this.matchesPattern(node, interopPattern.evidence)) {
           matchingFiles.push(node.path || node.name);
-          if (node.metadata.language && !languages.includes(node.metadata.language)) {
-            languages.push(node.metadata.language);
+          // Check both metadata.language and properties.language for compatibility
+          const language = node.metadata.language || node.properties?.language;
+          if (language && !languages.includes(language)) {
+            languages.push(language);
           }
         }
       }
