@@ -22,7 +22,8 @@ import { UserConfigurationManager } from './UserConfigurationManager.js';
 import { CustomPatternEngine } from './CustomPatternEngine.js';
 import { MultiModalConfidenceFusion, MultiModalConfidence, ConfidenceEvidence, FusedConfidence } from './MultiModalConfidenceFusion.js';
 import { EpisodicMemory, Episode, EpisodeContext, EpisodeAction, SimilarityMatch, EpisodeStats } from './EpisodicMemory.js';
-import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight, CacheStats, ProcessingProgress, InhibitionResult, ScalabilityConfig, ProjectScale, ResourceUsage, UserPreferences, CustomPatternRule, ProjectLearningConfig, PrivacySettings, UserFeedback } from '../types/index.js';
+import { CallPatternAnalyzer, CallPattern, FunctionCallGraph, CallGraphNode } from './CallPatternAnalyzer.js';
+import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight, CacheStats, ProcessingProgress, InhibitionResult, ScalabilityConfig, ProjectScale, ResourceUsage, UserPreferences, CustomPatternRule, ProjectLearningConfig, PrivacySettings, UserFeedback, CallPatternAnalysis } from '../types/index.js';
 import { join } from 'path';
 
 export class MindMapEngine {
@@ -50,6 +51,7 @@ export class MindMapEngine {
   private customPatternEngine: CustomPatternEngine;
   private multiModalFusion: MultiModalConfidenceFusion;
   private episodicMemory: EpisodicMemory;
+  private callPatternAnalyzer: CallPatternAnalyzer;
   private projectRoot: string;
 
   constructor(projectRoot: string) {
@@ -158,6 +160,7 @@ export class MindMapEngine {
       conflictThreshold: 0.35
     });
     this.episodicMemory = new EpisodicMemory(this.storage);
+    this.callPatternAnalyzer = new CallPatternAnalyzer();
   }
 
   async initialize(): Promise<void> {
@@ -996,6 +999,193 @@ export class MindMapEngine {
    */
   async analyzeProjectScale(): Promise<ProjectScale> {
     return this.scalabilityManager.analyzeProjectScale();
+  }
+
+  /**
+   * Analyze call patterns and relationships for TypeScript/JavaScript files
+   */
+  async analyzeCallPatterns(filePaths?: string[]): Promise<CallPatternAnalysis> {
+    const graph = this.storage.getGraph();
+    let targetFiles = filePaths;
+
+    // If no specific files provided, analyze all TypeScript/JavaScript files
+    if (!targetFiles) {
+      targetFiles = Array.from(graph.nodes.values())
+        .filter(node => node.type === 'file' && node.path)
+        .filter(node => {
+          const ext = node.path!.split('.').pop()?.toLowerCase();
+          return ext && ['ts', 'tsx', 'js', 'jsx'].includes(ext);
+        })
+        .map(node => node.path!);
+    }
+
+    const allNodes: MindMapNode[] = [];
+    const allEdges: MindMapEdge[] = [];
+    const allCallPatterns: CallPattern[] = [];
+    const callGraphs: FunctionCallGraph[] = [];
+
+    let processedFiles = 0;
+    const totalFiles = targetFiles.length;
+
+    console.log(`🔗 Analyzing call patterns for ${totalFiles} files...`);
+
+    // Analyze each file
+    for (const filePath of targetFiles) {
+      try {
+        const result = await this.callPatternAnalyzer.analyzeFile(filePath);
+
+        // Add nodes and edges to storage
+        result.nodes.forEach(node => {
+          this.storage.addNode(node);
+          allNodes.push(node);
+        });
+
+        result.edges.forEach(edge => {
+          this.storage.addEdge(edge);
+          allEdges.push(edge);
+        });
+
+        allCallPatterns.push(...result.callPatterns);
+        callGraphs.push(result.callGraph);
+
+        processedFiles++;
+        if (processedFiles % 10 === 0 || processedFiles === totalFiles) {
+          console.log(`   📊 Processed ${processedFiles}/${totalFiles} files`);
+        }
+      } catch (error) {
+        console.warn(`Failed to analyze call patterns for ${filePath}:`, error);
+      }
+    }
+
+    // Perform cross-file analysis
+    console.log(`🌐 Performing cross-file call pattern analysis...`);
+    const { crossFileCallPatterns, globalCallGraph } = await this.callPatternAnalyzer.performCrossFileAnalysis();
+
+    // Add cross-file call pattern edges
+    crossFileCallPatterns.forEach((pattern, index) => {
+      const edge: MindMapEdge = {
+        id: `cross_file_call_${index}`,
+        source: `call_pattern_${pattern.callerId.replace(/[^\w]/g, '_')}`,
+        target: `call_pattern_${pattern.calleeId.replace(/[^\w]/g, '_')}`,
+        type: 'calls',
+        metadata: {
+          callType: pattern.callType,
+          isCrossFile: true,
+          sourceFile: pattern.sourceFile,
+          targetFile: pattern.targetFile,
+          confidence: pattern.confidence
+        },
+        confidence: pattern.confidence
+      };
+      this.storage.addEdge(edge);
+      allEdges.push(edge);
+    });
+
+    // Get statistics
+    const statistics = this.callPatternAnalyzer.getCallPatternStatistics();
+
+    console.log(`✅ Call pattern analysis complete:`);
+    console.log(`   📞 Total call patterns: ${statistics.totalCallPatterns}`);
+    console.log(`   🔗 Direct calls: ${statistics.directCalls}`);
+    console.log(`   📋 Method calls: ${statistics.methodCalls}`);
+    console.log(`   🏗️  Constructor calls: ${statistics.constructorCalls}`);
+    console.log(`   ⚡ Async calls: ${statistics.asyncCalls}`);
+    console.log(`   🔄 Recursive functions: ${statistics.recursiveFunctions}`);
+    console.log(`   📊 Average complexity: ${statistics.averageComplexity.toFixed(1)}`);
+    console.log(`   📏 Max call depth: ${statistics.maxCallDepth}`);
+
+    // Store analysis results in brain-inspired systems
+    await this.updateCallPatternKnowledge(allCallPatterns, globalCallGraph);
+
+    return {
+      nodes: allNodes,
+      edges: allEdges,
+      callPatterns: allCallPatterns.concat(crossFileCallPatterns),
+      callGraph: globalCallGraph,
+      statistics
+    };
+  }
+
+  /**
+   * Update brain-inspired systems with call pattern knowledge
+   */
+  private async updateCallPatternKnowledge(callPatterns: CallPattern[], callGraph: FunctionCallGraph): Promise<void> {
+    // Update Hebbian learning with call co-activations
+    for (const pattern of callPatterns) {
+      if (pattern.confidence > 0.6) {
+        await this.hebbianLearning.recordCoActivation(
+          pattern.callerId,
+          [pattern.calleeId],
+          `call_pattern_${pattern.callType}`,
+          pattern.callType === 'async_call' ? 0.9 : 0.7
+        );
+      }
+    }
+
+    // Update attention system for high-complexity functions
+    const highComplexityCallGraphNodes = Array.from(callGraph.nodes.values())
+      .filter(node => node.complexity > 5 || node.incomingCalls > 3);
+
+    if (highComplexityCallGraphNodes.length > 0) {
+      // Convert call graph nodes to mind map nodes for attention allocation
+      const mindMapNodes: MindMapNode[] = highComplexityCallGraphNodes.map(cgNode => ({
+        id: `call_pattern_${cgNode.id.replace(/[^\w]/g, '_')}`,
+        type: 'function' as const,
+        name: cgNode.name,
+        path: cgNode.filePath,
+        metadata: {
+          functionType: cgNode.type,
+          complexity: cgNode.complexity,
+          incomingCalls: cgNode.incomingCalls,
+          outgoingCalls: cgNode.outgoingCalls
+        },
+        confidence: 0.8,
+        lastUpdated: new Date()
+      }));
+
+      this.attentionSystem.allocateAttention(
+        mindMapNodes,
+        {
+          currentTask: 'call_pattern_analysis',
+          activeFiles: [...new Set(callPatterns.map(p => p.sourceFile))],
+          userGoals: ['understand_code_relationships', 'identify_complexity_hotspots']
+        }
+      );
+    }
+
+    // Update episodic memory with call pattern insights
+    const episodeContext: EpisodeContext = {
+      taskDescription: 'call_pattern_analysis',
+      activeFiles: [...new Set(callPatterns.map(p => p.sourceFile))],
+      userGoals: ['analyze_function_calls', 'map_code_relationships'],
+      projectType: 'multi_language',
+      frameworks: [],
+      languages: ['typescript', 'javascript'],
+      fileTypes: ['ts', 'tsx', 'js', 'jsx'],
+      sessionDuration: Date.now() // Will be calculated properly by episodic memory
+    };
+
+    const episodeActions: EpisodeAction[] = [
+      {
+        type: 'search',
+        target: 'call_patterns',
+        parameters: {
+          totalPatterns: callPatterns.length,
+          maxDepth: callGraph.depth,
+          recursiveFunctions: Array.from(callGraph.nodes.values()).filter(n => n.isRecursive).length
+        },
+        timestamp: new Date(),
+        success: true,
+        duration: 0 // Will be calculated by episodic memory
+      }
+    ];
+
+    await this.episodicMemory.storeEpisode(
+      'Analyzed call patterns and function relationships across TypeScript/JavaScript files',
+      episodeContext,
+      episodeActions,
+      'success'
+    );
   }
 
   // ===== Phase 4.4: User Customization Methods =====

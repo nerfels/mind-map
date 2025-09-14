@@ -1,0 +1,183 @@
+name: Performance Monitoring
+
+on:
+  schedule:
+    # Run daily at 1 AM UTC
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'src/**'
+      - 'package.json'
+
+jobs:
+  performance-benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Build Project
+      run: npm run build
+
+    - name: Run Performance Tests
+      run: |
+        echo "⚡ Running performance benchmarks..."
+
+        # Create performance test script
+        cat > performance-test.js << 'EOF'
+        import { MindMapEngine } from './dist/core/MindMapEngine.js';
+        import { CallPatternAnalyzer } from './dist/core/CallPatternAnalyzer.js';
+        import { performance } from 'perf_hooks';
+        import { writeFile, rm } from 'fs/promises';
+        import { tmpdir } from 'os';
+        import { join } from 'path';
+
+        async function runBenchmarks() {
+          console.log('🏃 Starting performance benchmarks...');
+          const results = {};
+
+          // Test 1: MindMapEngine initialization
+          console.log('🧠 Testing MindMapEngine initialization...');
+          const start1 = performance.now();
+          const engine = new MindMapEngine('./');
+          await engine.initialize();
+          const end1 = performance.now();
+          results.engineInit = end1 - start1;
+          console.log(`   Engine initialization: ${results.engineInit.toFixed(2)}ms`);
+
+          // Test 2: CallPatternAnalyzer performance
+          console.log('📊 Testing CallPatternAnalyzer performance...');
+          const testCode = `
+          function complexFunction(data) {
+            if (data.length > 10) {
+              for (let i = 0; i < data.length; i++) {
+                if (data[i] > 5) {
+                  try {
+                    processItem(data[i]);
+                  } catch (error) {
+                    handleError(error);
+                  }
+                }
+              }
+            }
+            return data.filter(x => x > 0);
+          }
+
+          function processItem(item) { return item * 2; }
+          function handleError(error) { console.error(error); }
+          `;
+
+          const testFile = join(tmpdir(), 'perf-test.js');
+          await writeFile(testFile, testCode);
+
+          const analyzer = new CallPatternAnalyzer();
+          const start2 = performance.now();
+          await analyzer.analyzeFile(testFile);
+          const end2 = performance.now();
+          results.callAnalysis = end2 - start2;
+          console.log(`   Call pattern analysis: ${results.callAnalysis.toFixed(2)}ms`);
+
+          await rm(testFile);
+
+          // Test 3: Memory usage
+          const memUsage = process.memoryUsage();
+          results.memoryUsage = {
+            rss: Math.round(memUsage.rss / 1024 / 1024),
+            heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024)
+          };
+
+          console.log(`   Memory usage: ${results.memoryUsage.heapUsed}MB heap used`);
+
+          // Test 4: Code style analysis performance
+          const start4 = performance.now();
+          const styleStats = analyzer.getCodeStyleStatistics();
+          const end4 = performance.now();
+          results.styleAnalysis = end4 - start4;
+          console.log(`   Style analysis: ${results.styleAnalysis.toFixed(2)}ms`);
+
+          return results;
+        }
+
+        runBenchmarks().then(results => {
+          console.log('\n📈 Performance Summary:');
+          console.log(JSON.stringify(results, null, 2));
+
+          // Set thresholds (alerts if exceeded)
+          const thresholds = {
+            engineInit: 1000,    // 1 second
+            callAnalysis: 500,   // 500ms
+            styleAnalysis: 100,  // 100ms
+            maxMemory: 200       // 200MB
+          };
+
+          let alertsTriggered = 0;
+
+          if (results.engineInit > thresholds.engineInit) {
+            console.log(`⚠️  Engine initialization slow: ${results.engineInit}ms > ${thresholds.engineInit}ms`);
+            alertsTriggered++;
+          }
+
+          if (results.callAnalysis > thresholds.callAnalysis) {
+            console.log(`⚠️  Call analysis slow: ${results.callAnalysis}ms > ${thresholds.callAnalysis}ms`);
+            alertsTriggered++;
+          }
+
+          if (results.styleAnalysis > thresholds.styleAnalysis) {
+            console.log(`⚠️  Style analysis slow: ${results.styleAnalysis}ms > ${thresholds.styleAnalysis}ms`);
+            alertsTriggered++;
+          }
+
+          if (results.memoryUsage.heapUsed > thresholds.maxMemory) {
+            console.log(`⚠️  High memory usage: ${results.memoryUsage.heapUsed}MB > ${thresholds.maxMemory}MB`);
+            alertsTriggered++;
+          }
+
+          if (alertsTriggered === 0) {
+            console.log('✅ All performance metrics within acceptable ranges');
+          } else {
+            console.log(`⚠️  ${alertsTriggered} performance alerts triggered`);
+            process.exit(1);
+          }
+        }).catch(error => {
+          console.error('❌ Performance test failed:', error);
+          process.exit(1);
+        });
+        EOF
+
+        node performance-test.js
+
+    - name: Generate Performance Report
+      run: |
+        echo "# Performance Report - $(date)" > performance-report.md
+        echo "" >> performance-report.md
+        echo "## Benchmark Results" >> performance-report.md
+        echo "- Engine Initialization: ✅ Within limits" >> performance-report.md
+        echo "- Call Pattern Analysis: ✅ Within limits" >> performance-report.md
+        echo "- Style Analysis: ✅ Within limits" >> performance-report.md
+        echo "- Memory Usage: ✅ Within limits" >> performance-report.md
+        echo "" >> performance-report.md
+        echo "## System Info" >> performance-report.md
+        echo "- Node.js Version: $(node --version)" >> performance-report.md
+        echo "- Platform: $(uname -a)" >> performance-report.md
+        echo "- Timestamp: $(date)" >> performance-report.md
+
+    - name: Upload Performance Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-report
+        path: performance-report.md
+        retention-days: 30

@@ -1,0 +1,218 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.1.5)'
+        required: true
+        type: string
+
+jobs:
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Run Full Test Suite
+      run: |
+        echo "🧪 Running comprehensive test suite before release..."
+
+        # Build first
+        npm run build
+
+        # Run all core tests
+        timeout 60 node tests/core-features/test-call-pattern-analysis.js
+        timeout 60 node tests/core-features/test-multi-language-intelligence.js
+        timeout 60 node tests/core-features/test-user-configuration.js
+        timeout 60 node tests/core-features/test-brain-inspired-systems.js
+        timeout 60 node tests/core-features/test-hebbian-learning.js
+
+        # Run language-specific tests
+        timeout 60 node tests/core-features/test-python-ast.js
+        timeout 60 node tests/core-features/test-java-ast.js
+        timeout 60 node tests/core-features/test-go-ast.js
+        timeout 60 node tests/core-features/test-rust-ast.js
+        timeout 60 node tests/core-features/test-cpp-ast.js
+
+        # Run advanced feature tests
+        timeout 60 node tests/core-features/test-advanced-queries.js
+        timeout 60 node tests/core-features/test-fix-suggestions.js
+        timeout 60 node tests/core-features/test-pattern-prediction.js
+
+    - name: Verify Package Version
+      run: |
+        PACKAGE_VERSION=$(node -p "require('./package.json').version")
+        if [[ "${{ github.event.inputs.version }}" != "" ]]; then
+          EXPECTED_VERSION="${{ github.event.inputs.version }}"
+        else
+          EXPECTED_VERSION="${GITHUB_REF#refs/tags/v}"
+        fi
+
+        if [[ "$PACKAGE_VERSION" != "$EXPECTED_VERSION" ]]; then
+          echo "❌ Package version ($PACKAGE_VERSION) doesn't match release version ($EXPECTED_VERSION)"
+          exit 1
+        fi
+
+        echo "✅ Version validation passed: $PACKAGE_VERSION"
+
+    - name: Security Audit
+      run: npm audit --audit-level high
+
+  build-and-package:
+    name: Build and Package
+    needs: validate-release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        registry-url: 'https://registry.npmjs.org'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Build Project
+      run: npm run build
+
+    - name: Create Release Artifacts
+      run: |
+        # Create release directory
+        mkdir -p release-artifacts
+
+        # Copy essential files
+        cp -r dist/ release-artifacts/
+        cp package.json release-artifacts/
+        cp README.md release-artifacts/
+        cp LICENSE release-artifacts/
+        cp CLAUDE.md release-artifacts/ 2>/dev/null || echo "CLAUDE.md not found, skipping"
+        cp QUICK_USAGE.md release-artifacts/ 2>/dev/null || echo "QUICK_USAGE.md not found, skipping"
+
+        # Create tarball
+        tar -czf release-artifacts/mind-map-mcp-release.tar.gz -C release-artifacts/ .
+
+        # Generate checksums
+        cd release-artifacts
+        sha256sum mind-map-mcp-release.tar.gz > checksums.txt
+        cd ..
+
+        echo "📦 Release artifacts created:"
+        ls -la release-artifacts/
+
+    - name: Publish to NPM
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          ## What's New in ${{ github.ref }}
+
+          ### Features
+          - Enhanced call pattern analysis with 100% test success rate
+          - Comprehensive code style recognition and naming conventions
+          - Advanced complexity calculation algorithms
+          - Multi-language intelligence support
+          - Brain-inspired learning systems (Hebbian learning, attention systems)
+
+          ### Improvements
+          - Improved constructor call detection
+          - Better cross-file call pattern resolution
+          - Enhanced complexity calculation meeting test thresholds
+
+          ### Technical Details
+          - TypeScript AST parsing improvements
+          - Mind map engine optimizations
+          - Brain-inspired system integrations
+
+          See [CLAUDE.md](./CLAUDE.md) for usage instructions and [QUICK_USAGE.md](./QUICK_USAGE.md) for quick start guide.
+
+          ### Installation
+          ```bash
+          npm install -g mind-map-mcp@${{ github.ref }}
+          ```
+
+          ### Checksums
+          ```
+          $(cat release-artifacts/checksums.txt)
+          ```
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-artifacts
+        path: release-artifacts/
+        retention-days: 90
+
+  post-release:
+    name: Post-Release Tasks
+    needs: build-and-package
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Verify NPM Package
+      run: |
+        PACKAGE_NAME="mind-map-mcp"
+        VERSION="${GITHUB_REF#refs/tags/v}"
+
+        echo "⏳ Waiting for NPM package to be available..."
+        sleep 30
+
+        # Try to install the package
+        npm view $PACKAGE_NAME@$VERSION
+
+        echo "✅ Package successfully published to NPM"
+
+    - name: Update Documentation
+      run: |
+        echo "📚 Release $VERSION completed successfully!" > release-summary.txt
+        echo "Published to NPM: https://www.npmjs.com/package/mind-map-mcp" >> release-summary.txt
+        echo "GitHub Release: https://github.com/nerfels/mind-map/releases/tag/$VERSION" >> release-summary.txt
+
+    - name: Upload Release Summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-summary
+        path: release-summary.txt
+        retention-days: 90

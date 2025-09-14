@@ -1,6 +1,6 @@
 export interface MindMapNode {
   id: string;
-  type: 'file' | 'directory' | 'function' | 'class' | 'error' | 'pattern' | 'episodic_memory';
+  type: 'file' | 'directory' | 'function' | 'class' | 'error' | 'pattern' | 'episodic_memory' | 'call_pattern';
   name: string;
   path?: string;
   metadata: Record<string, any>;
@@ -536,4 +536,64 @@ export interface PerformanceStats {
   minDuration: number;
   maxDuration: number;
   recentMetrics: PerformanceMetric[];
+}
+
+// Call Pattern Analysis Interfaces
+export interface CallPattern {
+  callerId: string;
+  callerName: string;
+  callerType: 'function' | 'method' | 'constructor';
+  calleeId: string;
+  calleeName: string;
+  calleeType: 'function' | 'method' | 'constructor' | 'external';
+  callType: 'direct_call' | 'method_call' | 'constructor_call' | 'callback' | 'async_call';
+  sourceFile: string;
+  targetFile?: string;
+  lineNumber: number;
+  confidence: number;
+  context: {
+    isConditional?: boolean;
+    isLoop?: boolean;
+    isAsyncContext?: boolean;
+    isTryCatch?: boolean;
+    parameterCount: number;
+    hasReturnValue: boolean;
+  };
+}
+
+export interface FunctionCallGraph {
+  nodes: Map<string, CallGraphNode>;
+  edges: CallPattern[];
+  entryPoints: string[];
+  cycles: string[][];
+  depth: number;
+}
+
+export interface CallGraphNode {
+  id: string;
+  name: string;
+  type: 'function' | 'method' | 'constructor';
+  filePath: string;
+  lineNumber: number;
+  incomingCalls: number;
+  outgoingCalls: number;
+  complexity: number;
+  isRecursive: boolean;
+}
+
+export interface CallPatternAnalysis {
+  nodes: MindMapNode[];
+  edges: MindMapEdge[];
+  callPatterns: CallPattern[];
+  callGraph: FunctionCallGraph;
+  statistics: {
+    totalCallPatterns: number;
+    directCalls: number;
+    methodCalls: number;
+    constructorCalls: number;
+    asyncCalls: number;
+    recursiveFunctions: number;
+    averageComplexity: number;
+    maxCallDepth: number;
+  };
 }

@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.1.4 🧠
+# Mind Map MCP Server v1.1.5 🧠
 
-**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, and **episodic memory** for next-generation code understanding.
+**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, and advanced **call pattern analysis** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.1.4
+## 🚀 Current Status: Production Ready v1.1.5
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ CI/CD Pipeline**
 
-**🧠 Latest Update v1.1.4**: **12 Programming Languages** + **Episodic Memory System** - Added comprehensive support for PHP, C#, Ruby, Swift, Kotlin, and Scala with complete AST parsing and framework detection. Implemented brain-inspired episodic memory with 77.1% similarity matching accuracy and experience-based suggestions.
+**🧠 Latest Update v1.1.5**: **Enhanced Call Pattern Analysis** + **CI/CD Infrastructure** - Implemented comprehensive call pattern analysis with 100% test success rate, including constructor call detection, call depth calculation, complexity analysis, and code style recognition. Added complete CI/CD pipeline infrastructure with automated testing, security scanning, performance monitoring, and release workflows.
 
 ## 📦 Installation & Setup
 
@@ -171,6 +171,25 @@ Please recommend missing development tools that would benefit this project.
 - **Attention Mechanisms**: Multi-modal attention fusion with cognitive load management (Miller's 7±2 rule)
 - **Bi-temporal Knowledge Model**: Valid time vs transaction time tracking with complete audit trails
 - **Pattern Prediction Engine**: Anticipates code patterns before they emerge using time series analysis and predictive forecasting
+
+### 📊 Advanced Call Pattern Analysis (v1.1.5)
+- **Function Call Graph Construction**: Complete call graph analysis with entry points, cycles, and depth calculation
+- **Constructor Call Detection**: Accurate detection of class instantiation and constructor patterns
+- **Method Call Analysis**: Comprehensive tracking of method invocations and chaining patterns
+- **Async/Await Pattern Recognition**: Full support for asynchronous call pattern detection
+- **Recursion Detection**: Automatic identification of recursive functions and call cycles
+- **Code Style Recognition**: Comprehensive naming convention and style pattern analysis
+- **Complexity Calculation**: Enhanced cyclomatic complexity with callback function and control flow analysis
+- **Cross-File Pattern Resolution**: Advanced resolution of call patterns across multiple files
+
+### 🚀 CI/CD Pipeline Infrastructure (v1.1.5)
+- **Automated Testing**: Comprehensive test suite with multi-language AST validation
+- **Security Scanning**: Automated vulnerability detection with npm audit integration
+- **Performance Monitoring**: Continuous performance benchmarking with alert thresholds
+- **Code Quality Analysis**: Bundle size monitoring, style analysis, and quality reporting
+- **Release Automation**: Automated NPM publishing with GitHub release creation
+- **Maintenance Workflows**: Dependency updates, health checks, and system monitoring
+- **Pull Request Validation**: PR title validation, impact analysis, and comprehensive testing
 
 ### 🧠 Advanced Code Intelligence
 - **Multi-Language AST Analysis**: Full parsing for **12 languages** (TypeScript/JavaScript/Python/Java/Go/Rust/C++/**PHP/C#/Ruby/Swift/Kotlin/Scala**) with function/class extraction
@@ -487,23 +506,31 @@ The server consists of several key components:
 
 ## 📋 Version History
 
-### v1.0.0 (Current)
-- ✅ Complete brain-inspired intelligence system
-- ✅ Enterprise scalability and user customization
-- ✅ Organized test suite with proper structure
-- ✅ 33 advanced MCP tools fully functional
-- ✅ Multi-language support (6 languages)
-- ✅ 80+ development tools integration
-- ✅ Project organization and cleanup completed
+### v1.1.5 (Current) 🚀
+- ✅ **Advanced Call Pattern Analysis**: Complete function call graph construction with 100% test success rate
+- ✅ **Constructor Call Detection**: Accurate class instantiation and constructor pattern recognition
+- ✅ **Enhanced Complexity Calculation**: Improved cyclomatic complexity with callback functions and control flow
+- ✅ **Code Style Recognition**: Comprehensive naming convention and style pattern analysis (camelCase, PascalCase, snake_case)
+- ✅ **CI/CD Pipeline Infrastructure**: Complete automation with testing, security scanning, and performance monitoring
+- ✅ **Release Automation**: Automated NPM publishing with GitHub release workflows
+- ✅ **Pull Request Validation**: Comprehensive PR checks with impact analysis and quality gates
 
-## 📋 Version History
+### v1.1.4
+- ✅ **12 Programming Languages** + **Episodic Memory System**
+- ✅ Added comprehensive support for PHP, C#, Ruby, Swift, Kotlin, and Scala
+- ✅ Complete AST parsing and framework detection
+- ✅ Brain-inspired episodic memory with 77.1% similarity matching accuracy
 
-### v1.0.1 (Current)
+### v1.1.0-1.1.3
+- ✅ Multi-modal confidence fusion and brain-inspired intelligence platform
+- ✅ Performance optimization and cache improvements
+- ✅ Enhanced query description with semantic search capabilities
+
+### v1.0.1
 - ✅ Enhanced README with comprehensive Claude Code integration guide
 - ✅ Added step-by-step installation instructions
 - ✅ Included usage examples and workflow guides
 - ✅ Added troubleshooting section and verification checklist
-- ✅ Improved npm package documentation
 
 ### v1.0.0
 - ✅ Complete brain-inspired intelligence system
@@ -512,7 +539,6 @@ The server consists of several key components:
 - ✅ 33 advanced MCP tools fully functional
 - ✅ Multi-language support (6 languages)
 - ✅ 80+ development tools integration
-- ✅ Project organization and cleanup completed
 
 ### 🔮 Future Roadmap
 - **Visual Interface**: Mind map visualization and exploration

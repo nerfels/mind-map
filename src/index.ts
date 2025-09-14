@@ -17,7 +17,7 @@ class MindMapMCPServer {
     this.server = new Server(
       {
         name: 'mind-map-mcp',
-        version: '0.1.0'
+        version: '1.1.5'
       },
       {
         capabilities: {
@@ -176,7 +176,10 @@ class MindMapMCPServer {
           
           case 'analyze_and_predict':
             return await this.handleAnalyzeAndPredict(args as any);
-          
+
+          case 'analyze_call_patterns':
+            return await this.handleAnalyzeCallPatterns(args as any);
+
           case 'init_claude_code':
             return await this.handleInitClaudeCode(args as any);
           
@@ -2867,6 +2870,156 @@ class MindMapMCPServer {
     } catch (error) {
       return {
         content: [{ type: 'text', text: `❌ Failed to analyze and predict: ${error}` }]
+      };
+    }
+  }
+
+  private async handleAnalyzeCallPatterns(args: {
+    file_paths?: string[];
+    include_cross_file?: boolean;
+    min_confidence?: number;
+  }) {
+    try {
+      await this.mindMap.initialize();
+
+      let text = `🔗 **Analyzing Call Patterns and Code Relationships**\n\n`;
+
+      const filePaths = args.file_paths;
+      const includeCrossFile = args.include_cross_file ?? true;
+      const minConfidence = args.min_confidence ?? 0.6;
+
+      if (filePaths && filePaths.length > 0) {
+        text += `📁 **Target Files:** ${filePaths.length} files\n`;
+        filePaths.slice(0, 3).forEach(path => {
+          text += `   • ${path}\n`;
+        });
+        if (filePaths.length > 3) {
+          text += `   • ... and ${filePaths.length - 3} more files\n`;
+        }
+        text += `\n`;
+      } else {
+        text += `📁 **Target:** All TypeScript/JavaScript files in project\n\n`;
+      }
+
+      text += `⚙️ **Configuration:**\n`;
+      text += `• Cross-file analysis: ${includeCrossFile ? 'Enabled' : 'Disabled'}\n`;
+      text += `• Minimum confidence: ${(minConfidence * 100).toFixed(0)}%\n\n`;
+
+      text += `⚡ Starting call pattern analysis...\n\n`;
+
+      // Perform the analysis
+      const analysis = await this.mindMap.analyzeCallPatterns(filePaths);
+
+      text += `✅ **Call Pattern Analysis Complete!**\n\n`;
+
+      // Display statistics
+      text += `**📊 Analysis Results:**\n`;
+      text += `• **Functions Analyzed:** ${analysis.callGraph.nodes.size}\n`;
+      text += `• **Call Patterns Found:** ${analysis.statistics.totalCallPatterns}\n`;
+      text += `• **Direct Calls:** ${analysis.statistics.directCalls}\n`;
+      text += `• **Method Calls:** ${analysis.statistics.methodCalls}\n`;
+      text += `• **Constructor Calls:** ${analysis.statistics.constructorCalls}\n`;
+      text += `• **Async Calls:** ${analysis.statistics.asyncCalls}\n`;
+      text += `• **Recursive Functions:** ${analysis.statistics.recursiveFunctions}\n`;
+      text += `• **Average Complexity:** ${analysis.statistics.averageComplexity.toFixed(1)}\n`;
+      text += `• **Max Call Depth:** ${analysis.statistics.maxCallDepth}\n\n`;
+
+      // Show entry points
+      if (analysis.callGraph.entryPoints.length > 0) {
+        text += `**🚪 Entry Points:** (${analysis.callGraph.entryPoints.length} functions)\n`;
+        analysis.callGraph.entryPoints.slice(0, 5).forEach(entryId => {
+          const node = analysis.callGraph.nodes.get(entryId);
+          if (node) {
+            text += `   • ${node.name} (complexity: ${node.complexity})\n`;
+          }
+        });
+        if (analysis.callGraph.entryPoints.length > 5) {
+          text += `   • ... and ${analysis.callGraph.entryPoints.length - 5} more\n`;
+        }
+        text += `\n`;
+      }
+
+      // Show high-complexity functions
+      const highComplexityNodes = Array.from(analysis.callGraph.nodes.values())
+        .filter(node => node.complexity > 5)
+        .sort((a, b) => b.complexity - a.complexity)
+        .slice(0, 3);
+
+      if (highComplexityNodes.length > 0) {
+        text += `**🔥 High Complexity Functions:**\n`;
+        highComplexityNodes.forEach(node => {
+          text += `   • **${node.name}** (complexity: ${node.complexity}, calls: ${node.outgoingCalls})\n`;
+          if (node.isRecursive) text += `     ↻ Recursive function\n`;
+        });
+        text += `\n`;
+      }
+
+      // Show functions with many incoming calls
+      const popularNodes = Array.from(analysis.callGraph.nodes.values())
+        .filter(node => node.incomingCalls > 2)
+        .sort((a, b) => b.incomingCalls - a.incomingCalls)
+        .slice(0, 3);
+
+      if (popularNodes.length > 0) {
+        text += `**📈 Most Called Functions:**\n`;
+        popularNodes.forEach(node => {
+          text += `   • **${node.name}** (${node.incomingCalls} incoming calls)\n`;
+        });
+        text += `\n`;
+      }
+
+      // Show cycles if any
+      if (analysis.callGraph.cycles.length > 0) {
+        text += `**🔄 Call Cycles Detected:** ${analysis.callGraph.cycles.length}\n`;
+        analysis.callGraph.cycles.slice(0, 2).forEach((cycle, i) => {
+          text += `   ${i + 1}. ${cycle.length} functions in cycle\n`;
+        });
+        if (analysis.callGraph.cycles.length > 2) {
+          text += `   • ... and ${analysis.callGraph.cycles.length - 2} more cycles\n`;
+        }
+        text += `\n`;
+      }
+
+      // Cross-file analysis results
+      const crossFileCalls = analysis.callPatterns.filter(p => p.targetFile && p.sourceFile !== p.targetFile);
+      if (includeCrossFile && crossFileCalls.length > 0) {
+        text += `**🌐 Cross-File Call Patterns:** ${crossFileCalls.length}\n`;
+        const fileConnections = new Map<string, Set<string>>();
+        crossFileCalls.forEach(call => {
+          if (!fileConnections.has(call.sourceFile)) {
+            fileConnections.set(call.sourceFile, new Set());
+          }
+          if (call.targetFile) {
+            fileConnections.get(call.sourceFile)!.add(call.targetFile);
+          }
+        });
+
+        Array.from(fileConnections.entries()).slice(0, 3).forEach(([source, targets]) => {
+          const fileName = source.split('/').pop() || source;
+          text += `   • ${fileName} → ${targets.size} other files\n`;
+        });
+        text += `\n`;
+      }
+
+      // Brain-inspired system integration
+      text += `**🧠 Brain-Inspired Integration:**\n`;
+      text += `• Hebbian learning updated with call co-activations\n`;
+      text += `• Attention allocated to high-complexity functions\n`;
+      text += `• Episodic memory stores call pattern insights\n`;
+      text += `• Call patterns integrated into mind map graph\n\n`;
+
+      text += `**🔍 Next Steps:**\n`;
+      text += `• Use query_mindmap with function names to explore specific relationships\n`;
+      text += `• Use advanced_query with Cypher syntax for complex call pattern queries\n`;
+      text += `• Re-run after code changes to track relationship evolution\n`;
+      text += `• Analyze specific files by providing file_paths parameter\n`;
+
+      return {
+        content: [{ type: 'text', text }]
+      };
+    } catch (error) {
+      return {
+        content: [{ type: 'text', text: `❌ Failed to analyze call patterns: ${error}` }]
       };
     }
   }

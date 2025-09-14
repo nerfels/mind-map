@@ -1,0 +1,196 @@
+name: Maintenance & Dependencies
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+jobs:
+  dependency-check:
+    name: Dependency Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Check for Outdated Dependencies
+      run: |
+        echo "🔍 Checking for outdated dependencies..."
+        npm outdated --json > outdated.json || true
+
+        if [ -s outdated.json ]; then
+          echo "📋 Outdated dependencies found:"
+          cat outdated.json | jq .
+        else
+          echo "✅ All dependencies are up to date"
+        fi
+
+    - name: Security Audit
+      run: |
+        echo "🔐 Running security audit..."
+        npm audit --json > audit.json || true
+
+        # Check for high/critical vulnerabilities
+        HIGH_VULN=$(cat audit.json | jq -r '.vulnerabilities | to_entries[] | select(.value.severity == "high" or .value.severity == "critical") | .key' | wc -l)
+
+        if [ "$HIGH_VULN" -gt 0 ]; then
+          echo "❌ High/Critical vulnerabilities found: $HIGH_VULN"
+          npm audit --audit-level high
+          exit 1
+        else
+          echo "✅ No high/critical vulnerabilities found"
+        fi
+
+    - name: License Compatibility Check
+      run: |
+        echo "⚖️ Checking license compatibility..."
+        npx license-checker --summary > license-summary.txt
+
+        echo "📄 License summary:"
+        cat license-summary.txt
+
+        # Check for problematic licenses
+        if grep -E "(GPL|AGPL|LGPL)" license-summary.txt; then
+          echo "⚠️  Copyleft licenses detected - review required"
+        else
+          echo "✅ No problematic licenses found"
+        fi
+
+    - name: Generate Maintenance Report
+      run: |
+        echo "# Maintenance Report - $(date)" > maintenance-report.md
+        echo "" >> maintenance-report.md
+
+        echo "## Dependency Status" >> maintenance-report.md
+        if [ -s outdated.json ]; then
+          echo "### Outdated Dependencies" >> maintenance-report.md
+          echo "\`\`\`json" >> maintenance-report.md
+          cat outdated.json >> maintenance-report.md
+          echo "\`\`\`" >> maintenance-report.md
+        else
+          echo "✅ All dependencies up to date" >> maintenance-report.md
+        fi
+
+        echo "" >> maintenance-report.md
+        echo "## Security Audit" >> maintenance-report.md
+        if [ -s audit.json ]; then
+          TOTAL_VULN=$(cat audit.json | jq '.vulnerabilities | length')
+          echo "Total vulnerabilities: $TOTAL_VULN" >> maintenance-report.md
+        else
+          echo "✅ No vulnerabilities detected" >> maintenance-report.md
+        fi
+
+        echo "" >> maintenance-report.md
+        echo "## License Summary" >> maintenance-report.md
+        echo "\`\`\`" >> maintenance-report.md
+        cat license-summary.txt >> maintenance-report.md
+        echo "\`\`\`" >> maintenance-report.md
+
+    - name: Upload Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: maintenance-reports
+        path: |
+          maintenance-report.md
+          outdated.json
+          audit.json
+          license-summary.txt
+        retention-days: 30
+
+  health-check:
+    name: System Health Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Build Project
+      run: npm run build
+
+    - name: Run Core System Tests
+      run: |
+        echo "🏥 Running system health checks..."
+
+        # Test core functionality
+        timeout 60 node tests/core-features/test-call-pattern-analysis.js
+        echo "✅ Call Pattern Analysis: Healthy"
+
+        timeout 60 node tests/core-features/test-brain-inspired-systems.js
+        echo "✅ Brain-Inspired Systems: Healthy"
+
+        timeout 60 node tests/core-features/test-multi-language-intelligence.js
+        echo "✅ Multi-Language Intelligence: Healthy"
+
+    - name: Memory and Performance Check
+      run: |
+        echo "📊 Running performance diagnostics..."
+
+        # Test memory usage with a sample analysis
+        node -e "
+        import('./dist/core/MindMapEngine.js').then(async ({ MindMapEngine }) => {
+          const engine = new MindMapEngine('./');
+          console.log('🧠 MindMapEngine initialized');
+
+          const stats = await engine.getStats();
+          console.log('📈 Stats retrieved successfully');
+          console.log('✅ Performance check passed');
+        }).catch(err => {
+          console.error('❌ Performance check failed:', err);
+          process.exit(1);
+        });
+        "
+
+    - name: Integration Test
+      run: |
+        echo "🔗 Testing MCP integration..."
+
+        # Verify MCP server can start
+        node -e "
+        import('./dist/index.js').then(() => {
+          console.log('✅ MCP server integration test passed');
+        }).catch(err => {
+          console.error('❌ MCP integration test failed:', err);
+          process.exit(1);
+        });
+        "
+
+    - name: Generate Health Report
+      run: |
+        echo "# System Health Report - $(date)" > health-report.md
+        echo "" >> health-report.md
+        echo "## Test Results" >> health-report.md
+        echo "- ✅ Call Pattern Analysis: Healthy" >> health-report.md
+        echo "- ✅ Brain-Inspired Systems: Healthy" >> health-report.md
+        echo "- ✅ Multi-Language Intelligence: Healthy" >> health-report.md
+        echo "- ✅ MCP Integration: Healthy" >> health-report.md
+        echo "" >> health-report.md
+        echo "## System Status" >> health-report.md
+        echo "All systems operational ✅" >> health-report.md
+
+    - name: Upload Health Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: health-report
+        path: health-report.md
+        retention-days: 14

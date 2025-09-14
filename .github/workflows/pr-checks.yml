@@ -1,0 +1,243 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+    types: [ opened, synchronize, reopened, ready_for_review ]
+
+jobs:
+  pr-validation:
+    name: PR Validation
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Check PR Title
+      run: |
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        echo "📝 PR Title: $PR_TITLE"
+
+        # Check for conventional commit format
+        if [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore|perf|ci|build)(\(.+\))?: .+ ]]; then
+          echo "✅ PR title follows conventional commit format"
+        else
+          echo "⚠️  PR title should follow conventional commit format"
+          echo "Examples:"
+          echo "  feat: add new feature"
+          echo "  fix: resolve bug in component"
+          echo "  docs: update README"
+          echo "  refactor: improve code structure"
+        fi
+
+    - name: Analyze Changed Files
+      run: |
+        echo "📂 Analyzing changed files..."
+
+        # Get list of changed files
+        git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD > changed-files.txt
+
+        echo "Changed files:"
+        cat changed-files.txt
+
+        # Check if any core files were modified
+        if grep -E "(src/core/|src/types/)" changed-files.txt; then
+          echo "🔍 Core files modified - running comprehensive tests"
+          echo "CORE_MODIFIED=true" >> $GITHUB_ENV
+        fi
+
+        # Check if tests were added/modified
+        if grep -E "test.*\.js$" changed-files.txt; then
+          echo "🧪 Test files modified"
+          echo "TESTS_MODIFIED=true" >> $GITHUB_ENV
+        fi
+
+    - name: Run Type Check
+      run: npm run type-check
+
+    - name: Run Linting
+      run: npm run lint
+
+    - name: Build Project
+      run: npm run build
+
+    - name: Run Basic Tests
+      run: |
+        echo "🧪 Running basic test suite..."
+        timeout 60 node tests/core-features/test-call-pattern-analysis.js
+
+    - name: Run Comprehensive Tests
+      if: env.CORE_MODIFIED == 'true'
+      run: |
+        echo "🔬 Running comprehensive tests due to core changes..."
+
+        timeout 60 node tests/core-features/test-multi-language-intelligence.js
+        timeout 60 node tests/core-features/test-brain-inspired-systems.js
+        timeout 60 node tests/core-features/test-user-configuration.js
+
+        # Language-specific tests
+        timeout 60 node tests/core-features/test-python-ast.js
+        timeout 60 node tests/core-features/test-java-ast.js
+        timeout 60 node tests/core-features/test-go-ast.js
+
+    - name: Check Bundle Size Impact
+      run: |
+        # Build current branch
+        npm run build
+        CURRENT_SIZE=$(du -sb dist/ | cut -f1)
+        echo "Current bundle size: $CURRENT_SIZE bytes"
+
+        # Check against base branch
+        git checkout origin/${{ github.event.pull_request.base.ref }}
+        npm ci
+        npm run build
+        BASE_SIZE=$(du -sb dist/ | cut -f1)
+        echo "Base bundle size: $BASE_SIZE bytes"
+
+        # Calculate difference
+        DIFF=$((CURRENT_SIZE - BASE_SIZE))
+        DIFF_PERCENT=$((DIFF * 100 / BASE_SIZE))
+
+        echo "Bundle size difference: $DIFF bytes ($DIFF_PERCENT%)"
+
+        if [ $DIFF -gt 1048576 ]; then  # 1MB
+          echo "⚠️  Bundle size increased by more than 1MB!"
+          echo "Consider optimizing the changes to reduce bundle size impact."
+        fi
+
+    - name: Generate PR Summary
+      run: |
+        echo "# PR Analysis Summary" > pr-summary.md
+        echo "" >> pr-summary.md
+        echo "## Changed Files" >> pr-summary.md
+        echo "\`\`\`" >> pr-summary.md
+        cat changed-files.txt >> pr-summary.md
+        echo "\`\`\`" >> pr-summary.md
+        echo "" >> pr-summary.md
+
+        if [ "$CORE_MODIFIED" = "true" ]; then
+          echo "## Impact Assessment" >> pr-summary.md
+          echo "⚠️  Core system files modified - comprehensive testing required" >> pr-summary.md
+        fi
+
+        echo "" >> pr-summary.md
+        echo "## Test Results" >> pr-summary.md
+        echo "- ✅ Type Check: Passed" >> pr-summary.md
+        echo "- ✅ Linting: Passed" >> pr-summary.md
+        echo "- ✅ Build: Successful" >> pr-summary.md
+        echo "- ✅ Basic Tests: Passed" >> pr-summary.md
+
+        if [ "$CORE_MODIFIED" = "true" ]; then
+          echo "- ✅ Comprehensive Tests: Passed" >> pr-summary.md
+        fi
+
+    - name: Upload PR Analysis
+      uses: actions/upload-artifact@v4
+      with:
+        name: pr-analysis
+        path: |
+          pr-summary.md
+          changed-files.txt
+        retention-days: 7
+
+  code-coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Build Project
+      run: npm run build
+
+    - name: Calculate Test Coverage
+      run: |
+        echo "📊 Calculating test coverage..."
+
+        # Count total test files
+        TOTAL_TESTS=$(find tests/ -name "*.js" | wc -l)
+        echo "Total test files: $TOTAL_TESTS"
+
+        # Run tests and count successes
+        PASSED_TESTS=0
+
+        for test_file in tests/core-features/*.js; do
+          echo "Running $(basename $test_file)..."
+          if timeout 60 node "$test_file" > /dev/null 2>&1; then
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+            echo "✅ $(basename $test_file)"
+          else
+            echo "❌ $(basename $test_file)"
+          fi
+        done
+
+        COVERAGE_PERCENT=$((PASSED_TESTS * 100 / TOTAL_TESTS))
+        echo "Test Coverage: $COVERAGE_PERCENT% ($PASSED_TESTS/$TOTAL_TESTS)"
+
+        echo "# Test Coverage Report" > coverage-report.md
+        echo "- Total Tests: $TOTAL_TESTS" >> coverage-report.md
+        echo "- Passing Tests: $PASSED_TESTS" >> coverage-report.md
+        echo "- Coverage: $COVERAGE_PERCENT%" >> coverage-report.md
+
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage-report.md
+        retention-days: 7
+
+  auto-merge-ready:
+    name: Auto-merge Readiness
+    runs-on: ubuntu-latest
+    needs: [pr-validation, code-coverage]
+    if: github.event.pull_request.draft == false
+
+    steps:
+    - name: Check Auto-merge Readiness
+      run: |
+        echo "🔍 Checking if PR is ready for auto-merge..."
+
+        # This would typically check:
+        # - All required checks passed
+        # - PR has required approvals
+        # - No conflicts with base branch
+        # - Labels indicate it's ready
+
+        echo "✅ PR validation completed"
+        echo "✅ Code coverage analysis completed"
+        echo "🚀 PR is ready for review/merge"
+
+    - name: Add Ready Label
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.addLabels({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: ['ready-for-review']
+          });

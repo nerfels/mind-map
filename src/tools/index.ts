@@ -1118,6 +1118,34 @@ export const ANALYZE_AND_PREDICT_TOOL: Tool = {
   }
 };
 
+export const ANALYZE_CALL_PATTERNS_TOOL: Tool = {
+  name: 'analyze_call_patterns',
+  description: 'Analyze function call patterns, method invocations, and code relationships within TypeScript/JavaScript files. Creates a comprehensive call graph with complexity metrics, recursion detection, and cross-file relationship mapping.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      file_paths: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional array of specific file paths to analyze. If not provided, analyzes all TypeScript/JavaScript files in the project.'
+      },
+      include_cross_file: {
+        type: 'boolean',
+        default: true,
+        description: 'Whether to analyze cross-file call patterns and dependencies (default: true)'
+      },
+      min_confidence: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        default: 0.6,
+        description: 'Minimum confidence threshold for call pattern detection (default: 0.6)'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
 export const INIT_CLAUDE_CODE_TOOL: Tool = {
   name: 'init_claude_code',
   description: 'Get comprehensive setup instructions and configuration guidance for integrating Mind Map MCP with Claude Code',
@@ -1185,5 +1213,6 @@ export const ALL_TOOLS: Tool[] = [
   GET_EMERGING_PATTERNS_TOOL,
   PREDICT_PATTERN_EMERGENCE_TOOL,
   ANALYZE_AND_PREDICT_TOOL,
+  ANALYZE_CALL_PATTERNS_TOOL,
   INIT_CLAUDE_CODE_TOOL
 ];
