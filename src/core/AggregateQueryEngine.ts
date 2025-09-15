@@ -100,7 +100,7 @@ export class AggregateQueryEngine {
   async executeAggregate(query: AggregateQuery): Promise<AggregateResult> {
     const startTime = Date.now();
     const cacheKey = this.getCacheKey(query);
-    
+
     // Check cache
     const cached = this.resultCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < cached.ttl) {
@@ -113,10 +113,10 @@ export class AggregateQueryEngine {
 
     // Get all nodes
     const allNodes = Array.from(this.storage.getGraph().nodes.values());
-    
+
     // Apply filters
-    const filteredNodes = query.filter ? 
-      allNodes.filter(node => this.evaluateFilter(node, query.filter!)) : 
+    const filteredNodes = query.filter ?
+      allNodes.filter(node => this.evaluateFilter(node, query.filter!)) :
       allNodes;
 
     // Group the data
@@ -339,12 +339,12 @@ export class AggregateQueryEngine {
     if (groupBy.length === 0) {
       return 'all';
     }
-    
+
     const keyParts = groupBy.map(clause => {
       const value = this.getFieldValue(node, clause.field);
       return this.transformValue(value, clause.transform, clause.parameters);
     });
-    
+
     return keyParts.join('|');
   }
 

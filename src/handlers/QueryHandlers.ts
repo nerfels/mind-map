@@ -195,7 +195,7 @@ export class QueryHandlers {
 
     const result = await this.mindMap.executeAggregateQuery({
       aggregation,
-      group_by: group_by?.map(g => ({
+      groupBy: group_by?.map(g => ({
         ...g,
         transform: g.transform as any
       })),
@@ -203,7 +203,7 @@ export class QueryHandlers {
         ...filter,
         operator: filter.operator || 'AND' as const
       } : undefined,
-      order_by: order_by?.map(o => ({
+      orderBy: order_by?.map(o => ({
         ...o,
         direction: o.direction || 'DESC' as const
       })),

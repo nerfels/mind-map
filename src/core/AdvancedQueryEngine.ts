@@ -448,59 +448,106 @@ export class AdvancedQueryEngine {
     const nodeValue = this.getNodeValue(node, condition.left);
     const conditionValue = condition.right;
 
-    // Debug logging - temporarily enabled
-    if (condition.left === 'name' && condition.operator === 'contains' && String(conditionValue).toLowerCase().includes('mindmap')) {
-      console.log(`[DEBUG] Evaluating condition: node.name="${nodeValue}" CONTAINS "${conditionValue}"`);
-      console.log(`[DEBUG] Node keys:`, Object.keys(node));
-      if (node.metadata) {
-        console.log(`[DEBUG] Metadata keys:`, Object.keys(node.metadata));
-      }
+
+    let result = false;
+    switch (condition.operator) {
+      case 'eq':
+        // Case-insensitive string comparison for equality
+        if (typeof nodeValue === 'string' && typeof conditionValue === 'string') {
+          result = nodeValue.toLowerCase() === conditionValue.toLowerCase();
+        } else {
+          result = nodeValue === conditionValue;
+        }
+        break;
+      case 'ne':
+        // Case-insensitive string comparison for inequality
+        if (typeof nodeValue === 'string' && typeof conditionValue === 'string') {
+          result = nodeValue.toLowerCase() !== conditionValue.toLowerCase();
+        } else {
+          result = nodeValue !== conditionValue;
+        }
+        break;
+      case 'gt':
+        result = nodeValue > conditionValue;
+        break;
+      case 'lt':
+        result = nodeValue < conditionValue;
+        break;
+      case 'gte':
+        result = nodeValue >= conditionValue;
+        break;
+      case 'lte':
+        result = nodeValue <= conditionValue;
+        break;
+      case 'contains':
+        result = nodeValue != null && String(nodeValue).toLowerCase().includes(String(conditionValue).toLowerCase());
+        break;
+      case 'starts_with':
+        result = nodeValue != null && String(nodeValue).toLowerCase().startsWith(String(conditionValue).toLowerCase());
+        break;
+      case 'ends_with':
+        result = nodeValue != null && String(nodeValue).toLowerCase().endsWith(String(conditionValue).toLowerCase());
+        break;
+      case 'regex':
+        result = nodeValue != null && new RegExp(String(conditionValue), 'i').test(String(nodeValue));
+        break;
+      default:
+        result = false;
     }
 
-    switch (condition.operator) {
-      case 'eq': return nodeValue === conditionValue;
-      case 'ne': return nodeValue !== conditionValue;
-      case 'gt': return nodeValue > conditionValue;
-      case 'lt': return nodeValue < conditionValue;
-      case 'gte': return nodeValue >= conditionValue;
-      case 'lte': return nodeValue <= conditionValue;
-      case 'contains': return String(nodeValue).toLowerCase().includes(String(conditionValue).toLowerCase());
-      case 'starts_with': return String(nodeValue).toLowerCase().startsWith(String(conditionValue).toLowerCase());
-      case 'ends_with': return String(nodeValue).toLowerCase().endsWith(String(conditionValue).toLowerCase());
-      case 'regex': return new RegExp(String(conditionValue), 'i').test(String(nodeValue));
-      default: return false;
+    if (condition.left === 'name' || condition.left === 'type') {
+      console.log(`[ADVANCED_QUERY_DEBUG] Result: ${result}`);
     }
+
+    return result;
   }
 
   private getNodeValue(node: MindMapNode, expression: string): any {
     const parts = expression.split('.');
     if (parts.length === 1) {
-      const field = parts[0];
+      const field = parts[0].toLowerCase(); // Make field access case-insensitive
       // First check direct properties on the node
-      if (field in node) {
-        return (node as any)[field];
+      const nodeKeys = Object.keys(node);
+      const matchingKey = nodeKeys.find(key => key.toLowerCase() === field);
+      if (matchingKey) {
+        return (node as any)[matchingKey];
       }
       // Then check metadata
-      if (node.metadata && field in node.metadata) {
-        return node.metadata[field];
+      if (node.metadata) {
+        const metadataKeys = Object.keys(node.metadata);
+        const matchingMetadataKey = metadataKeys.find(key => key.toLowerCase() === field);
+        if (matchingMetadataKey) {
+          return node.metadata[matchingMetadataKey];
+        }
       }
       return undefined;
     } else {
       const [prefix, property] = parts;
-      if (prefix === 'n' || prefix === 'node') {
+      const normalizedProperty = property.toLowerCase(); // Make property access case-insensitive
+      if (prefix.toLowerCase() === 'n' || prefix.toLowerCase() === 'node') {
         // First check direct properties
-        if (property in node) {
-          return (node as any)[property];
+        const nodeKeys = Object.keys(node);
+        const matchingKey = nodeKeys.find(key => key.toLowerCase() === normalizedProperty);
+        if (matchingKey) {
+          return (node as any)[matchingKey];
         }
         // Then check metadata
-        if (node.metadata && property in node.metadata) {
-          return node.metadata[property];
+        if (node.metadata) {
+          const metadataKeys = Object.keys(node.metadata);
+          const matchingMetadataKey = metadataKeys.find(key => key.toLowerCase() === normalizedProperty);
+          if (matchingMetadataKey) {
+            return node.metadata[matchingMetadataKey];
+          }
         }
         return undefined;
       }
       // For other prefixes, assume it's metadata
-      if (node.metadata && property in node.metadata) {
-        return node.metadata[property];
+      if (node.metadata) {
+        const metadataKeys = Object.keys(node.metadata);
+        const matchingMetadataKey = metadataKeys.find(key => key.toLowerCase() === normalizedProperty);
+        if (matchingMetadataKey) {
+          return node.metadata[matchingMetadataKey];
+        }
       }
       return undefined;
     }
