@@ -24,12 +24,27 @@ export interface CallPattern {
   };
 }
 
+export interface CallChain {
+  id: string;
+  sequence: string[]; // Function IDs in call order
+  depth: number;
+  performance: {
+    estimatedLatency: number; // ms
+    complexityScore: number;
+    riskLevel: 'low' | 'medium' | 'high';
+  };
+  crossFileCount: number;
+  hasAsyncCalls: boolean;
+  hasConditionalCalls: boolean;
+}
+
 export interface FunctionCallGraph {
   nodes: Map<string, CallGraphNode>;
   edges: CallPattern[];
   entryPoints: string[];
   cycles: string[][];
   depth: number;
+  callChains: CallChain[];
 }
 
 export interface CallGraphNode {
@@ -428,7 +443,10 @@ export class CallPatternAnalyzer {
     // Calculate maximum call depth
     const depth = this.calculateCallDepth(nodes, edges);
 
-    return { nodes, edges, entryPoints, cycles, depth };
+    // Analyze call chains
+    const callChains = this.analyzeCallChains(nodes, edges, entryPoints);
+
+    return { nodes, edges, entryPoints, cycles, depth, callChains };
   }
 
   private createMindMapElements(
@@ -455,7 +473,10 @@ export class CallPatternAnalyzer {
           outgoingCalls: decl.outgoingCalls,
           isRecursive: decl.isRecursive,
           isEntryPoint: callGraph.entryPoints.includes(decl.id),
-          language: 'typescript'
+          language: 'typescript',
+          callChains: this.getCallChainsForFunction(decl.id, callGraph.callChains),
+          maxChainDepth: this.getMaxChainDepth(decl.id, callGraph.callChains),
+          chainPerformanceRisk: this.getChainPerformanceRisk(decl.id, callGraph.callChains)
         },
         confidence: 0.9,
         lastUpdated: new Date()
@@ -870,13 +891,213 @@ export class CallPatternAnalyzer {
     return maxDepth;
   }
 
+  private analyzeCallChains(
+    nodes: Map<string, CallGraphNode>,
+    edges: CallPattern[],
+    entryPoints: string[]
+  ): CallChain[] {
+    const chains: CallChain[] = [];
+    const visited = new Set<string>();
+    let chainId = 0;
+
+    // Analyze chains starting from each entry point
+    for (const entryPoint of entryPoints) {
+      this.findCallChainsFromNode(
+        entryPoint,
+        nodes,
+        edges,
+        [],
+        visited,
+        chains,
+        chainId
+      );
+    }
+
+    return chains;
+  }
+
+  private findCallChainsFromNode(
+    nodeId: string,
+    nodes: Map<string, CallGraphNode>,
+    edges: CallPattern[],
+    currentChain: string[],
+    visited: Set<string>,
+    chains: CallChain[],
+    chainId: number,
+    maxDepth: number = 10
+  ): void {
+    if (currentChain.length >= maxDepth) {
+      return; // Prevent infinite recursion in cycles
+    }
+
+    const newChain = [...currentChain, nodeId];
+    const outgoingEdges = edges.filter(e => e.callerId === nodeId);
+
+    if (outgoingEdges.length === 0) {
+      // End of chain - create CallChain object if chain is significant
+      if (newChain.length >= 2) {
+        const chain: CallChain = {
+          id: `chain_${chainId++}`,
+          sequence: newChain,
+          depth: newChain.length - 1,
+          performance: this.calculateChainPerformance(newChain, nodes, edges),
+          crossFileCount: this.countCrossFileCallsInChain(newChain, nodes, edges),
+          hasAsyncCalls: this.hasAsyncCallsInChain(newChain, edges),
+          hasConditionalCalls: this.hasConditionalCallsInChain(newChain, edges)
+        };
+        chains.push(chain);
+      }
+      return;
+    }
+
+    // Continue exploring each outgoing call
+    for (const edge of outgoingEdges) {
+      if (!newChain.includes(edge.calleeId)) { // Avoid immediate cycles
+        this.findCallChainsFromNode(
+          edge.calleeId,
+          nodes,
+          edges,
+          newChain,
+          visited,
+          chains,
+          chainId,
+          maxDepth
+        );
+      }
+    }
+  }
+
+  private calculateChainPerformance(
+    chain: string[],
+    nodes: Map<string, CallGraphNode>,
+    edges: CallPattern[]
+  ): CallChain['performance'] {
+    let complexityScore = 0;
+    let estimatedLatency = 0;
+
+    // Calculate based on function complexities and call patterns
+    for (let i = 0; i < chain.length; i++) {
+      const node = nodes.get(chain[i]);
+      if (node) {
+        complexityScore += node.complexity;
+        // Base latency estimate: 1ms per complexity point
+        estimatedLatency += node.complexity * 1;
+      }
+
+      // Add latency for call overhead between functions
+      if (i < chain.length - 1) {
+        const edge = edges.find(e =>
+          e.callerId === chain[i] && e.calleeId === chain[i + 1]
+        );
+        if (edge) {
+          // Async calls add more latency
+          if (edge.context.isAsyncContext) {
+            estimatedLatency += 10; // 10ms for async overhead
+          } else {
+            estimatedLatency += 0.1; // 0.1ms for sync call overhead
+          }
+
+          // Conditional calls are less predictable
+          if (edge.context.isConditional) {
+            complexityScore += 2;
+          }
+        }
+      }
+    }
+
+    // Determine risk level based on complexity and depth
+    let riskLevel: 'low' | 'medium' | 'high';
+    if (complexityScore > 20 || chain.length > 5) {
+      riskLevel = 'high';
+    } else if (complexityScore > 10 || chain.length > 3) {
+      riskLevel = 'medium';
+    } else {
+      riskLevel = 'low';
+    }
+
+    return {
+      estimatedLatency: Math.round(estimatedLatency * 10) / 10,
+      complexityScore,
+      riskLevel
+    };
+  }
+
+  private countCrossFileCallsInChain(
+    chain: string[],
+    nodes: Map<string, CallGraphNode>,
+    edges: CallPattern[]
+  ): number {
+    let crossFileCount = 0;
+
+    for (let i = 0; i < chain.length - 1; i++) {
+      const callerNode = nodes.get(chain[i]);
+      const calleeNode = nodes.get(chain[i + 1]);
+
+      if (callerNode && calleeNode &&
+          callerNode.filePath !== calleeNode.filePath) {
+        crossFileCount++;
+      }
+    }
+
+    return crossFileCount;
+  }
+
+  private hasAsyncCallsInChain(chain: string[], edges: CallPattern[]): boolean {
+    for (let i = 0; i < chain.length - 1; i++) {
+      const edge = edges.find(e =>
+        e.callerId === chain[i] && e.calleeId === chain[i + 1]
+      );
+      if (edge && edge.context.isAsyncContext) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private hasConditionalCallsInChain(chain: string[], edges: CallPattern[]): boolean {
+    for (let i = 0; i < chain.length - 1; i++) {
+      const edge = edges.find(e =>
+        e.callerId === chain[i] && e.calleeId === chain[i + 1]
+      );
+      if (edge && edge.context.isConditional) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private getCallChainsForFunction(functionId: string, callChains: CallChain[]): string[] {
+    return callChains
+      .filter(chain => chain.sequence.includes(functionId))
+      .map(chain => chain.id);
+  }
+
+  private getMaxChainDepth(functionId: string, callChains: CallChain[]): number {
+    const relevantChains = callChains.filter(chain => chain.sequence.includes(functionId));
+    return relevantChains.reduce((max, chain) => Math.max(max, chain.depth), 0);
+  }
+
+  private getChainPerformanceRisk(functionId: string, callChains: CallChain[]): 'low' | 'medium' | 'high' {
+    const relevantChains = callChains.filter(chain => chain.sequence.includes(functionId));
+
+    if (relevantChains.length === 0) return 'low';
+
+    const highRiskCount = relevantChains.filter(chain => chain.performance.riskLevel === 'high').length;
+    const mediumRiskCount = relevantChains.filter(chain => chain.performance.riskLevel === 'medium').length;
+
+    if (highRiskCount > 0) return 'high';
+    if (mediumRiskCount > 0) return 'medium';
+    return 'low';
+  }
+
   private createEmptyCallGraph(): FunctionCallGraph {
     return {
       nodes: new Map(),
       edges: [],
       entryPoints: [],
       cycles: [],
-      depth: 0
+      depth: 0,
+      callChains: []
     };
   }
 
@@ -1009,6 +1230,67 @@ export class CallPatternAnalyzer {
         const nodes = Array.from(this.functionRegistry.values()).filter(n => n.filePath === filePath);
         return this.buildCallGraph(nodes, patterns).depth;
       }), 0)
+    };
+  }
+
+  getCallChainStatistics(): {
+    totalChains: number;
+    averageChainDepth: number;
+    maxChainDepth: number;
+    chainComplexityDistribution: Record<string, number>;
+    crossFileChainPercentage: number;
+    asyncChainPercentage: number;
+    riskDistribution: Record<string, number>;
+    topRiskyChains: { id: string; risk: string; complexity: number; depth: number }[];
+  } {
+    const allChains: CallChain[] = [];
+
+    // Collect all call chains from analyzed files by rebuilding call graphs
+    for (const [filePath, patterns] of this.callPatterns) {
+      const nodes = Array.from(this.functionRegistry.values()).filter(n => n.filePath === filePath);
+      const callGraph = this.buildCallGraph(nodes, patterns);
+      allChains.push(...callGraph.callChains);
+    }
+
+    if (allChains.length === 0) {
+      return {
+        totalChains: 0,
+        averageChainDepth: 0,
+        maxChainDepth: 0,
+        chainComplexityDistribution: { low: 0, medium: 0, high: 0 },
+        crossFileChainPercentage: 0,
+        asyncChainPercentage: 0,
+        riskDistribution: { low: 0, medium: 0, high: 0 },
+        topRiskyChains: []
+      };
+    }
+
+    return {
+      totalChains: allChains.length,
+      averageChainDepth: allChains.reduce((sum, chain) => sum + chain.depth, 0) / allChains.length,
+      maxChainDepth: allChains.reduce((max, chain) => Math.max(max, chain.depth), 0),
+      chainComplexityDistribution: {
+        low: allChains.filter(c => c.performance.complexityScore < 5).length,
+        medium: allChains.filter(c => c.performance.complexityScore >= 5 && c.performance.complexityScore < 15).length,
+        high: allChains.filter(c => c.performance.complexityScore >= 15).length
+      },
+      crossFileChainPercentage: (allChains.filter(c => c.crossFileCount > 0).length / allChains.length) * 100,
+      asyncChainPercentage: (allChains.filter(c => c.hasAsyncCalls).length / allChains.length) * 100,
+      riskDistribution: {
+        low: allChains.filter(c => c.performance.riskLevel === 'low').length,
+        medium: allChains.filter(c => c.performance.riskLevel === 'medium').length,
+        high: allChains.filter(c => c.performance.riskLevel === 'high').length
+      },
+      topRiskyChains: allChains
+        .filter(c => c.performance.riskLevel === 'high')
+        .sort((a, b) => b.performance.complexityScore - a.performance.complexityScore)
+        .slice(0, 5)
+        .map(c => ({
+          id: c.id,
+          risk: c.performance.riskLevel,
+          complexity: c.performance.complexityScore,
+          depth: c.depth
+        }))
     };
   }
 }
