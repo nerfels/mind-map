@@ -171,6 +171,55 @@ export class MindMapEngine {
     await this.scanningService.scanProject(forceRescan, includeAnalysis);
   }
 
+  async scanProjectWithRoot(projectRoot: string, forceRescan: boolean = false, includeAnalysis: boolean = true): Promise<void> {
+    // Create temporary scanning components for the specified project root
+    const tempStorage = new MindMapStorage(projectRoot);
+    const tempScanner = new FileScanner(projectRoot);
+    const tempParallelProcessor = new ParallelFileProcessor(projectRoot, {
+      chunkSize: 100,
+      maxWorkers: 3,
+      timeoutMs: 45000,
+    });
+
+    const tempScanningService = new ScanningService(
+      tempStorage,
+      tempScanner,
+      this.codeAnalyzer,
+      tempParallelProcessor,
+      this.scalabilityManager,
+      projectRoot
+    );
+
+    // Perform the scan with the temporary service
+    await tempScanningService.scanProject(forceRescan, includeAnalysis);
+
+    // Copy the results to the main storage
+    const tempGraph = tempStorage.getGraph();
+    const mainGraph = this.storage.getGraph();
+
+    // Clear existing nodes and edges for the project root being scanned
+    const projectRootNormalized = projectRoot.replace(/\\/g, '/');
+    for (const [nodeId, node] of mainGraph.nodes) {
+      if (node.path && (node.path.startsWith(projectRootNormalized) || node.path.startsWith(projectRoot))) {
+        mainGraph.nodes.delete(nodeId);
+      }
+    }
+
+    // Add nodes and edges from temp storage
+    for (const [nodeId, node] of tempGraph.nodes) {
+      mainGraph.nodes.set(nodeId, node);
+    }
+    for (const [edgeId, edge] of tempGraph.edges) {
+      mainGraph.edges.set(edgeId, edge);
+    }
+
+    // Update scan metadata
+    mainGraph.lastScan = tempGraph.lastScan;
+
+    // Save the updated graph
+    await this.storage.save();
+  }
+
   async scanProjectLegacy(): Promise<void> {
     await this.scanningService.scanProjectLegacy();
   }

@@ -136,7 +136,7 @@ export const SUGGEST_EXPLORATION_TOOL: Tool = {
 
 export const SCAN_PROJECT_TOOL: Tool = {
   name: 'scan_project',
-  description: 'Perform a fresh scan of the project to update the mind map with current file structure',
+  description: 'Perform a fresh scan of the project to update the mind map with current file structure. Supports multiple project contexts via project_root parameter or MCP_PROJECT_ROOT environment variable.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -149,6 +149,10 @@ export const SCAN_PROJECT_TOOL: Tool = {
         type: 'boolean',
         description: 'Include basic code analysis during scan (default: true)',
         default: true
+      },
+      project_root: {
+        type: 'string',
+        description: 'Project root directory to scan (optional - uses MCP_PROJECT_ROOT env var, then current working directory if not specified)'
       }
     }
   }

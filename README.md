@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.1.5 🧠
+# Mind Map MCP Server v1.2.0 🧠
 
-**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, and advanced **call pattern analysis** for next-generation code understanding.
+**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, and **cross-project functionality** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.1.5
+## 🚀 Current Status: Production Ready v1.2.0
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ CI/CD Pipeline**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Cross-Project Support** | **✅ CI/CD Pipeline**
 
-**🧠 Latest Update v1.1.5**: **Enhanced Call Pattern Analysis** + **CI/CD Infrastructure** - Implemented comprehensive call pattern analysis with 100% test success rate, including constructor call detection, call depth calculation, complexity analysis, and code style recognition. Added complete CI/CD pipeline infrastructure with automated testing, security scanning, performance monitoring, and release workflows.
+**🎯 Latest Update v1.2.0**: **Cross-Project Functionality** - Revolutionary cross-project support allowing MCP to work seamlessly across multiple project directories. Features automatic project detection, environment variable configuration, project-specific caching, and independent configuration management. Each project maintains its own mind map data and settings while sharing the same powerful MCP server.
 
 ## 📦 Installation & Setup
 
@@ -60,7 +60,46 @@ If you prefer manual configuration, add this to your Claude Desktop config:
 }
 ```
 
-#### 3. **Verify Installation**
+#### 3. **Environment Variable Configuration**
+
+You can configure the MCP server to work with specific project directories using the `MCP_PROJECT_ROOT` environment variable:
+
+```json
+{
+  "mcpServers": {
+    "mind-map-mcp": {
+      "command": "npx",
+      "args": ["mind-map-mcp"],
+      "env": {
+        "MCP_PROJECT_ROOT": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+**What it does:**
+- Makes MCP scan and cache files in the specified project directory
+- Creates `.mindmap-cache` folder in the target project
+- Uses project-specific configuration and mind map data
+- Allows working with multiple projects independently
+
+**Usage Examples:**
+```json
+// For a specific project
+"env": {
+  "MCP_PROJECT_ROOT": "/Users/yourname/projects/my-app"
+}
+
+// For a demo or test project
+"env": {
+  "MCP_PROJECT_ROOT": "/Users/yourname/projects/demo-project"
+}
+```
+
+**Without this variable:** MCP uses the current working directory where the MCP server was started.
+
+#### 4. **Verify Installation**
 
 After setup, restart Claude and verify the integration:
 

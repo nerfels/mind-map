@@ -531,14 +531,39 @@ class MindMapMCPServer {
   private async handleScanProject(args?: {
     force_rescan?: boolean;
     include_analysis?: boolean;
+    project_root?: string;
   }) {
-    const { force_rescan = false, include_analysis = true } = args || {};
-    
+    const { force_rescan = false, include_analysis = true, project_root } = args || {};
+
     console.error('Starting project scan...');
-    await this.mindMap.scanProject(force_rescan);
-    
+
+    // Get the target project root in priority order:
+    // 1. Explicit project_root parameter
+    // 2. MCP_PROJECT_ROOT environment variable
+    // 3. Current working directory
+    // 4. Server's original project root
+    const envProjectRoot = process.env.MCP_PROJECT_ROOT;
+    const currentWorkingDir = process.cwd();
+    const targetProjectRoot = project_root || envProjectRoot || currentWorkingDir;
+
+    // Always use scanProjectWithRoot to ensure we scan the correct directory
+    console.error(`🎯 Target project root: ${targetProjectRoot}`);
+    console.error(`📁 Current working directory: ${currentWorkingDir}`);
+    console.error(`🖥️  Server project root: ${this.projectRoot}`);
+    console.error(`🌍 MCP_PROJECT_ROOT env var: ${envProjectRoot || 'not set'}`);
+
+    if (targetProjectRoot !== this.projectRoot) {
+      // Use the new method to scan a different project root
+      console.error(`🔄 Using scanProjectWithRoot for different directory`);
+      await this.mindMap.scanProjectWithRoot(targetProjectRoot, force_rescan, include_analysis);
+    } else {
+      // Use the default method when scanning the server's project root
+      console.error(`✅ Using default scanProject for server's project root`);
+      await this.mindMap.scanProject(force_rescan);
+    }
+
     const stats = this.mindMap.getStats();
-    
+
     return {
       content: [
         {
@@ -547,7 +572,10 @@ class MindMapMCPServer {
             `- Scanned ${stats.nodesByType.file || 0} files\n` +
             `- Found ${stats.nodesByType.directory || 0} directories\n` +
             `- Total nodes: ${stats.nodeCount}\n` +
-            `- Total relationships: ${stats.edgeCount}`
+            `- Total relationships: ${stats.edgeCount}\n` +
+            `- Project root: ${targetProjectRoot}` +
+            (targetProjectRoot !== currentWorkingDir ? `\n- Working directory: ${currentWorkingDir}` : '') +
+            (envProjectRoot ? `\n- Environment root: ${envProjectRoot}` : '')
         }
       ]
     };
