@@ -44,7 +44,8 @@ export class QueryService {
 
     // Route to specialized engines for optimal results
     if (queryRoute.engine === 'advanced') {
-      return await this.advancedQueryEngine.executeQuery(queryRoute.optimizedQuery || query, queryRoute.parameters || {});
+      const result = await this.advancedQueryEngine.executeQuery(queryRoute.optimizedQuery || query, queryRoute.parameters || {});
+      return { ...result, isAdvancedQuery: true };
     } else if (queryRoute.engine === 'temporal') {
       const timeRange = queryRoute.timeRange || {
         start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
@@ -75,7 +76,10 @@ export class QueryService {
         totalMatches: nodes.length,
         queryTime: Date.now() - startTime,
         usedActivation: false,
-        temporalData: temporalResult
+        temporalData: temporalResult,
+        isTemporalQuery: true,
+        timeRange,
+        entity: queryRoute.entity || '*'
       } as any;
     } else if (queryRoute.engine === 'aggregate') {
       const aggregateResult = await this.aggregateQueryEngine.executeAggregate({
@@ -431,8 +435,110 @@ export class QueryService {
   }
 
   private determineQueryRoute(query: string, options: QueryOptions): any {
-    // Implementation would need to be copied from MindMapEngine
+    const queryLower = query.toLowerCase();
+
+    // Check for Cypher-like advanced query patterns
+    const advancedPatterns = [
+      /match\s*\(/i,
+      /where\s+\w+\./i,
+      /return\s+\w+\./i,
+      /\bwhere\b.*\bequals?\b/i,
+      /\bmatch\b.*\bnodes?\b/i,
+      /find.*relationships?.*between/i
+    ];
+
+    if (advancedPatterns.some(pattern => pattern.test(query))) {
+      return {
+        engine: 'advanced',
+        optimizedQuery: query,
+        parameters: {}
+      };
+    }
+
+    // Check for temporal/time-based query patterns
+    const temporalPatterns = [
+      /\b(over\s+time|evolution|changes?\s+over|history|timeline|temporal)\b/i,
+      /\b(when|since|until|before|after|during)\b/i,
+      /\b(trend|growth|decline|progression)\b/i
+    ];
+
+    if (temporalPatterns.some(pattern => pattern.test(query))) {
+      return {
+        engine: 'temporal',
+        entity: this.extractEntity(query),
+        timeRange: this.extractTimeRange(query)
+      };
+    }
+
+    // Check for aggregate/statistics query patterns
+    const aggregatePatterns = [
+      /\b(count|sum|average|avg|total|statistics|stats)\b/i,
+      /\b(group\s+by|grouped?\s+by|by\s+type)\b/i,
+      /\bhow\s+many\b/i,
+      /\b(distribution|breakdown)\b/i,
+      /\b(files?\s+by\s+type|classes?\s+by|functions?\s+by)\b/i
+    ];
+
+    if (aggregatePatterns.some(pattern => pattern.test(query))) {
+      return {
+        engine: 'aggregate',
+        aggregation: this.determineAggregation(query),
+        groupBy: this.determineGrouping(query),
+        filter: this.extractFilter(query)
+      };
+    }
+
+    // Default to linear search for simple queries
     return { engine: 'linear' };
+  }
+
+  private extractEntity(query: string): string {
+    // Extract entity from temporal queries
+    const entityMatches = query.match(/\b(file|function|class|node|component)s?\b/i);
+    return entityMatches ? entityMatches[1].toLowerCase() : '*';
+  }
+
+  private extractTimeRange(query: string): any {
+    // For now, return default time range - could be enhanced to parse specific dates
+    return {
+      start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+      end: new Date()
+    };
+  }
+
+  private determineAggregation(query: string): any {
+    if (/\bcount\b/i.test(query)) {
+      return { function: 'count', field: 'id' };
+    }
+    if (/\b(sum|total)\b/i.test(query)) {
+      return { function: 'sum', field: 'confidence' };
+    }
+    if (/\b(average|avg)\b/i.test(query)) {
+      return { function: 'avg', field: 'confidence' };
+    }
+    return { function: 'count', field: 'id' }; // default
+  }
+
+  private determineGrouping(query: string): any[] {
+    if (/\b(by\s+type|files?\s+by\s+type|group.*type)\b/i.test(query)) {
+      return [{ field: 'type' }];
+    }
+    if (/\b(by\s+name|group.*name)\b/i.test(query)) {
+      return [{ field: 'name' }];
+    }
+    return [{ field: 'type' }]; // default grouping
+  }
+
+  private extractFilter(query: string): any {
+    // Extract basic filters from query
+    const typeMatch = query.match(/\b(file|function|class|directory)s?\b/i);
+    if (typeMatch) {
+      return {
+        conditions: [{ field: 'type', operator: 'eq', value: typeMatch[1].toLowerCase() }],
+        operator: 'AND'
+      };
+    }
+    return undefined;
   }
 
   private createQueryContext(options: QueryOptions): string {

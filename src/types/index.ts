@@ -328,6 +328,17 @@ export interface QueryResult {
   }>;
   usedActivation?: boolean;
   activationLevels?: number;
+  // Specialized engine markers
+  isAdvancedQuery?: boolean;
+  isTemporalQuery?: boolean;
+  queryPlan?: string;
+  // Specialized engine data
+  aggregateData?: any;
+  temporalData?: any;
+  timeRange?: any;
+  entity?: string;
+  analysisType?: string;
+  metric?: string;
 }
 
 // Predictive Error Detection Interfaces

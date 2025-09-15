@@ -62,7 +62,36 @@ export class QueryHandlers {
       }
     }
 
-    const responseText = ResponseFormatter.formatQueryResults(result, include_metadata);
+    // Detect which engine was used and format appropriately
+    let responseText: string;
+
+    if (result.aggregateData) {
+      // Aggregate engine was used
+      responseText = ResponseFormatter.formatAggregateQueryResults(
+        result.aggregateData,
+        result.aggregateData.aggregation || { function: 'count', field: 'name' }
+      );
+    } else if (result.isTemporalQuery || result.temporalData) {
+      // Temporal engine was used
+      responseText = ResponseFormatter.formatTemporalQueryResults(
+        result.temporalData || result,
+        result.timeRange || { start: new Date(), end: new Date() },
+        result.entity || '*',
+        result.analysisType || 'evolution',
+        result.metric
+      );
+    } else if (result.isAdvancedQuery || (result.nodes && result.queryPlan)) {
+      // Advanced engine was used
+      responseText = ResponseFormatter.formatAdvancedQueryResults(
+        result,
+        query,
+        {},
+        false
+      );
+    } else {
+      // Standard linear query
+      responseText = ResponseFormatter.formatQueryResults(result, include_metadata);
+    }
 
     return ResponseFormatter.formatSuccessResponse(responseText);
   }

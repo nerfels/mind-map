@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.5.0 🧠
+# Mind Map MCP Server v1.5.1 🧠
 
 **Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, and **call pattern analysis** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.5.0
+## 🚀 Current Status: Production Ready v1.5.1
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Enhanced Query System** | **✅ CI/CD Pipeline**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ CI/CD Pipeline**
 
-**🎯 Latest Update v1.5.0**: **Complete Query Engine Fixes** - Fixed critical issues in advanced query WHERE clauses, aggregate query grouping, and parameter parsing. All query engines (basic, advanced, aggregate, temporal) now work perfectly with case-insensitive field access and proper value extraction.
+**🎯 Latest Update v1.5.1**: **Perfect Automatic Query Routing** - Fixed result formatting for specialized engines (aggregate, temporal, advanced). The query_mindmap tool now automatically detects query intent and routes to the optimal engine with proper result display. Aggregate queries show statistics, temporal queries show evolution metrics, and advanced queries show Cypher results.
 
 ## 📦 Installation & Setup
 
