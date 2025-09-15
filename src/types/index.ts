@@ -260,7 +260,8 @@ export interface CodeStructure {
   imports: Array<{
     module: string;
     path?: string;
-    type: 'default' | 'named' | 'namespace';
+    type: 'default' | 'named' | 'namespace' | 'dynamic' | 'require';
+    line?: number; // Line number for dynamic imports/requires
   }>;
   exports: Array<{
     name: string;

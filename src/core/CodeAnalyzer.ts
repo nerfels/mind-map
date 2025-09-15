@@ -110,6 +110,9 @@ export class CodeAnalyzer {
       this.processExportDeclaration(node, structure);
     } else if (ts.isVariableStatement(node)) {
       this.processVariableDeclaration(node, structure);
+    } else if (ts.isCallExpression(node)) {
+      // Check for dynamic imports and require calls
+      this.processDynamicImport(node, structure);
     }
 
     // Recursively walk child nodes
@@ -264,6 +267,63 @@ export class CodeAnalyzer {
         }
       }
     });
+  }
+
+  private processDynamicImport(
+    node: ts.CallExpression,
+    structure: CodeStructure
+  ): void {
+    // Check for dynamic import() calls
+    if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const arg = node.arguments[0];
+      if (arg && ts.isStringLiteral(arg)) {
+        structure.imports.push({
+          module: arg.text,
+          type: 'dynamic',
+          line: this.getLineNumber(node)
+        });
+      } else if (arg && ts.isTemplateExpression(arg)) {
+        // Template literal import like import(`./modules/${name}`)
+        structure.imports.push({
+          module: '<dynamic-template>',
+          type: 'dynamic',
+          line: this.getLineNumber(node)
+        });
+      } else {
+        // Variable or computed import like import(moduleName)
+        structure.imports.push({
+          module: '<dynamic-variable>',
+          type: 'dynamic',
+          line: this.getLineNumber(node)
+        });
+      }
+    }
+
+    // Check for require() calls
+    if (ts.isIdentifier(node.expression) && node.expression.text === 'require') {
+      const arg = node.arguments[0];
+      if (arg && ts.isStringLiteral(arg)) {
+        structure.imports.push({
+          module: arg.text,
+          type: 'require',
+          line: this.getLineNumber(node)
+        });
+      } else if (arg && ts.isTemplateExpression(arg)) {
+        // Template literal require like require(`./modules/${name}`)
+        structure.imports.push({
+          module: '<require-template>',
+          type: 'require',
+          line: this.getLineNumber(node)
+        });
+      } else {
+        // Variable or computed require like require(moduleName)
+        structure.imports.push({
+          module: '<require-variable>',
+          type: 'require',
+          line: this.getLineNumber(node)
+        });
+      }
+    }
   }
 
   private getLineNumber(node: ts.Node): number {
