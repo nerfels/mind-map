@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.2.0 🧠
+# Mind Map MCP Server v1.3.1 🧠
 
 **Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, and **call pattern analysis** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.2.0
+## 🚀 Current Status: Production Ready v1.3.1
 
 **✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ CI/CD Pipeline**
 
-**🎯 Latest Update v1.2.0**: **Enhanced Project Configuration** - Improved project scanning and configuration management with environment variable support for flexible project targeting.
+**🎯 Latest Update v1.3.1**: **Fixed Java Code Structure Recognition** - Resolved critical issue where Java classes, methods, and functions were not being properly extracted and stored as separate nodes during project scanning. Java files now provide full code intelligence with class and method recognition at the same level as TypeScript/JavaScript.
 
 ## 📦 Installation & Setup
 
