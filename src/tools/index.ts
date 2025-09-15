@@ -1150,6 +1150,60 @@ export const ANALYZE_CALL_PATTERNS_TOOL: Tool = {
   }
 };
 
+export const UPDATE_IGNORE_PATTERNS_TOOL: Tool = {
+  name: 'update_ignore_patterns',
+  description: 'Update ignore patterns for file scanning with support for .gitignore and .mindmapignore files',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      patterns: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Array of ignore patterns using .gitignore syntax (e.g., ["node_modules/**", "*.log", "dist/"])'
+      },
+      create_mindmapignore: {
+        type: 'boolean',
+        description: 'Create .mindmapignore file with the patterns (default: false)',
+        default: false
+      }
+    },
+    required: ['patterns'],
+    additionalProperties: false
+  }
+};
+
+export const TEST_IGNORE_PATTERNS_TOOL: Tool = {
+  name: 'test_ignore_patterns',
+  description: 'Test ignore patterns against project files to see what would be ignored',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      patterns: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Array of ignore patterns to test'
+      },
+      sample_paths: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Optional array of specific file paths to test against (uses project files if not provided)'
+      }
+    },
+    required: ['patterns'],
+    additionalProperties: false
+  }
+};
+
+export const GET_IGNORE_STATS_TOOL: Tool = {
+  name: 'get_ignore_stats',
+  description: 'Get statistics about currently active ignore patterns and their effectiveness',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
 export const INIT_CLAUDE_CODE_TOOL: Tool = {
   name: 'init_claude_code',
   description: 'Get comprehensive setup instructions and configuration guidance for integrating Mind Map MCP with Claude Code',
@@ -1218,5 +1272,8 @@ export const ALL_TOOLS: Tool[] = [
   PREDICT_PATTERN_EMERGENCE_TOOL,
   ANALYZE_AND_PREDICT_TOOL,
   ANALYZE_CALL_PATTERNS_TOOL,
+  UPDATE_IGNORE_PATTERNS_TOOL,
+  TEST_IGNORE_PATTERNS_TOOL,
+  GET_IGNORE_STATS_TOOL,
   INIT_CLAUDE_CODE_TOOL
 ];

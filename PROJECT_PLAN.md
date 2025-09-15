@@ -160,6 +160,32 @@ Project Knowledge Graph
 **Research Basis**: Comprehensive relationship detection beyond traditional AST analysis
 **Expected Impact**: 95%+ code relationship coverage including unused components
 
+#### Week 4.5: File Ignore Configuration Enhancement (🔥🔥🔥 HIGH ROI)
+**Research Basis**: Efficient scanning through intelligent file filtering reduces noise and improves analysis focus
+**Expected Impact**: 20-30% performance improvement through reduced analysis overhead
+**Status**: 📋 PLANNED
+
+- **Enhanced Ignore Pattern System**
+  - Configuration-driven ignore patterns (ProjectLearningConfig.ignorePatterns)
+  - Support for `.gitignore` and `.mindmapignore` file formats
+  - Pattern merging: user patterns + smart defaults + project-specific ignores
+  - Real-time pattern validation and testing interface
+  - **Expected**: More focused analysis, better performance, user control
+
+- **Multi-Source Ignore Pattern Integration**
+  - FileScanner configuration enhancement to accept dynamic patterns
+  - Automatic `.gitignore` parsing with glob pattern support
+  - Custom `.mindmapignore` file creation and management
+  - Pattern precedence: user config > `.mindmapignore` > `.gitignore` > defaults
+  - **Expected**: Familiar workflow for developers, comprehensive coverage
+
+- **Configuration Management API**
+  - MCP tools for ignore pattern management (`update_ignore_patterns`, `test_ignore_patterns`)
+  - Pattern testing with sample file matching and performance impact
+  - Configuration validation and optimization suggestions
+  - Pattern analytics: files ignored, scan time reduction, pattern effectiveness
+  - **Expected**: Easy configuration management, performance insights
+
 #### Week 5: Enhanced Code Analysis (🔥🔥🔥 High ROI)
 - **Dynamic Import Detection**
   - Track runtime imports (`import()`, `require()` calls)

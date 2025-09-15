@@ -259,4 +259,109 @@ export class SystemHandlers {
       return ResponseFormatter.formatErrorResponse('clear_cache', error);
     }
   }
+
+  async handleUpdateIgnorePatterns(args: { patterns: string[]; create_mindmapignore?: boolean }) {
+    try {
+      const { patterns, create_mindmapignore = false } = args;
+
+      // Validate patterns
+      const validatedPatterns = patterns
+        .map(p => p.trim())
+        .filter(Boolean)
+        .filter(p => !p.startsWith('#')); // Remove comments
+
+      if (validatedPatterns.length === 0) {
+        throw new Error('No valid patterns provided');
+      }
+
+      // Update user configuration
+      const configService = this.mindMap.getConfigurationService();
+      const currentConfig = configService.getProjectLearningConfig() || {
+        projectId: 'default',
+        projectName: 'Current Project',
+        enableHebbianLearning: true,
+        enableInhibitoryLearning: true,
+        enablePatternLearning: true,
+        learningRate: 0.1,
+        decayRate: 0.05,
+        confidenceThreshold: 0.5,
+        customPatterns: [],
+        disabledPatterns: [],
+        ignorePatterns: [],
+        priorityDirectories: [],
+        excludeDirectories: [],
+        frameworkOverrides: {},
+        enableFeedbackCollection: true,
+        autoRating: false
+      };
+
+      currentConfig.ignorePatterns = validatedPatterns;
+      await configService.updateProjectLearningConfig(currentConfig);
+
+      // Update FileScanner patterns
+      const scanner = this.mindMap.getFileScanner();
+      await scanner.updateIgnorePatterns(validatedPatterns);
+
+      // Create .mindmapignore file if requested
+      if (create_mindmapignore) {
+        await scanner.createMindMapIgnoreFile(validatedPatterns);
+      }
+
+      const text = `✅ Updated ignore patterns:\n${validatedPatterns.map(p => `  - ${p}`).join('\n')}\n` +
+        (create_mindmapignore ? '\n📝 Created .mindmapignore file' : '');
+
+      return ResponseFormatter.formatSuccessResponse(text);
+    } catch (error) {
+      return ResponseFormatter.formatErrorResponse('update_ignore_patterns', error);
+    }
+  }
+
+  async handleTestIgnorePatterns(args: { patterns: string[]; sample_paths?: string[] }) {
+    try {
+      const { patterns, sample_paths } = args;
+
+      if (!patterns || patterns.length === 0) {
+        throw new Error('No patterns provided for testing');
+      }
+
+      const scanner = this.mindMap.getFileScanner();
+      const result = await scanner.testIgnorePatterns(patterns, sample_paths);
+
+      const text = `🧪 Pattern Test Results:\n` +
+        `⏱️ Performance: ${result.performance}ms\n` +
+        `📁 Files matched: ${result.matched.length}\n` +
+        `🚫 Files ignored: ${result.ignored.length}\n\n` +
+        `Ignored files (first 10):\n${result.ignored.slice(0, 10).map(f => `  - ${f}`).join('\n')}` +
+        (result.ignored.length > 10 ? `\n  ... and ${result.ignored.length - 10} more` : '');
+
+      return ResponseFormatter.formatSuccessResponse(text);
+    } catch (error) {
+      return ResponseFormatter.formatErrorResponse('test_ignore_patterns', error);
+    }
+  }
+
+  async handleGetIgnoreStats(args?: {}) {
+    try {
+      const scanner = this.mindMap.getFileScanner();
+      const stats = scanner.getIgnorePatternStats();
+      const activePatterns = scanner.getActiveIgnorePatterns();
+
+      const text = `📊 Ignore Pattern Statistics:\n` +
+        `🔢 Total patterns: ${stats.totalPatterns}\n` +
+        `📂 Source breakdown:\n` +
+        `  - Defaults: ${stats.sourceBreakdown.defaults}\n` +
+        `  - Custom: ${stats.sourceBreakdown.custom}\n` +
+        `  - .gitignore: ${stats.sourceBreakdown.gitignore}\n` +
+        `  - .mindmapignore: ${stats.sourceBreakdown.mindmapignore}\n` +
+        `  - Custom files: ${stats.sourceBreakdown.customFiles}\n` +
+        `🚫 Files ignored: ${stats.filesIgnored}\n` +
+        `⚡ Pattern loading time: ${stats.scanTimeReduction}ms\n\n` +
+        `Active patterns (first 10):\n${activePatterns.slice(0, 10).map(p => `  - ${p}`).join('\n')}` +
+        (activePatterns.length > 10 ? `\n  ... and ${activePatterns.length - 10} more` : '');
+
+      return ResponseFormatter.formatSuccessResponse(text);
+    } catch (error) {
+      return ResponseFormatter.formatErrorResponse('get_ignore_stats', error);
+    }
+  }
 }

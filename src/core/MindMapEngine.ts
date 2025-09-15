@@ -1,5 +1,5 @@
 import { MindMapStorage } from './MindMapStorage.js';
-import { FileScanner } from './FileScanner.js';
+import { FileScanner, FileScannerOptions } from './FileScanner.js';
 import { CodeAnalyzer } from './CodeAnalyzer.js';
 import { ArchitecturalAnalyzer } from './ArchitecturalAnalyzer.js';
 import { AdvancedQueryEngine } from './AdvancedQueryEngine.js';
@@ -72,7 +72,13 @@ export class MindMapEngine {
   constructor(projectRoot: string) {
     this.projectRoot = projectRoot;
     this.storage = new MindMapStorage(projectRoot);
-    this.scanner = new FileScanner(projectRoot);
+
+    // Initialize UserConfigurationManager first to get ignore patterns
+    this.userConfigManager = new UserConfigurationManager(this.projectRoot);
+
+    // Initialize FileScanner with configuration support
+    this.scanner = new FileScanner(this.projectRoot, this.getFileScannerOptions());
+
     this.codeAnalyzer = new CodeAnalyzer();
     this.architecturalAnalyzer = new ArchitecturalAnalyzer(this.storage);
     this.advancedQueryEngine = new AdvancedQueryEngine(this.storage);
@@ -159,6 +165,39 @@ export class MindMapEngine {
       this.scalabilityManager,
       this.projectRoot
     );
+  }
+
+  /**
+   * Get FileScanner options from user configuration
+   */
+  private getFileScannerOptions(): FileScannerOptions {
+    try {
+      const projectConfig = this.userConfigManager.getProjectConfig();
+      return {
+        ignorePatterns: projectConfig?.ignorePatterns || [],
+        useGitignore: true,
+        useMindMapIgnore: true,
+        customIgnoreFiles: []
+      };
+    } catch (error) {
+      // Configuration not initialized yet, use defaults
+      return {
+        ignorePatterns: [],
+        useGitignore: true,
+        useMindMapIgnore: true,
+        customIgnoreFiles: []
+      };
+    }
+  }
+
+
+  // Accessor Methods
+  getFileScanner(): FileScanner {
+    return this.scanner;
+  }
+
+  getConfigurationService() {
+    return this.configurationService;
   }
 
   // Core Query Methods - delegate to QueryService
@@ -509,6 +548,14 @@ export class MindMapEngine {
 
   // Additional methods for MCP compatibility
   async initialize(): Promise<void> {
+    // Initialize user configuration first
+    await this.userConfigManager.initialize();
+    await this.configurationService.initialize();
+
+    // Reload FileScanner with proper configuration now
+    const newOptions = this.getFileScannerOptions();
+    await this.scanner.updateIgnorePatterns(newOptions.ignorePatterns);
+
     // Load existing data from storage
     try {
       await this.storage.load();

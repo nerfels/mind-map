@@ -1,0 +1,9 @@
+# Mind Map Ignore Patterns
+# This file specifies patterns for files and directories that should be ignored by the mind map scanner
+# Syntax follows .gitignore conventions
+
+temp/**
+*.backup
+logs/**
+cache/**
+build-*/**

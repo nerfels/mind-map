@@ -150,6 +150,12 @@ class MindMapMCPServer {
             return await this.systemHandlers.handleGetCacheStats(args as any);
           case 'clear_cache':
             return await this.systemHandlers.handleClearCache(args as any);
+          case 'update_ignore_patterns':
+            return await this.systemHandlers.handleUpdateIgnorePatterns(args as any);
+          case 'test_ignore_patterns':
+            return await this.systemHandlers.handleTestIgnorePatterns(args as any);
+          case 'get_ignore_stats':
+            return await this.systemHandlers.handleGetIgnoreStats(args as any);
 
           // Tooling handlers
           case 'detect_project_tooling':
