@@ -6,6 +6,8 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { MindMapEngine } from './core/MindMapEngine.js';
 import { AttentionType } from './core/AttentionSystem.js';
 import { ALL_TOOLS } from './tools/index.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 class MindMapMCPServer {
   private server: Server;
@@ -14,10 +16,14 @@ class MindMapMCPServer {
 
   constructor() {
     this.projectRoot = process.cwd();
+
+    // Setup logging to .mindmap-cache
+    this.setupLogging();
+
     this.server = new Server(
       {
         name: 'mind-map-mcp',
-        version: '1.1.5'
+        version: '0.1.0'
       },
       {
         capabilities: {
@@ -28,6 +34,44 @@ class MindMapMCPServer {
 
     this.mindMap = new MindMapEngine(this.projectRoot);
     this.setupHandlers();
+
+    // Initialize the mind map (load existing data)
+    this.initializeMindMap();
+  }
+
+  private setupLogging() {
+    const cacheDir = path.join(this.projectRoot, '.mindmap-cache');
+
+    // Ensure cache directory exists
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+
+    const logFile = path.join(cacheDir, 'mcp.log');
+
+    // Override console.log and console.error to also write to file
+    const originalLog = console.log;
+    const originalError = console.error;
+
+    console.log = (...args: any[]) => {
+      const timestamp = new Date().toISOString();
+      const message = `[${timestamp}] LOG: ${args.join(' ')}\n`;
+      fs.appendFileSync(logFile, message);
+      originalLog(...args);
+    };
+
+    console.error = (...args: any[]) => {
+      const timestamp = new Date().toISOString();
+      const message = `[${timestamp}] ERROR: ${args.join(' ')}\n`;
+      fs.appendFileSync(logFile, message);
+      originalError(...args);
+    };
+
+    console.log('🗂️  MCP logging initialized in .mindmap-cache/mcp.log');
+  }
+
+  private async initializeMindMap() {
+    await this.mindMap.initialize();
   }
 
   private setupHandlers(): void {
@@ -176,10 +220,7 @@ class MindMapMCPServer {
           
           case 'analyze_and_predict':
             return await this.handleAnalyzeAndPredict(args as any);
-
-          case 'analyze_call_patterns':
-            return await this.handleAnalyzeCallPatterns(args as any);
-
+          
           case 'init_claude_code':
             return await this.handleInitClaudeCode(args as any);
           
@@ -207,7 +248,24 @@ class MindMapMCPServer {
     include_metadata?: boolean;
   }) {
     const { query, type, limit, include_metadata } = args;
-    
+
+    // Always log MCP queries to track what's happening
+    console.log(`[MCP] Query received: "${query}"`);
+
+    // Debug for problematic queries
+    const isTestQuery = query.toLowerCase().includes('mindmap') ||
+                       query.toLowerCase().includes('querymindmap') ||
+                       query === 'MindMapEngine' ||
+                       query === 'queryMindMap';
+    if (isTestQuery) {
+      console.log(`[MCP DEBUG] Processing test query: "${query}"`);
+    }
+
+    // Debug logging
+    if (query.toLowerCase().includes('mindmap')) {
+      console.log(`[MCP DEBUG] Handling MindMap query: "${query}"`);
+    }
+
     // Input validation
     this.validateQuery(query);
     this.validateLimit(limit);
@@ -219,13 +277,26 @@ class MindMapMCPServer {
       includeMetadata: include_metadata,
       useActivation: false,  // Use simple linear query for stability
       bypassInhibition: true,  // Skip inhibitory learning for basic queries
-      bypassHebbianLearning: false,  // Enable Hebbian learning for associative intelligence
+      bypassHebbianLearning: true,  // Skip Hebbian learning for basic queries
       bypassAttention: true,  // Skip attention system for basic queries
       bypassBiTemporal: true,  // Skip bi-temporal processing for basic queries
       includeParentContext: false,  // Skip hierarchical context
       includeChildContext: false,   // Skip hierarchical context
-      bypassCache: false  // Enable caching for better performance
+      bypassCache: false,  // Enable caching for better performance
+      bypassMultiModalFusion: true,  // Skip multi-modal fusion to avoid filtering
+      confidence: 0.0  // Accept all confidence levels
     });
+
+    // Debug the result
+    if (isTestQuery) {
+      console.log(`[MCP DEBUG] Result: nodes=${result.nodes.length}, total=${result.totalMatches}`);
+      if (result.totalMatches > 0 && result.nodes.length === 0) {
+        console.log('[MCP DEBUG] Found matches but filtered out during processing!');
+      }
+      if (result.nodes.length > 0) {
+        console.log(`[MCP DEBUG] First node: ${result.nodes[0].name}, confidence=${result.nodes[0].confidence}`);
+      }
+    }
 
     const responseText = this.formatQueryResults(result, include_metadata);
 
@@ -291,16 +362,14 @@ class MindMapMCPServer {
     this.validateFilesInvolved(files_involved);
     this.validateOutcome(outcome);
 
-    this.mindMap.updateFromTask(
-      task_description,
-      files_involved,
+    this.mindMap.updateFromTask({
+      task: task_description,
+      files: files_involved,
       outcome,
-      {
-        errorDetails: error_details,
-        solutionDetails: solution_details,
-        patternsDiscovered: patterns_discovered
-      }
-    );
+      errorDetails: error_details,
+      solutionDetails: solution_details,
+      patternsDiscovered: patterns_discovered
+    });
 
     await this.mindMap.save();
 
@@ -691,11 +760,26 @@ class MindMapMCPServer {
       throw new Error('limit must be between 1 and 50');
     }
 
-    let insights = this.mindMap.getArchitecturalInsights(pattern_type);
-    
+    let insights = await this.mindMap.getArchitecturalInsights();
+
+    // Debug: Check what we actually got
+    console.log('Architectural insights type:', typeof insights);
+    console.log('Architectural insights:', insights);
+
+    // Ensure insights is an array
+    if (!Array.isArray(insights)) {
+      console.warn('getArchitecturalInsights returned non-array:', insights);
+      insights = [];
+    }
+
+    // Filter by pattern type if specified
+    if (pattern_type) {
+      insights = insights.filter(insight => insight.patternType === pattern_type);
+    }
+
     // Filter by confidence threshold
     insights = insights.filter(insight => insight.confidence >= min_confidence);
-    
+
     // Apply limit
     insights = insights.slice(0, limit);
 
@@ -832,12 +916,12 @@ class MindMapMCPServer {
       if (node.path) text += `   Path: ${node.path}\n`;
       text += `   Confidence: ${node.confidence.toFixed(2)}\n`;
       
-      if (includeMetadata && Object.keys(node.metadata).length > 0) {
+      if (includeMetadata && node.metadata && Object.keys(node.metadata).length > 0) {
         text += `   Metadata: ${JSON.stringify(node.metadata, null, 2)}\n`;
       }
       
-      if (node.properties.language) text += `   Language: ${node.properties.language}\n`;
-      if (node.properties.framework) text += `   Framework: ${node.properties.framework}\n`;
+      if (node.properties?.language) text += `   Language: ${node.properties.language}\n`;
+      if (node.properties?.framework) text += `   Framework: ${node.properties.framework}\n`;
       text += '\n';
     });
 
@@ -926,12 +1010,12 @@ class MindMapMCPServer {
       granularity: time_range.granularity || 'day' as const
     };
 
-    const result = await this.mindMap.executeTemporalQuery(
+    const result = await this.mindMap.executeTemporalQuery({
       timeRange,
       entity,
       analysis_type,
       metric
-    );
+    });
 
     let text = `⏰ Temporal Query Results:\n\n`;
     text += `📅 Time Range: ${timeRange.start.toISOString().split('T')[0]} to ${timeRange.end.toISOString().split('T')[0]}\n`;
@@ -1006,22 +1090,22 @@ class MindMapMCPServer {
       throw new Error('Aggregation function and field are required');
     }
 
-    const result = await this.mindMap.executeAggregateQuery(
+    const result = await this.mindMap.executeAggregateQuery({
       aggregation,
-      group_by?.map(g => ({
+      group_by: group_by?.map(g => ({
         ...g,
         transform: g.transform as any
       })),
-      filter ? {
+      filter: filter ? {
         ...filter,
         operator: filter.operator || 'AND' as const
       } : undefined,
-      order_by?.map(o => ({
+      order_by: order_by?.map(o => ({
         ...o,
         direction: o.direction || 'DESC' as const
       })),
       limit
-    );
+    });
 
     let text = `📊 Aggregate Query Results:\n\n`;
     text += `Function: ${aggregation.function.toUpperCase()}(${aggregation.field})\n`;
@@ -1058,42 +1142,107 @@ class MindMapMCPServer {
     min_confidence?: number;
     actionable_only?: boolean;
   }) {
-    const { 
-      categories, 
-      min_confidence = 0.5, 
-      actionable_only = false 
+    console.log('DEBUG: handleGetInsights called with args:', args);
+
+    const {
+      categories,
+      min_confidence = 0.5,
+      actionable_only = false
     } = args;
 
-    const insights = await this.mindMap.generateInsights(
-      categories,
-      min_confidence,
-      actionable_only
-    );
+    console.log('DEBUG: Extracted parameters - min_confidence:', min_confidence, 'actionable_only:', actionable_only);
+
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Analysis timeout after 15 seconds')), 15000);
+    });
+
+    console.log('DEBUG: About to call generateInsights...');
+    const analysisResult = await Promise.race([
+      this.mindMap.generateInsights(),
+      timeoutPromise
+    ]).catch(err => {
+      console.error('Analysis failed or timed out:', err);
+      return null;
+    });
+
+    console.log('DEBUG: generateInsights completed or timed out');
+
+    // Debug: Check what we actually got
+    console.log('generateInsights result type:', typeof analysisResult);
+    console.log('generateInsights result:', analysisResult);
 
     let text = `🧠 Project Insights:\n\n`;
-    text += `Found ${insights.length} insights`;
-    if (categories) text += ` in categories: ${categories.join(', ')}`;
-    text += `\n\n`;
 
-    if (insights.length === 0) {
-      text += `No insights found matching the criteria.\n`;
-      text += `Try lowering min_confidence or removing category filters.`;
-    } else {
-      insights.forEach((insight, i) => {
-        text += `${i + 1}. 📊 ${insight.category}: ${insight.title}\n`;
-        text += `   ${insight.description}\n`;
-        text += `   Value: ${insight.value}\n`;
-        text += `   Confidence: ${(insight.confidence * 100).toFixed(1)}%\n`;
-        if (insight.trend) {
-          text += `   Trend: ${insight.trend === 'up' ? '📈' : insight.trend === 'down' ? '📉' : '➡️'}\n`;
+    // Handle null/timeout case
+    if (!analysisResult) {
+      text += `❌ Analysis failed or timed out. This could be due to:\n`;
+      text += `• Complex project structure requiring more processing time\n`;
+      text += `• Incomplete project scan - try running scan_project first\n`;
+      text += `• System resource constraints\n\n`;
+      text += `💡 Try: scan_project with force_rescan=true, then retry\n`;
+    }
+    // generateInsights returns an AnalysisResult object, not an array
+    else if (analysisResult && typeof analysisResult === 'object') {
+      console.log('DEBUG: Processing analysis result with actionable_only:', actionable_only);
+
+      // Filter results based on parameters
+      let filteredResult = analysisResult;
+
+      // Apply confidence filtering
+      if (min_confidence > 0) {
+        console.log('DEBUG: Applying confidence filter:', min_confidence);
+        // Filter architectural insights by confidence
+        if (Array.isArray(filteredResult.architectural)) {
+          filteredResult.architectural = filteredResult.architectural.filter((item: any) =>
+            !item.confidence || item.confidence >= min_confidence
+          );
         }
-        if (insight.actionable && insight.recommendation) {
-          text += `   💡 Recommendation: ${insight.recommendation}\n`;
+      }
+
+      // Apply actionable_only filtering
+      if (actionable_only) {
+        console.log('DEBUG: Applying actionable_only filter');
+        text += `📊 Actionable Insights (Confidence ≥ ${min_confidence}):\n\n`;
+
+        // Only show insights with specific recommendations
+        if (Array.isArray(filteredResult.architectural)) {
+          const actionableArchitectural = filteredResult.architectural.filter((item: any) =>
+            item.recommendations && Array.isArray(item.recommendations) && item.recommendations.length > 0
+          );
+          if (actionableArchitectural.length > 0) {
+            text += `**🏗️ Architecture Actions:** ${actionableArchitectural.length} items\n`;
+          }
         }
-        text += `\n`;
-      });
+
+        if (Array.isArray(filteredResult.errorPredictions) && filteredResult.errorPredictions.length > 0) {
+          text += `**⚠️ Error Prevention:** ${filteredResult.errorPredictions.length} items\n`;
+        }
+
+        if (filteredResult.recommendations && Array.isArray(filteredResult.recommendations) && filteredResult.recommendations.length > 0) {
+          text += `**💡 Recommendations:** ${filteredResult.recommendations.length} items\n`;
+        }
+      } else {
+        text += `📊 Comprehensive Analysis Results:\n\n`;
+
+        if (filteredResult.architectural) {
+          text += `**🏗️ Architecture:** ${Array.isArray(filteredResult.architectural) ? filteredResult.architectural.length : 0} insights\n`;
+        }
+        if (filteredResult.frameworks) {
+          text += `**🎯 Frameworks:** ${Array.isArray(filteredResult.frameworks) ? filteredResult.frameworks.length : 0} detected\n`;
+        }
+        if (filteredResult.tooling) {
+          text += `**🔧 Tooling:** Analysis completed\n`;
+        }
+        if (filteredResult.errorPredictions) {
+          text += `**⚠️ Error Predictions:** ${Array.isArray(filteredResult.errorPredictions) ? filteredResult.errorPredictions.length : 0} potential issues\n`;
+        }
+      }
+      text += `\n`;
+      console.log('DEBUG: Finished processing analysis result');
     }
 
+    console.log('DEBUG: About to return result from handleGetInsights');
     return {
       content: [
         {
@@ -1134,8 +1283,8 @@ class MindMapMCPServer {
       name,
       description,
       query,
-      parameters,
-      query_type
+      query_type || 'advanced',
+      parameters
     );
 
     const text = `💾 Query Saved Successfully!\n\n` +
@@ -1258,8 +1407,8 @@ class MindMapMCPServer {
     
     // Language breakdown
     text += `📊 **Languages (${analysis.languages.size}):**\n`;
-    const sortedLanguages = Array.from(analysis.languages.entries())
-      .sort(([,a], [,b]) => b.fileCount - a.fileCount);
+    const sortedLanguages = Array.from((analysis.languages as Map<string, any>).entries())
+      .sort(([,a], [,b]) => (b as any).fileCount - (a as any).fileCount);
     
     for (const [lang, data] of sortedLanguages) {
       text += `• ${lang.toUpperCase()}: ${data.fileCount} files`;
@@ -1395,7 +1544,7 @@ class MindMapMCPServer {
   }) {
     const { force_refresh = false, language_filter } = args;
 
-    const toolingByLanguage = await this.mindMap.detectProjectTooling(force_refresh);
+    const toolingByLanguage = await this.mindMap.detectProjectTooling(language_filter, force_refresh);
     
     // Filter by languages if specified
     let filteredTooling = toolingByLanguage;
@@ -1474,7 +1623,7 @@ class MindMapMCPServer {
         };
       }
 
-      const result = await this.mindMap.runLanguageTool(tool, toolArgs);
+      const result = await this.mindMap.runLanguageTool(tool.name, language, toolArgs);
       
       let text = `🔧 **${tool.name}** Results:\n\n`;
       text += `⏱️  Duration: ${result.duration}ms\n`;
@@ -1521,32 +1670,26 @@ class MindMapMCPServer {
     
     let text = `💡 Development Tool Recommendations:\n\n`;
     
-    if (recommendations.size === 0) {
+    if (recommendations.length === 0) {
       text += 'No specific tool recommendations found. Your tooling setup looks good!';
     } else {
-      for (const [language, langRecommendations] of recommendations) {
-        const filteredRecs = priority_filter === 'all' 
-          ? langRecommendations 
-          : langRecommendations.filter(r => r.priority === priority_filter);
-        
-        if (filteredRecs.length > 0) {
-          text += `**${language.toUpperCase()} Recommendations:**\n`;
-          
-          for (const rec of filteredRecs) {
-            const priorityIcon = rec.priority === 'high' ? '🔴' : rec.priority === 'medium' ? '🟡' : '🟢';
-            text += `${priorityIcon} **${rec.tool}** (${rec.priority} priority)\n`;
-            text += `   ${rec.reason}\n`;
-            
-            if (include_install_commands && rec.installCommand) {
-              text += `   📥 Install: \`${rec.installCommand}\`\n`;
-            }
-            
-            if (rec.configExample) {
-              text += `   ⚙️ Config example:\n\`\`\`\n${rec.configExample.slice(0, 200)}\n\`\`\`\n`;
-            }
-            text += '\n';
-          }
+      const filteredRecs = priority_filter === 'all'
+        ? recommendations
+        : recommendations.filter((r: any) => r.priority === priority_filter);
+
+      for (const rec of filteredRecs) {
+        const priorityIcon = rec.priority === 'high' ? '🔴' : rec.priority === 'medium' ? '🟡' : '🟢';
+        text += `${priorityIcon} **${rec.tool}** (${rec.priority} priority)\n`;
+        text += `   ${rec.reason}\n`;
+
+        if (include_install_commands && rec.installCommand) {
+          text += `   📥 Install: \`${rec.installCommand}\`\n`;
         }
+
+        if (rec.configExample) {
+          text += `   ⚙️ Config example:\n\`\`\`\n${rec.configExample.slice(0, 200)}\n\`\`\`\n`;
+        }
+        text += '\n';
       }
     }
 
@@ -1590,7 +1733,13 @@ class MindMapMCPServer {
 
       let text = `🔧 Running Tool Suite (${toolsToRun.length} tools)...\n\n`;
       
-      const results = await this.mindMap.runToolSuite(toolsToRun, parallel);
+      const results = await this.mindMap.runToolSuite({
+        tools: toolsToRun,
+        parallel,
+        fail_fast,
+        languages,
+        tool_types
+      });
       
       let successCount = 0;
       let totalIssues = 0;
@@ -1641,22 +1790,14 @@ class MindMapMCPServer {
     const { force_refresh = false, categories, min_confidence = 0.3 } = args;
 
     try {
-      const allFrameworks = await this.mindMap.detectEnhancedFrameworks(force_refresh);
-      
-      // Filter by categories if specified
-      let filteredFrameworks = allFrameworks;
-      if (categories && categories.length > 0) {
-        filteredFrameworks = new Map();
-        for (const category of categories) {
-          if (allFrameworks.has(category)) {
-            filteredFrameworks.set(category, allFrameworks.get(category)!);
-          }
-        }
-      }
+      const allFrameworks = await this.mindMap.detectEnhancedFrameworks(categories, force_refresh, min_confidence);
+
+      // Filter by min_confidence if specified
+      let filteredFrameworks = allFrameworks.filter((fw: any) => fw.confidence >= min_confidence);
 
       let text = `🎯 **Enhanced Framework Detection Results:**\n\n`;
       
-      if (filteredFrameworks.size === 0) {
+      if (filteredFrameworks.length === 0) {
         text += 'No frameworks detected matching the specified criteria.';
       } else {
         let totalFrameworks = 0;
@@ -1708,7 +1849,8 @@ class MindMapMCPServer {
           }
         }
         
-        text += `\n📊 **Summary:** ${totalFrameworks} frameworks detected across ${filteredFrameworks.size} categories`;
+        const uniqueCategories = new Set(filteredFrameworks.map((fw: any) => fw.category)).size;
+        text += `\n📊 **Summary:** ${totalFrameworks} frameworks detected across ${uniqueCategories} categories`;
         
         if (min_confidence > 0.3) {
           text += ` (confidence ≥ ${Math.round(min_confidence * 100)}%)`;
@@ -1758,7 +1900,7 @@ class MindMapMCPServer {
         };
       }
 
-      const recommendations = this.mindMap.getFrameworkRecommendations(frameworksToAnalyze);
+      const recommendations = await this.mindMap.getFrameworkRecommendations(frameworksToAnalyze);
       
       let text = `💡 **Framework Recommendations:**\n\n`;
       
@@ -1822,23 +1964,20 @@ class MindMapMCPServer {
 
   private async handleClearCache(args: { affected_paths?: string[] }) {
     try {
-      let invalidatedCount: number;
-      
       if (args.affected_paths && args.affected_paths.length > 0) {
-        invalidatedCount = await this.mindMap.invalidateCache(args.affected_paths);
+        this.mindMap.invalidateCache(args.affected_paths);
       } else {
-        await this.mindMap.clearCache();
-        invalidatedCount = -1; // All cache cleared
+        this.mindMap.clearCache();
       }
       
       let text = `🧹 **Cache Cleared**\n\n`;
-      
-      if (invalidatedCount === -1) {
+
+      if (args.affected_paths && args.affected_paths.length > 0) {
+        text += `• Specific entries invalidated\n`;
+        text += `• Affected paths: ${args.affected_paths.join(', ')}\n`;
+      } else {
         text += `• All cache entries cleared\n`;
         text += `• Memory freed: All cache memory\n`;
-      } else {
-        text += `• Entries invalidated: ${invalidatedCount}\n`;
-        text += `• Affected paths: ${args.affected_paths?.join(', ') || 'None specified'}\n`;
       }
       
       text += `• Fresh query results will be computed\n`;
@@ -2158,7 +2297,7 @@ class MindMapMCPServer {
       
       text += `**🎯 Attention Modality Distribution:**\n`;
       Object.entries(stats.modalityDistribution).forEach(([modality, strength]) => {
-        const percentage = (strength * 100).toFixed(1);
+        const percentage = ((strength as number) * 100).toFixed(1);
         text += `• ${modality}: ${percentage}% of total attention\n`;
       });
       
@@ -2227,24 +2366,17 @@ class MindMapMCPServer {
         }
       };
       
-      const allocation = this.mindMap.allocateAttention(nodes, attentionContext, attentionType);
-      
+      await this.mindMap.allocateAttention(node_ids, attention_type, attentionContext);
+
       let text = `🧠 **Attention Allocated Successfully**\n\n`;
       text += `**📊 Allocation Results:**\n`;
       text += `• Attention Type: ${attention_type}\n`;
       text += `• Nodes Targeted: ${node_ids.length}\n`;
-      text += `• Total Capacity Used: ${(allocation.allocated * 100).toFixed(1)}%\n`;
-      text += `• Available Capacity: ${(allocation.available * 100).toFixed(1)}%\n`;
-      text += `• Allocation Efficiency: ${(allocation.efficiency * 100).toFixed(1)}%\n\n`;
-      
-      text += `**🎯 Attention Targets:**\n`;
-      allocation.targets.slice(0, 10).forEach((target, index) => {
-        const strength = (target.strength * 100).toFixed(1);
-        const priority = (target.priority * 100).toFixed(1);
-        text += `${index + 1}. ${target.nodeId}\n`;
-        text += `   • Strength: ${strength}%\n`;
-        text += `   • Modality: ${target.modality}\n`;
-        text += `   • Priority: ${priority}%\n`;
+      text += `• Context: ${context?.current_task || 'Dynamic allocation'}\n\n`;
+
+      text += `**🎯 Target Node IDs:**\n`;
+      node_ids.slice(0, 10).forEach((nodeId, index) => {
+        text += `${index + 1}. ${nodeId}\n`;
       });
       
       text += `\n🎯 **Usage Guide:**\n`;
@@ -2268,12 +2400,7 @@ class MindMapMCPServer {
       await this.mindMap.initialize();
       const { node_ids = [], action_type, query_text } = args;
       
-      this.mindMap.updateAttentionFromActivity({
-        nodeIds: node_ids,
-        queryText: query_text,
-        actionType: action_type as any,
-        timestamp: new Date()
-      });
+      await this.mindMap.updateAttentionFromActivity(action_type, node_ids, query_text);
       
       let text = `🧠 **Attention Updated from Activity**\n\n`;
       text += `**📊 Activity Details:**\n`;
@@ -2378,21 +2505,21 @@ class MindMapMCPServer {
       const validTimeStart = new Date(valid_time_start);
       const validTimeEnd = valid_time_end ? new Date(valid_time_end) : null;
       
-      const contextWindow = await this.mindMap.createContextWindow(
+      const contextWindowId = await this.mindMap.createContextWindow(
         name,
-        validTimeStart,
-        validTimeEnd,
+        validTimeStart.toISOString(),
+        validTimeEnd?.toISOString(),
         description,
         framework_versions
       );
       
       let text = `🕐 **Context Window Created Successfully**\n\n`;
       text += `**📊 Context Details:**\n`;
-      text += `• Name: ${contextWindow.name}\n`;
-      text += `• ID: ${contextWindow.id}\n`;
-      text += `• Valid Time Start: ${contextWindow.validTime.start.toISOString()}\n`;
-      text += `• Valid Time End: ${contextWindow.validTime.end ? contextWindow.validTime.end.toISOString() : 'Ongoing'}\n`;
-      text += `• Description: ${contextWindow.description}\n\n`;
+      text += `• Name: ${name}\n`;
+      text += `• ID: ${contextWindowId}\n`;
+      text += `• Valid Time Start: ${validTimeStart.toISOString()}\n`;
+      text += `• Valid Time End: ${validTimeEnd ? validTimeEnd.toISOString() : 'Ongoing'}\n`;
+      text += `• Description: ${description}\n\n`;
       
       if (Object.keys(framework_versions).length > 0) {
         text += `**🔧 Framework Versions:**\n`;
@@ -2444,7 +2571,7 @@ class MindMapMCPServer {
       }
       if (context_window) temporalQuery.contextWindow = context_window;
       
-      const result = this.mindMap.queryBiTemporal(temporalQuery);
+      const result = await this.mindMap.queryBiTemporal(temporalQuery);
       
       let text = `🕐 **Bi-temporal Query Results**\n\n`;
       text += `**📊 Query Parameters:**\n`;
@@ -2497,7 +2624,7 @@ class MindMapMCPServer {
       await this.mindMap.initialize();
       const { name } = args;
       
-      const snapshot = this.mindMap.createTemporalSnapshot(name);
+      const snapshot = await this.mindMap.createTemporalSnapshot(name);
       
       let text = `🕐 **Temporal Snapshot Created**\n\n`;
       text += `**📊 Snapshot Details:**\n`;
@@ -2546,7 +2673,7 @@ class MindMapMCPServer {
       
       const invalidationTime = invalidation_date ? new Date(invalidation_date) : new Date();
       
-      await this.mindMap.invalidateRelationship(edge_id, invalidationTime, reason, evidence);
+      await this.mindMap.invalidateRelationship(edge_id, invalidationTime.toISOString(), reason, evidence);
       
       let text = `🕐 **Relationship Invalidated Successfully**\n\n`;
       text += `**📊 Invalidation Details:**\n`;
@@ -2870,156 +2997,6 @@ class MindMapMCPServer {
     } catch (error) {
       return {
         content: [{ type: 'text', text: `❌ Failed to analyze and predict: ${error}` }]
-      };
-    }
-  }
-
-  private async handleAnalyzeCallPatterns(args: {
-    file_paths?: string[];
-    include_cross_file?: boolean;
-    min_confidence?: number;
-  }) {
-    try {
-      await this.mindMap.initialize();
-
-      let text = `🔗 **Analyzing Call Patterns and Code Relationships**\n\n`;
-
-      const filePaths = args.file_paths;
-      const includeCrossFile = args.include_cross_file ?? true;
-      const minConfidence = args.min_confidence ?? 0.6;
-
-      if (filePaths && filePaths.length > 0) {
-        text += `📁 **Target Files:** ${filePaths.length} files\n`;
-        filePaths.slice(0, 3).forEach(path => {
-          text += `   • ${path}\n`;
-        });
-        if (filePaths.length > 3) {
-          text += `   • ... and ${filePaths.length - 3} more files\n`;
-        }
-        text += `\n`;
-      } else {
-        text += `📁 **Target:** All TypeScript/JavaScript files in project\n\n`;
-      }
-
-      text += `⚙️ **Configuration:**\n`;
-      text += `• Cross-file analysis: ${includeCrossFile ? 'Enabled' : 'Disabled'}\n`;
-      text += `• Minimum confidence: ${(minConfidence * 100).toFixed(0)}%\n\n`;
-
-      text += `⚡ Starting call pattern analysis...\n\n`;
-
-      // Perform the analysis
-      const analysis = await this.mindMap.analyzeCallPatterns(filePaths);
-
-      text += `✅ **Call Pattern Analysis Complete!**\n\n`;
-
-      // Display statistics
-      text += `**📊 Analysis Results:**\n`;
-      text += `• **Functions Analyzed:** ${analysis.callGraph.nodes.size}\n`;
-      text += `• **Call Patterns Found:** ${analysis.statistics.totalCallPatterns}\n`;
-      text += `• **Direct Calls:** ${analysis.statistics.directCalls}\n`;
-      text += `• **Method Calls:** ${analysis.statistics.methodCalls}\n`;
-      text += `• **Constructor Calls:** ${analysis.statistics.constructorCalls}\n`;
-      text += `• **Async Calls:** ${analysis.statistics.asyncCalls}\n`;
-      text += `• **Recursive Functions:** ${analysis.statistics.recursiveFunctions}\n`;
-      text += `• **Average Complexity:** ${analysis.statistics.averageComplexity.toFixed(1)}\n`;
-      text += `• **Max Call Depth:** ${analysis.statistics.maxCallDepth}\n\n`;
-
-      // Show entry points
-      if (analysis.callGraph.entryPoints.length > 0) {
-        text += `**🚪 Entry Points:** (${analysis.callGraph.entryPoints.length} functions)\n`;
-        analysis.callGraph.entryPoints.slice(0, 5).forEach(entryId => {
-          const node = analysis.callGraph.nodes.get(entryId);
-          if (node) {
-            text += `   • ${node.name} (complexity: ${node.complexity})\n`;
-          }
-        });
-        if (analysis.callGraph.entryPoints.length > 5) {
-          text += `   • ... and ${analysis.callGraph.entryPoints.length - 5} more\n`;
-        }
-        text += `\n`;
-      }
-
-      // Show high-complexity functions
-      const highComplexityNodes = Array.from(analysis.callGraph.nodes.values())
-        .filter(node => node.complexity > 5)
-        .sort((a, b) => b.complexity - a.complexity)
-        .slice(0, 3);
-
-      if (highComplexityNodes.length > 0) {
-        text += `**🔥 High Complexity Functions:**\n`;
-        highComplexityNodes.forEach(node => {
-          text += `   • **${node.name}** (complexity: ${node.complexity}, calls: ${node.outgoingCalls})\n`;
-          if (node.isRecursive) text += `     ↻ Recursive function\n`;
-        });
-        text += `\n`;
-      }
-
-      // Show functions with many incoming calls
-      const popularNodes = Array.from(analysis.callGraph.nodes.values())
-        .filter(node => node.incomingCalls > 2)
-        .sort((a, b) => b.incomingCalls - a.incomingCalls)
-        .slice(0, 3);
-
-      if (popularNodes.length > 0) {
-        text += `**📈 Most Called Functions:**\n`;
-        popularNodes.forEach(node => {
-          text += `   • **${node.name}** (${node.incomingCalls} incoming calls)\n`;
-        });
-        text += `\n`;
-      }
-
-      // Show cycles if any
-      if (analysis.callGraph.cycles.length > 0) {
-        text += `**🔄 Call Cycles Detected:** ${analysis.callGraph.cycles.length}\n`;
-        analysis.callGraph.cycles.slice(0, 2).forEach((cycle, i) => {
-          text += `   ${i + 1}. ${cycle.length} functions in cycle\n`;
-        });
-        if (analysis.callGraph.cycles.length > 2) {
-          text += `   • ... and ${analysis.callGraph.cycles.length - 2} more cycles\n`;
-        }
-        text += `\n`;
-      }
-
-      // Cross-file analysis results
-      const crossFileCalls = analysis.callPatterns.filter(p => p.targetFile && p.sourceFile !== p.targetFile);
-      if (includeCrossFile && crossFileCalls.length > 0) {
-        text += `**🌐 Cross-File Call Patterns:** ${crossFileCalls.length}\n`;
-        const fileConnections = new Map<string, Set<string>>();
-        crossFileCalls.forEach(call => {
-          if (!fileConnections.has(call.sourceFile)) {
-            fileConnections.set(call.sourceFile, new Set());
-          }
-          if (call.targetFile) {
-            fileConnections.get(call.sourceFile)!.add(call.targetFile);
-          }
-        });
-
-        Array.from(fileConnections.entries()).slice(0, 3).forEach(([source, targets]) => {
-          const fileName = source.split('/').pop() || source;
-          text += `   • ${fileName} → ${targets.size} other files\n`;
-        });
-        text += `\n`;
-      }
-
-      // Brain-inspired system integration
-      text += `**🧠 Brain-Inspired Integration:**\n`;
-      text += `• Hebbian learning updated with call co-activations\n`;
-      text += `• Attention allocated to high-complexity functions\n`;
-      text += `• Episodic memory stores call pattern insights\n`;
-      text += `• Call patterns integrated into mind map graph\n\n`;
-
-      text += `**🔍 Next Steps:**\n`;
-      text += `• Use query_mindmap with function names to explore specific relationships\n`;
-      text += `• Use advanced_query with Cypher syntax for complex call pattern queries\n`;
-      text += `• Re-run after code changes to track relationship evolution\n`;
-      text += `• Analyze specific files by providing file_paths parameter\n`;
-
-      return {
-        content: [{ type: 'text', text }]
-      };
-    } catch (error) {
-      return {
-        content: [{ type: 'text', text: `❌ Failed to analyze call patterns: ${error}` }]
       };
     }
   }

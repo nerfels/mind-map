@@ -113,8 +113,15 @@ export class CallPatternAnalyzer {
 
   private extractDeclarations(sourceFile: ts.SourceFile, filePath: string): CallGraphNode[] {
     const declarations: CallGraphNode[] = [];
+    let depth = 0;
+    const MAX_DEPTH = 50; // Prevent infinite recursion
 
     const visit = (node: ts.Node): void => {
+      depth++;
+      if (depth > MAX_DEPTH) {
+        console.warn(`Max recursion depth reached in ${filePath}, stopping analysis`);
+        return;
+      }
       if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node) || ts.isConstructorDeclaration(node)) {
         const declaration = this.processDeclaration(node, filePath);
         if (declaration) {
@@ -156,6 +163,7 @@ export class CallPatternAnalyzer {
       }
 
       ts.forEachChild(node, visit);
+      depth--;
     };
 
     visit(sourceFile);
@@ -233,8 +241,15 @@ export class CallPatternAnalyzer {
   ): CallPattern[] {
     const patterns: CallPattern[] = [];
     const declMap = new Map(declarations.map(d => [d.name, d]));
+    let depth = 0;
+    const MAX_DEPTH = 50; // Prevent infinite recursion
 
     const visit = (node: ts.Node, currentFunction?: CallGraphNode): void => {
+      depth++;
+      if (depth > MAX_DEPTH) {
+        console.warn(`Max recursion depth reached in extractCallPatterns for ${filePath}, stopping analysis`);
+        return;
+      }
       // Track current function context
       let currentFunc = currentFunction;
       if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node) || ts.isConstructorDeclaration(node)) {
@@ -275,6 +290,7 @@ export class CallPatternAnalyzer {
       }
 
       ts.forEachChild(node, (child) => visit(child, currentFunc));
+      depth--;
     };
 
     visit(sourceFile);

@@ -298,6 +298,8 @@ export interface QueryOptions {
   currentTask?: string;
   activeFiles?: string[];
   recentErrors?: string[];
+  // Query parameters for parameterized queries
+  parameters?: any;
   sessionGoals?: string[];
   frameworkContext?: string[];
   languageContext?: string[];
@@ -596,4 +598,19 @@ export interface CallPatternAnalysis {
     averageComplexity: number;
     maxCallDepth: number;
   };
+}
+
+// Insight interface for generateInsights method
+export interface ProjectInsight {
+  id: string;
+  title: string;
+  description: string;
+  value: string | number;
+  confidence: number; // 0.0 to 1.0
+  trend: 'increasing' | 'decreasing' | 'stable' | 'unknown';
+  actionable: boolean;
+  category: string;
+  priority: 'low' | 'medium' | 'high';
+  evidence: string[];
+  timestamp: Date;
 }
