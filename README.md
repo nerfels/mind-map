@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.9.0 🧠
+# Mind Map MCP Server v1.10.0 🧠
 
-**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, **method call chain analysis**, **document intelligence**, **dynamic import detection**, and **enhanced file ignore patterns** for next-generation code understanding.
+**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, **method call chain analysis**, **variable usage tracking**, **document intelligence**, **dynamic import detection**, and **enhanced file ignore patterns** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.9.0
+## 🚀 Current Status: Production Ready v1.10.0
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Method Call Chain Analysis** | **✅ Document Intelligence** | **✅ Dynamic Import Detection** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ Complete Java Support** | **✅ CI/CD Pipeline**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Method Call Chain Analysis** | **✅ Variable Usage Tracking** | **✅ Document Intelligence** | **✅ Dynamic Import Detection** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ Complete Java Support** | **✅ CI/CD Pipeline**
 
-**🎯 Latest Update v1.9.0**: **Method Call Chain Analysis** - Advanced call sequence tracking that follows A→B→C→D execution paths up to 10 levels deep. Features performance impact assessment, risk analysis, async call detection, and cross-file relationship mapping. Enables deeper understanding of complex business logic flows and performance bottleneck identification. Completes Phase 8.1 enhanced code analysis improvements.
+**🎯 Latest Update v1.10.0**: **Variable Usage Tracking** - Comprehensive variable intelligence that tracks declaration, usage, and modification patterns across files. Features variable lifecycle analysis, cross-module dependency detection, unused variable identification, and variable relationship mapping. Creates 8,966+ variable nodes with 48,756+ usage relationships for complete code understanding. Completes Phase 8.1 enhanced code analysis with revolutionary variable intelligence.
 
 ## 📦 Installation & Setup
 
@@ -244,6 +244,7 @@ Please recommend missing development tools that would benefit this project.
 - **Multi-Language AST Analysis**: Full parsing for **12 languages** (TypeScript/JavaScript/Python/Java/Go/Rust/C++/**PHP/C#/Ruby/Swift/Kotlin/Scala**) with function/class extraction
 - **Dynamic Import Detection**: Track runtime imports including `import()` calls, `require()` statements, template literals, and variable-based module loading for modern JavaScript/TypeScript applications
 - **Method Call Chain Analysis**: Advanced call sequence tracking following A→B→C→D execution paths up to 10 levels deep with performance impact assessment and risk analysis
+- **Variable Usage Tracking**: Comprehensive variable intelligence tracking declaration, usage, and modification patterns across files with lifecycle analysis and cross-module dependency detection
 - **Cross-Language Dependency Detection**: Identifies API calls, FFI, microservices, and shared data patterns across languages
 - **Polyglot Project Analysis**: Architectural style detection with multi-language recommendations
 - **Enterprise Framework Detection**: React, Vue, Express, Django, Flask, Spring Boot, **Laravel, ASP.NET, Rails, SwiftUI, Android, Akka**, and 60+ more

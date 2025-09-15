@@ -163,6 +163,7 @@ export class MindMapEngine {
       this.storage,
       this.scanner,
       this.codeAnalyzer,
+      this.callPatternAnalyzer,
       this.parallelProcessor,
       this.scalabilityManager,
       this.projectRoot
@@ -235,6 +236,7 @@ export class MindMapEngine {
       tempStorage,
       tempScanner,
       this.codeAnalyzer,
+      this.callPatternAnalyzer,
       tempParallelProcessor,
       this.scalabilityManager,
       projectRoot

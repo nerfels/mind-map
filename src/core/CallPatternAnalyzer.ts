@@ -72,14 +72,95 @@ export interface CodeStyleMetrics {
   braceStyle: '1TBS' | 'Allman' | 'GNU' | 'mixed';
 }
 
+export interface VariableDeclaration {
+  id: string;
+  name: string;
+  type: 'var' | 'let' | 'const' | 'parameter' | 'property' | 'import';
+  dataType?: string; // inferred or annotated type
+  filePath: string;
+  lineNumber: number;
+  scope: 'global' | 'function' | 'block' | 'class' | 'module';
+  scopeId: string; // ID of the containing scope
+  isExported: boolean;
+  isImported: boolean;
+  importSource?: string; // for imported variables
+  initialValue?: string; // literal initial value if simple
+  confidence: number;
+}
+
+export interface VariableUsage {
+  id: string;
+  variableId: string;
+  variableName: string;
+  usageType: 'read' | 'write' | 'call' | 'property_access' | 'assignment' | 'parameter_passing';
+  filePath: string;
+  lineNumber: number;
+  functionContext?: string; // ID of containing function
+  confidence: number;
+  context: {
+    isConditional?: boolean;
+    isLoop?: boolean;
+    isAsyncContext?: boolean;
+    isTryCatch?: boolean;
+    accessPattern?: string; // e.g., "obj.prop", "arr[0]"
+  };
+}
+
+export interface VariableLifecycle {
+  variableId: string;
+  variableName: string;
+  declaration: VariableDeclaration;
+  usages: VariableUsage[];
+  isUnused: boolean;
+  firstUsage?: VariableUsage;
+  lastUsage?: VariableUsage;
+  readCount: number;
+  writeCount: number;
+  crossFileUsageCount: number;
+  lifespan: {
+    declarationLine: number;
+    firstUsageLine?: number;
+    lastUsageLine?: number;
+    scopeEnd?: number;
+  };
+}
+
+export interface CrossModuleVariableDependency {
+  id: string;
+  sourceVariable: VariableDeclaration;
+  targetVariable: VariableDeclaration;
+  dependencyType: 'import' | 'export' | 'reference' | 'assignment';
+  sourceFile: string;
+  targetFile: string;
+  confidence: number;
+  usagePattern: string;
+}
+
+export interface VariableAnalysisResult {
+  declarations: VariableDeclaration[];
+  usages: VariableUsage[];
+  lifecycles: VariableLifecycle[];
+  crossModuleDependencies: CrossModuleVariableDependency[];
+  unusedVariables: VariableDeclaration[];
+  globalVariables: VariableDeclaration[];
+  importExportMapping: Map<string, string[]>; // file -> imported/exported variables
+}
+
 /**
  * Advanced Call Pattern Analyzer for tracking function calls, method invocations,
- * and code relationships within and across files
+ * variable usage patterns, and code relationships within and across files
  */
 export class CallPatternAnalyzer {
   private callPatterns: Map<string, CallPattern[]> = new Map();
   private functionRegistry: Map<string, CallGraphNode> = new Map();
   private crossFileReferences: Map<string, string[]> = new Map();
+
+  // Variable tracking storage
+  private variableDeclarations: Map<string, VariableDeclaration[]> = new Map();
+  private variableUsages: Map<string, VariableUsage[]> = new Map();
+  private variableLifecycles: Map<string, VariableLifecycle[]> = new Map();
+  private crossModuleDependencies: Map<string, CrossModuleVariableDependency[]> = new Map();
+  private scopeRegistry: Map<string, string> = new Map(); // scopeId -> filePath
 
   constructor() {}
 
@@ -88,11 +169,31 @@ export class CallPatternAnalyzer {
     edges: MindMapEdge[];
     callPatterns: CallPattern[];
     callGraph: FunctionCallGraph;
+    variableAnalysis: VariableAnalysisResult;
   }> {
-    try {
-      const fileContent = content || await readFile(filePath, 'utf-8');
-      const fileName = filePath.split('/').pop() || filePath;
+    console.log(`[CallPatternAnalyzer] Starting analysis of: ${filePath}`);
 
+    // Add timeout to prevent hanging on large files
+    const ANALYSIS_TIMEOUT = 30000; // 30 seconds
+
+    return new Promise(async (resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        console.warn(`Analysis timeout for ${filePath} after ${ANALYSIS_TIMEOUT}ms`);
+        resolve({
+          nodes: [],
+          edges: [],
+          callPatterns: [],
+          callGraph: this.createEmptyCallGraph(),
+          variableAnalysis: this.createEmptyVariableAnalysis()
+        });
+      }, ANALYSIS_TIMEOUT);
+
+      try {
+        console.log(`[CallPatternAnalyzer] Reading file content: ${filePath}`);
+        const fileContent = content || await readFile(filePath, 'utf-8');
+        const fileName = filePath.split('/').pop() || filePath;
+
+      console.log(`[CallPatternAnalyzer] Creating TypeScript AST for: ${fileName}`);
       // Create TypeScript AST
       const sourceFile = ts.createSourceFile(
         filePath,
@@ -102,28 +203,56 @@ export class CallPatternAnalyzer {
         this.getScriptKind(fileName)
       );
 
+      console.log(`[CallPatternAnalyzer] Extracting declarations from: ${fileName}`);
       // Extract function/method declarations first
       const declarations = this.extractDeclarations(sourceFile, filePath);
+      console.log(`[CallPatternAnalyzer] Found ${declarations.length} declarations in: ${fileName}`);
 
+      console.log(`[CallPatternAnalyzer] Extracting call patterns from: ${fileName}`);
       // Extract call patterns
       const callPatterns = this.extractCallPatterns(sourceFile, filePath, declarations);
+      console.log(`[CallPatternAnalyzer] Found ${callPatterns.length} call patterns in: ${fileName}`);
 
+      console.log(`[CallPatternAnalyzer] Building call graph for: ${fileName}`);
       // Build call graph
       const callGraph = this.buildCallGraph(declarations, callPatterns);
+      console.log(`[CallPatternAnalyzer] Built call graph with ${callGraph.nodes.size} nodes for: ${fileName}`);
 
-      // Create mind map nodes and edges
-      const { nodes, edges } = this.createMindMapElements(filePath, declarations, callPatterns, callGraph);
+      console.log(`[CallPatternAnalyzer] Starting variable analysis for: ${fileName}`);
+      // Extract variable analysis
+      const variableAnalysis = this.analyzeVariables(sourceFile, filePath, declarations);
+      console.log(`[CallPatternAnalyzer] Found ${variableAnalysis.declarations.length} variables in: ${fileName}`);
+
+      // Create mind map nodes and edges (now includes variable nodes)
+      const { nodes, edges } = this.createMindMapElements(filePath, declarations, callPatterns, callGraph, variableAnalysis);
 
       // Store patterns for cross-file analysis
       this.callPatterns.set(filePath, callPatterns);
       declarations.forEach(decl => this.functionRegistry.set(decl.id, decl));
 
-      return { nodes, edges, callPatterns, callGraph };
+      // Store variable analysis results
+      this.variableDeclarations.set(filePath, variableAnalysis.declarations);
+      this.variableUsages.set(filePath, variableAnalysis.usages);
+      this.variableLifecycles.set(filePath, variableAnalysis.lifecycles);
+      if (variableAnalysis.crossModuleDependencies.length > 0) {
+        this.crossModuleDependencies.set(filePath, variableAnalysis.crossModuleDependencies);
+      }
 
-    } catch (error) {
-      console.warn(`Failed to analyze call patterns in ${filePath}:`, error);
-      return { nodes: [], edges: [], callPatterns: [], callGraph: this.createEmptyCallGraph() };
-    }
+        clearTimeout(timeoutId);
+        resolve({ nodes, edges, callPatterns, callGraph, variableAnalysis });
+
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.warn(`Failed to analyze call patterns in ${filePath}:`, error);
+        resolve({
+          nodes: [],
+          edges: [],
+          callPatterns: [],
+          callGraph: this.createEmptyCallGraph(),
+          variableAnalysis: this.createEmptyVariableAnalysis()
+        });
+      }
+    });
   }
 
   private extractDeclarations(sourceFile: ts.SourceFile, filePath: string): CallGraphNode[] {
@@ -453,7 +582,8 @@ export class CallPatternAnalyzer {
     filePath: string,
     declarations: CallGraphNode[],
     patterns: CallPattern[],
-    callGraph: FunctionCallGraph
+    callGraph: FunctionCallGraph,
+    variableAnalysis?: VariableAnalysisResult
   ): { nodes: MindMapNode[]; edges: MindMapEdge[] } {
     const nodes: MindMapNode[] = [];
     const edges: MindMapEdge[] = [];
@@ -503,6 +633,81 @@ export class CallPatternAnalyzer {
       };
       edges.push(edge);
     });
+
+    // Create nodes and edges for variables if analysis is available
+    if (variableAnalysis) {
+      // Create nodes for variable declarations
+      variableAnalysis.declarations.forEach((declaration, index) => {
+        const node: MindMapNode = {
+          id: `variable_${declaration.id.replace(/[^\w]/g, '_')}`,
+          type: 'variable',
+          name: declaration.name,
+          path: filePath,
+          metadata: {
+            variableType: declaration.type,
+            dataType: declaration.dataType,
+            lineNumber: declaration.lineNumber,
+            scope: declaration.scope,
+            scopeId: declaration.scopeId,
+            isExported: declaration.isExported,
+            isImported: declaration.isImported,
+            importSource: declaration.importSource,
+            initialValue: declaration.initialValue,
+            isUnused: variableAnalysis.unusedVariables.some(v => v.id === declaration.id),
+            isGlobal: declaration.scope === 'global' || declaration.scope === 'module',
+            usageCount: variableAnalysis.usages.filter(u => u.variableId === declaration.id).length,
+            readCount: variableAnalysis.lifecycles.find(l => l.variableId === declaration.id)?.readCount || 0,
+            writeCount: variableAnalysis.lifecycles.find(l => l.variableId === declaration.id)?.writeCount || 0,
+            crossFileUsageCount: variableAnalysis.lifecycles.find(l => l.variableId === declaration.id)?.crossFileUsageCount || 0,
+            language: 'typescript'
+          },
+          confidence: declaration.confidence,
+          lastUpdated: new Date()
+        };
+        nodes.push(node);
+      });
+
+      // Create edges for variable usages
+      variableAnalysis.usages.forEach((usage, index) => {
+        const edge: MindMapEdge = {
+          id: `variable_usage_edge_${index}_${filePath.replace(/[^\w]/g, '_')}`,
+          source: `variable_${usage.variableId.replace(/[^\w]/g, '_')}`,
+          target: usage.functionContext ? `call_pattern_${usage.functionContext.replace(/[^\w]/g, '_')}` : `file_${filePath.replace(/[^\w]/g, '_')}`,
+          type: 'used_by',
+          metadata: {
+            usageType: usage.usageType,
+            lineNumber: usage.lineNumber,
+            confidence: usage.confidence,
+            context: usage.context,
+            isConditional: usage.context.isConditional,
+            isLoop: usage.context.isLoop,
+            isAsync: usage.context.isAsyncContext,
+            accessPattern: usage.context.accessPattern
+          },
+          confidence: usage.confidence
+        };
+        edges.push(edge);
+      });
+
+      // Create edges for cross-module dependencies
+      variableAnalysis.crossModuleDependencies.forEach((dependency, index) => {
+        const edge: MindMapEdge = {
+          id: `cross_module_dep_${index}_${filePath.replace(/[^\w]/g, '_')}`,
+          source: `variable_${dependency.sourceVariable.id.replace(/[^\w]/g, '_')}`,
+          target: `external_${dependency.targetFile.replace(/[^\w]/g, '_')}`,
+          type: 'depends_on',
+          metadata: {
+            dependencyType: dependency.dependencyType,
+            sourceFile: dependency.sourceFile,
+            targetFile: dependency.targetFile,
+            usagePattern: dependency.usagePattern,
+            confidence: dependency.confidence
+          },
+          confidence: dependency.confidence
+        };
+        edges.push(edge);
+      });
+    }
 
     return { nodes, edges };
   }
@@ -818,16 +1023,23 @@ export class CallPatternAnalyzer {
   }
 
   private detectCycles(nodes: Map<string, CallGraphNode>, edges: CallPattern[]): string[][] {
-    // Simplified cycle detection using DFS
+    // Optimized cycle detection with depth limits to prevent hanging
     const cycles: string[][] = [];
     const visited = new Set<string>();
     const recursionStack = new Set<string>();
+    const MAX_DEPTH = 50; // Prevent infinite recursion
+    const MAX_CYCLES = 10; // Limit number of cycles to detect
 
-    const dfs = (nodeId: string, path: string[]): void => {
+    const dfs = (nodeId: string, path: string[], depth: number): void => {
+      // Prevent infinite recursion and excessive memory usage
+      if (depth > MAX_DEPTH || cycles.length >= MAX_CYCLES) {
+        return;
+      }
+
       if (recursionStack.has(nodeId)) {
         // Found a cycle
         const cycleStart = path.indexOf(nodeId);
-        if (cycleStart !== -1) {
+        if (cycleStart !== -1 && cycles.length < MAX_CYCLES) {
           cycles.push(path.slice(cycleStart));
         }
         return;
@@ -839,26 +1051,33 @@ export class CallPatternAnalyzer {
       recursionStack.add(nodeId);
       path.push(nodeId);
 
-      // Find outgoing edges
-      const outgoingEdges = edges.filter(e => e.callerId === nodeId);
+      // Find outgoing edges (limit to prevent exponential blowup)
+      const outgoingEdges = edges.filter(e => e.callerId === nodeId).slice(0, 20);
       for (const edge of outgoingEdges) {
-        dfs(edge.calleeId, [...path]);
+        // Reuse path array instead of creating copies to reduce memory usage
+        dfs(edge.calleeId, path, depth + 1);
       }
 
+      // Clean up
+      path.pop();
       recursionStack.delete(nodeId);
     };
 
     for (const nodeId of nodes.keys()) {
-      if (!visited.has(nodeId)) {
-        dfs(nodeId, []);
+      if (!visited.has(nodeId) && cycles.length < MAX_CYCLES) {
+        dfs(nodeId, [], 0);
       }
     }
 
+    console.log(`[CallPatternAnalyzer] Detected ${cycles.length} cycles in call graph`);
     return cycles;
   }
 
   private calculateCallDepth(nodes: Map<string, CallGraphNode>, edges: CallPattern[]): number {
     const depths = new Map<string, number>();
+    const MAX_DEPTH = 100; // Prevent infinite analysis
+    let iterations = 0;
+    const MAX_ITERATIONS = 10000; // Prevent infinite loops
 
     // Initialize entry points with depth 0
     for (const node of nodes.values()) {
@@ -867,20 +1086,24 @@ export class CallPatternAnalyzer {
       }
     }
 
-    // BFS to calculate depths
+    // BFS to calculate depths with safety limits
     const queue = Array.from(depths.keys());
     let maxDepth = 0;
 
-    while (queue.length > 0) {
+    while (queue.length > 0 && iterations < MAX_ITERATIONS) {
+      iterations++;
       const nodeId = queue.shift()!;
       const currentDepth = depths.get(nodeId) || 0;
+
+      // Skip if depth is already too deep
+      if (currentDepth >= MAX_DEPTH) continue;
 
       const outgoingEdges = edges.filter(e => e.callerId === nodeId);
       for (const edge of outgoingEdges) {
         const targetDepth = currentDepth + 1;
         const existingDepth = depths.get(edge.calleeId);
 
-        if (!existingDepth || targetDepth > existingDepth) {
+        if (targetDepth <= MAX_DEPTH && (!existingDepth || targetDepth > existingDepth)) {
           depths.set(edge.calleeId, targetDepth);
           queue.push(edge.calleeId);
           maxDepth = Math.max(maxDepth, targetDepth);
@@ -888,7 +1111,8 @@ export class CallPatternAnalyzer {
       }
     }
 
-    return maxDepth;
+    console.log(`[CallPatternAnalyzer] Calculated call depth: ${maxDepth} (${iterations} iterations)`);
+    return Math.min(maxDepth, MAX_DEPTH);
   }
 
   private analyzeCallChains(
@@ -897,22 +1121,28 @@ export class CallPatternAnalyzer {
     entryPoints: string[]
   ): CallChain[] {
     const chains: CallChain[] = [];
-    const visited = new Set<string>();
+    const MAX_CHAINS = 50; // Limit number of chains to prevent hanging
     let chainId = 0;
 
-    // Analyze chains starting from each entry point
-    for (const entryPoint of entryPoints) {
+    console.log(`[CallPatternAnalyzer] Analyzing call chains from ${entryPoints.length} entry points`);
+
+    // Analyze chains starting from each entry point (limit to prevent hanging)
+    for (const entryPoint of entryPoints.slice(0, 10)) {
+      if (chains.length >= MAX_CHAINS) break;
+
       this.findCallChainsFromNode(
         entryPoint,
         nodes,
         edges,
         [],
-        visited,
+        new Set<string>(),
         chains,
-        chainId
+        chainId,
+        5 // Reduced max depth for performance
       );
     }
 
+    console.log(`[CallPatternAnalyzer] Generated ${chains.length} call chains`);
     return chains;
   }
 
@@ -924,47 +1154,54 @@ export class CallPatternAnalyzer {
     visited: Set<string>,
     chains: CallChain[],
     chainId: number,
-    maxDepth: number = 10
+    maxDepth: number = 5
   ): void {
-    if (currentChain.length >= maxDepth) {
-      return; // Prevent infinite recursion in cycles
-    }
-
-    const newChain = [...currentChain, nodeId];
-    const outgoingEdges = edges.filter(e => e.callerId === nodeId);
-
-    if (outgoingEdges.length === 0) {
-      // End of chain - create CallChain object if chain is significant
-      if (newChain.length >= 2) {
-        const chain: CallChain = {
-          id: `chain_${chainId++}`,
-          sequence: newChain,
-          depth: newChain.length - 1,
-          performance: this.calculateChainPerformance(newChain, nodes, edges),
-          crossFileCount: this.countCrossFileCallsInChain(newChain, nodes, edges),
-          hasAsyncCalls: this.hasAsyncCallsInChain(newChain, edges),
-          hasConditionalCalls: this.hasConditionalCallsInChain(newChain, edges)
-        };
-        chains.push(chain);
-      }
+    // Enhanced safety checks to prevent hanging
+    if (currentChain.length >= maxDepth || chains.length >= 50 || visited.has(nodeId)) {
       return;
     }
 
-    // Continue exploring each outgoing call
-    for (const edge of outgoingEdges) {
-      if (!newChain.includes(edge.calleeId)) { // Avoid immediate cycles
-        this.findCallChainsFromNode(
-          edge.calleeId,
-          nodes,
-          edges,
-          newChain,
-          visited,
-          chains,
-          chainId,
-          maxDepth
-        );
+    // Use array push/pop instead of creating new arrays
+    currentChain.push(nodeId);
+    visited.add(nodeId);
+
+    const outgoingEdges = edges.filter(e => e.callerId === nodeId).slice(0, 5); // Limit edges
+
+    if (outgoingEdges.length === 0) {
+      // End of chain - create CallChain object if chain is significant
+      if (currentChain.length >= 2) {
+        const chain: CallChain = {
+          id: `chain_${chainId++}`,
+          sequence: [...currentChain], // Copy only when storing final result
+          depth: currentChain.length - 1,
+          performance: this.calculateChainPerformance(currentChain, nodes, edges),
+          crossFileCount: this.countCrossFileCallsInChain(currentChain, nodes, edges),
+          hasAsyncCalls: this.hasAsyncCallsInChain(currentChain, edges),
+          hasConditionalCalls: this.hasConditionalCallsInChain(currentChain, edges)
+        };
+        chains.push(chain);
+      }
+    } else {
+      // Continue exploring each outgoing call
+      for (const edge of outgoingEdges) {
+        if (!currentChain.includes(edge.calleeId)) { // Avoid immediate cycles
+          this.findCallChainsFromNode(
+            edge.calleeId,
+            nodes,
+            edges,
+            currentChain,
+            visited,
+            chains,
+            chainId,
+            maxDepth
+          );
+        }
       }
     }
+
+    // Clean up for backtracking
+    currentChain.pop();
+    visited.delete(nodeId);
   }
 
   private calculateChainPerformance(
@@ -1088,6 +1325,592 @@ export class CallPatternAnalyzer {
     if (highRiskCount > 0) return 'high';
     if (mediumRiskCount > 0) return 'medium';
     return 'low';
+  }
+
+  // Variable Analysis Methods
+  private analyzeVariables(
+    sourceFile: ts.SourceFile,
+    filePath: string,
+    declarations: CallGraphNode[]
+  ): VariableAnalysisResult {
+    // Extract variable declarations
+    const variableDeclarations = this.extractVariableDeclarations(sourceFile, filePath, declarations);
+
+    // Extract variable usages
+    const variableUsages = this.extractVariableUsages(sourceFile, filePath, variableDeclarations);
+
+    // Build variable lifecycles
+    const lifecycles = this.buildVariableLifecycles(variableDeclarations, variableUsages);
+
+    // Detect cross-module dependencies
+    const crossModuleDependencies = this.detectCrossModuleDependencies(variableDeclarations, variableUsages, filePath);
+
+    // Identify unused variables
+    const unusedVariables = variableDeclarations.filter(decl =>
+      !variableUsages.some(usage => usage.variableId === decl.id)
+    );
+
+    // Identify global variables
+    const globalVariables = variableDeclarations.filter(decl => decl.scope === 'global' || decl.scope === 'module');
+
+    // Build import/export mapping
+    const importExportMapping = this.buildImportExportMapping(variableDeclarations);
+
+    return {
+      declarations: variableDeclarations,
+      usages: variableUsages,
+      lifecycles,
+      crossModuleDependencies,
+      unusedVariables,
+      globalVariables,
+      importExportMapping
+    };
+  }
+
+  private extractVariableDeclarations(
+    sourceFile: ts.SourceFile,
+    filePath: string,
+    declarations: CallGraphNode[]
+  ): VariableDeclaration[] {
+    const variables: VariableDeclaration[] = [];
+    let variableId = 0;
+    const MAX_DEPTH = 25;
+    const MAX_VARIABLES = 500; // Limit total variables to prevent memory issues
+
+    // Create scope stack for tracking nested scopes
+    const scopeStack: { id: string; type: string }[] = [{ id: `${filePath}:global`, type: 'global' }];
+
+    const visit = (node: ts.Node, depth: number = 0, currentScope?: string): void => {
+      if (depth > MAX_DEPTH) {
+        console.warn(`Max recursion depth ${MAX_DEPTH} reached in variable analysis for ${filePath}`);
+        return;
+      }
+
+      if (variables.length > MAX_VARIABLES) {
+        console.warn(`Max variables ${MAX_VARIABLES} reached in variable analysis for ${filePath}`);
+        return;
+      }
+
+      const scope = currentScope || scopeStack[scopeStack.length - 1]?.id || `${filePath}:global`;
+
+      // Handle different types of variable declarations
+      if (ts.isVariableDeclaration(node)) {
+        const variable = this.processVariableDeclaration(node, filePath, scope, sourceFile, variableId++);
+        if (variable) variables.push(variable);
+      }
+
+      // Handle function parameters
+      if (ts.isParameter(node)) {
+        const variable = this.processParameterDeclaration(node, filePath, scope, sourceFile, variableId++);
+        if (variable) variables.push(variable);
+      }
+
+      // Handle import declarations
+      if (ts.isImportDeclaration(node)) {
+        const importVars = this.processImportDeclaration(node, filePath, scope, sourceFile, variableId);
+        variables.push(...importVars);
+        variableId += importVars.length;
+      }
+
+      // Handle export declarations
+      if (ts.isExportDeclaration(node) || ts.isExportAssignment(node)) {
+        const exportVars = this.processExportDeclaration(node, filePath, scope, sourceFile, variableId);
+        variables.push(...exportVars);
+        variableId += exportVars.length;
+      }
+
+      // Update scope for nested structures
+      if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node) || ts.isArrowFunction(node)) {
+        const functionName = this.getFunctionName(node as any) || 'anonymous';
+        const functionScope = `${filePath}:${functionName}:${this.getLineNumber(node, sourceFile)}`;
+        scopeStack.push({ id: functionScope, type: 'function' });
+        this.scopeRegistry.set(functionScope, filePath);
+      } else if (ts.isClassDeclaration(node)) {
+        const className = node.name?.text || 'anonymous';
+        const classScope = `${filePath}:${className}:${this.getLineNumber(node, sourceFile)}`;
+        scopeStack.push({ id: classScope, type: 'class' });
+        this.scopeRegistry.set(classScope, filePath);
+      } else if (ts.isBlock(node)) {
+        const blockScope = `${filePath}:block:${this.getLineNumber(node, sourceFile)}`;
+        scopeStack.push({ id: blockScope, type: 'block' });
+        this.scopeRegistry.set(blockScope, filePath);
+      }
+
+      ts.forEachChild(node, (child) => visit(child, depth + 1, scopeStack[scopeStack.length - 1]?.id));
+
+      // Pop scope when exiting
+      if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node) ||
+          ts.isArrowFunction(node) || ts.isClassDeclaration(node) || ts.isBlock(node)) {
+        scopeStack.pop();
+      }
+    };
+
+    visit(sourceFile, 0);
+    return variables;
+  }
+
+  private processVariableDeclaration(
+    node: ts.VariableDeclaration,
+    filePath: string,
+    scope: string,
+    sourceFile: ts.SourceFile,
+    id: number
+  ): VariableDeclaration | null {
+    if (!ts.isIdentifier(node.name)) {
+      return null; // Skip destructuring for now
+    }
+
+    const name = node.name.text;
+    const lineNumber = this.getLineNumber(node, sourceFile);
+
+    // Determine variable type
+    let variableType: VariableDeclaration['type'] = 'let';
+    if (node.parent && ts.isVariableDeclarationList(node.parent)) {
+      if (node.parent.flags & ts.NodeFlags.Const) {
+        variableType = 'const';
+      } else if (node.parent.flags & ts.NodeFlags.Let) {
+        variableType = 'let';
+      } else {
+        variableType = 'var';
+      }
+    }
+
+    // Determine scope type
+    let scopeType: VariableDeclaration['scope'] = 'function';
+    if (scope.includes(':global')) scopeType = 'global';
+    else if (scope.includes(':block')) scopeType = 'block';
+    else if (scope.includes(':class')) scopeType = 'class';
+    else if (scope.includes(':') && !scope.includes(':function')) scopeType = 'module';
+
+    // Get data type if available
+    const dataType = node.type ? node.type.getText(sourceFile) : undefined;
+
+    // Get initial value if it's a simple literal
+    const initialValue = node.initializer ? this.getSimpleInitialValue(node.initializer) : undefined;
+
+    // Check if exported (simplified check)
+    const isExported = this.isNodeExported(node);
+
+    return {
+      id: `${filePath}:var:${name}:${id}`,
+      name,
+      type: variableType,
+      dataType,
+      filePath,
+      lineNumber,
+      scope: scopeType,
+      scopeId: scope,
+      isExported,
+      isImported: false,
+      initialValue,
+      confidence: 0.9
+    };
+  }
+
+  private processParameterDeclaration(
+    node: ts.ParameterDeclaration,
+    filePath: string,
+    scope: string,
+    sourceFile: ts.SourceFile,
+    id: number
+  ): VariableDeclaration | null {
+    if (!ts.isIdentifier(node.name)) {
+      return null; // Skip destructuring parameters
+    }
+
+    const name = node.name.text;
+    const lineNumber = this.getLineNumber(node, sourceFile);
+    const dataType = node.type ? node.type.getText(sourceFile) : undefined;
+    const initialValue = node.initializer ? this.getSimpleInitialValue(node.initializer) : undefined;
+
+    return {
+      id: `${filePath}:param:${name}:${id}`,
+      name,
+      type: 'parameter',
+      dataType,
+      filePath,
+      lineNumber,
+      scope: 'function',
+      scopeId: scope,
+      isExported: false,
+      isImported: false,
+      initialValue,
+      confidence: 0.95
+    };
+  }
+
+  private processImportDeclaration(
+    node: ts.ImportDeclaration,
+    filePath: string,
+    scope: string,
+    sourceFile: ts.SourceFile,
+    startId: number
+  ): VariableDeclaration[] {
+    const variables: VariableDeclaration[] = [];
+    let id = startId;
+
+    if (!node.importClause || !node.moduleSpecifier || !ts.isStringLiteral(node.moduleSpecifier)) {
+      return variables;
+    }
+
+    const importSource = node.moduleSpecifier.text;
+    const lineNumber = this.getLineNumber(node, sourceFile);
+
+    // Handle named imports
+    if (node.importClause.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
+      for (const element of node.importClause.namedBindings.elements) {
+        variables.push({
+          id: `${filePath}:import:${element.name.text}:${id++}`,
+          name: element.name.text,
+          type: 'import',
+          filePath,
+          lineNumber,
+          scope: 'module',
+          scopeId: scope,
+          isExported: false,
+          isImported: true,
+          importSource,
+          confidence: 0.95
+        });
+      }
+    }
+
+    // Handle default imports
+    if (node.importClause.name) {
+      variables.push({
+        id: `${filePath}:import:${node.importClause.name.text}:${id++}`,
+        name: node.importClause.name.text,
+        type: 'import',
+        filePath,
+        lineNumber,
+        scope: 'module',
+        scopeId: scope,
+        isExported: false,
+        isImported: true,
+        importSource,
+        confidence: 0.95
+      });
+    }
+
+    return variables;
+  }
+
+  private processExportDeclaration(
+    node: ts.ExportDeclaration | ts.ExportAssignment,
+    filePath: string,
+    scope: string,
+    sourceFile: ts.SourceFile,
+    startId: number
+  ): VariableDeclaration[] {
+    const variables: VariableDeclaration[] = [];
+    const lineNumber = this.getLineNumber(node, sourceFile);
+
+    // Handle export declarations - simplified for now
+    if (ts.isExportDeclaration(node) && node.exportClause && ts.isNamedExports(node.exportClause)) {
+      let id = startId;
+      for (const element of node.exportClause.elements) {
+        variables.push({
+          id: `${filePath}:export:${element.name.text}:${id++}`,
+          name: element.name.text,
+          type: 'var', // Could be let/const, but we'll use var for exports
+          filePath,
+          lineNumber,
+          scope: 'module',
+          scopeId: scope,
+          isExported: true,
+          isImported: false,
+          confidence: 0.9
+        });
+      }
+    }
+
+    return variables;
+  }
+
+  private extractVariableUsages(
+    sourceFile: ts.SourceFile,
+    filePath: string,
+    declarations: VariableDeclaration[]
+  ): VariableUsage[] {
+    const usages: VariableUsage[] = [];
+    const declMap = new Map(declarations.map(d => [d.name, d]));
+    let usageId = 0;
+    const MAX_DEPTH = 25;
+    const MAX_USAGES = 1000; // Limit total usages to prevent memory issues
+
+    const visit = (node: ts.Node, depth: number = 0, currentFunction?: string): void => {
+      if (depth > MAX_DEPTH) {
+        console.warn(`Max recursion depth ${MAX_DEPTH} reached in variable usage analysis for ${filePath}`);
+        return;
+      }
+
+      if (usages.length > MAX_USAGES) {
+        console.warn(`Max usages ${MAX_USAGES} reached in variable usage analysis for ${filePath}`);
+        return;
+      }
+
+      // Track current function context
+      let functionContext = currentFunction;
+      if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node) || ts.isArrowFunction(node)) {
+        const funcName = this.getFunctionName(node as any) || 'anonymous';
+        functionContext = `${filePath}:${funcName}:${this.getLineNumber(node, sourceFile)}`;
+      }
+
+      // Check for variable usages
+      if (ts.isIdentifier(node)) {
+        const variableName = node.text;
+        const declaration = declMap.get(variableName);
+
+        if (declaration) {
+          const usage = this.createVariableUsage(
+            node,
+            declaration,
+            filePath,
+            sourceFile,
+            functionContext,
+            usageId++
+          );
+          if (usage) usages.push(usage);
+        }
+      }
+
+      ts.forEachChild(node, (child) => visit(child, depth + 1, functionContext));
+    };
+
+    visit(sourceFile, 0);
+    return usages;
+  }
+
+  private createVariableUsage(
+    node: ts.Identifier,
+    declaration: VariableDeclaration,
+    filePath: string,
+    sourceFile: ts.SourceFile,
+    functionContext: string | undefined,
+    id: number
+  ): VariableUsage | null {
+    const lineNumber = this.getLineNumber(node, sourceFile);
+    const usageType = this.determineUsageType(node);
+    const context = this.analyzeVariableUsageContext(node);
+
+    return {
+      id: `${filePath}:usage:${declaration.name}:${id}`,
+      variableId: declaration.id,
+      variableName: declaration.name,
+      usageType,
+      filePath,
+      lineNumber,
+      functionContext,
+      confidence: 0.8,
+      context
+    };
+  }
+
+  private determineUsageType(node: ts.Identifier): VariableUsage['usageType'] {
+    const parent = node.parent;
+
+    if (!parent) return 'read';
+
+    // Assignment expressions
+    if (ts.isBinaryExpression(parent) && parent.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      if (parent.left === node) return 'assignment';
+    }
+
+    // Property access
+    if (ts.isPropertyAccessExpression(parent) && parent.expression === node) {
+      return 'property_access';
+    }
+
+    // Function calls
+    if (ts.isCallExpression(parent) && parent.expression === node) {
+      return 'call';
+    }
+
+    // Parameter passing
+    if (ts.isCallExpression(parent) && parent.arguments.includes(node as any)) {
+      return 'parameter_passing';
+    }
+
+    // Postfix/prefix operators
+    if (ts.isPostfixUnaryExpression(parent) || ts.isPrefixUnaryExpression(parent)) {
+      if (parent.operand === node) return 'write';
+    }
+
+    return 'read';
+  }
+
+  private analyzeVariableUsageContext(node: ts.Identifier): VariableUsage['context'] {
+    let isConditional = false;
+    let isLoop = false;
+    let isAsyncContext = false;
+    let isTryCatch = false;
+    let accessPattern = '';
+
+    let current: ts.Node | undefined = node.parent;
+    while (current) {
+      if (ts.isIfStatement(current) || ts.isConditionalExpression(current)) {
+        isConditional = true;
+      }
+      if (ts.isWhileStatement(current) || ts.isForStatement(current) ||
+          ts.isForInStatement(current) || ts.isForOfStatement(current)) {
+        isLoop = true;
+      }
+      if (ts.isTryStatement(current)) {
+        isTryCatch = true;
+      }
+      current = current.parent;
+    }
+
+    // Detect access patterns
+    if (ts.isPropertyAccessExpression(node.parent)) {
+      accessPattern = `${node.text}.${node.parent.name.text}`;
+    } else if (ts.isElementAccessExpression(node.parent) && node.parent.expression === node) {
+      accessPattern = `${node.text}[...]`;
+    }
+
+    isAsyncContext = this.isInAsyncContext(node);
+
+    return {
+      isConditional,
+      isLoop,
+      isAsyncContext,
+      isTryCatch,
+      accessPattern: accessPattern || undefined
+    };
+  }
+
+  private buildVariableLifecycles(
+    declarations: VariableDeclaration[],
+    usages: VariableUsage[]
+  ): VariableLifecycle[] {
+    const lifecycles: VariableLifecycle[] = [];
+
+    for (const declaration of declarations) {
+      const variableUsages = usages.filter(u => u.variableId === declaration.id);
+
+      const readUsages = variableUsages.filter(u => u.usageType === 'read' || u.usageType === 'property_access' || u.usageType === 'call');
+      const writeUsages = variableUsages.filter(u => u.usageType === 'write' || u.usageType === 'assignment');
+      const crossFileUsages = variableUsages.filter(u => u.filePath !== declaration.filePath);
+
+      const firstUsage = variableUsages.length > 0 ?
+        variableUsages.reduce((earliest, usage) =>
+          usage.lineNumber < earliest.lineNumber ? usage : earliest
+        ) : undefined;
+
+      const lastUsage = variableUsages.length > 0 ?
+        variableUsages.reduce((latest, usage) =>
+          usage.lineNumber > latest.lineNumber ? usage : latest
+        ) : undefined;
+
+      lifecycles.push({
+        variableId: declaration.id,
+        variableName: declaration.name,
+        declaration,
+        usages: variableUsages,
+        isUnused: variableUsages.length === 0,
+        firstUsage,
+        lastUsage,
+        readCount: readUsages.length,
+        writeCount: writeUsages.length,
+        crossFileUsageCount: crossFileUsages.length,
+        lifespan: {
+          declarationLine: declaration.lineNumber,
+          firstUsageLine: firstUsage?.lineNumber,
+          lastUsageLine: lastUsage?.lineNumber,
+          scopeEnd: undefined // Could be enhanced to detect scope end
+        }
+      });
+    }
+
+    return lifecycles;
+  }
+
+  private detectCrossModuleDependencies(
+    declarations: VariableDeclaration[],
+    usages: VariableUsage[],
+    filePath: string
+  ): CrossModuleVariableDependency[] {
+    const dependencies: CrossModuleVariableDependency[] = [];
+    let depId = 0;
+
+    // Find imports that create dependencies
+    const imports = declarations.filter(d => d.isImported);
+    for (const importDecl of imports) {
+      const importUsages = usages.filter(u => u.variableId === importDecl.id);
+
+      if (importUsages.length > 0 && importDecl.importSource) {
+        dependencies.push({
+          id: `${filePath}:dep:${depId++}`,
+          sourceVariable: importDecl,
+          targetVariable: importDecl, // Self-reference for imports
+          dependencyType: 'import',
+          sourceFile: filePath,
+          targetFile: importDecl.importSource,
+          confidence: 0.9,
+          usagePattern: importUsages.map(u => u.usageType).join(',')
+        });
+      }
+    }
+
+    return dependencies;
+  }
+
+  private buildImportExportMapping(declarations: VariableDeclaration[]): Map<string, string[]> {
+    const mapping = new Map<string, string[]>();
+
+    const imports = declarations.filter(d => d.isImported).map(d => d.name);
+    const exports = declarations.filter(d => d.isExported).map(d => d.name);
+
+    if (imports.length > 0) {
+      mapping.set('imports', imports);
+    }
+    if (exports.length > 0) {
+      mapping.set('exports', exports);
+    }
+
+    return mapping;
+  }
+
+  // Utility methods for variable analysis
+  private getSimpleInitialValue(node: ts.Expression): string | undefined {
+    if (ts.isStringLiteral(node) || ts.isNumericLiteral(node)) {
+      return node.text;
+    }
+    if (node.kind === ts.SyntaxKind.TrueKeyword) return 'true';
+    if (node.kind === ts.SyntaxKind.FalseKeyword) return 'false';
+    if (node.kind === ts.SyntaxKind.NullKeyword) return 'null';
+    if (node.kind === ts.SyntaxKind.UndefinedKeyword) return 'undefined';
+    return undefined;
+  }
+
+  private isNodeExported(node: ts.VariableDeclaration): boolean {
+    let current: ts.Node | undefined = node.parent;
+    while (current) {
+      // Check if current node has modifiers and one is export
+      if (ts.canHaveModifiers(current)) {
+        const modifiers = ts.getModifiers(current);
+        if (modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword)) {
+          return true;
+        }
+      }
+      if (ts.isExportDeclaration(current) || ts.isExportAssignment(current)) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+
+  private createEmptyVariableAnalysis(): VariableAnalysisResult {
+    return {
+      declarations: [],
+      usages: [],
+      lifecycles: [],
+      crossModuleDependencies: [],
+      unusedVariables: [],
+      globalVariables: [],
+      importExportMapping: new Map()
+    };
   }
 
   private createEmptyCallGraph(): FunctionCallGraph {
@@ -1291,6 +2114,238 @@ export class CallPatternAnalyzer {
           complexity: c.performance.complexityScore,
           depth: c.depth
         }))
+    };
+  }
+
+  // Variable Analysis Methods
+
+  async performCrossFileVariableAnalysis(): Promise<{
+    globalVariableUsages: VariableUsage[];
+    crossModuleDependencies: CrossModuleVariableDependency[];
+    unusedVariablesAcrossFiles: VariableDeclaration[];
+    globalVariableLifecycles: VariableLifecycle[];
+  }> {
+    const allDeclarations: VariableDeclaration[] = [];
+    const allUsages: VariableUsage[] = [];
+    const allLifecycles: VariableLifecycle[] = [];
+    const allCrossModuleDeps: CrossModuleVariableDependency[] = [];
+
+    // Combine all variable data from analyzed files
+    for (const [filePath, declarations] of this.variableDeclarations) {
+      allDeclarations.push(...declarations);
+    }
+
+    for (const [filePath, usages] of this.variableUsages) {
+      allUsages.push(...usages);
+    }
+
+    for (const [filePath, lifecycles] of this.variableLifecycles) {
+      allLifecycles.push(...lifecycles);
+    }
+
+    for (const [filePath, dependencies] of this.crossModuleDependencies) {
+      allCrossModuleDeps.push(...dependencies);
+    }
+
+    // Find global variables used across multiple files
+    const globalVariableUsages = allUsages.filter(usage => {
+      const declaration = allDeclarations.find(d => d.id === usage.variableId);
+      return declaration && (declaration.scope === 'global' || declaration.scope === 'module') &&
+             usage.filePath !== declaration.filePath;
+    });
+
+    // Find truly unused variables (not used in any file)
+    const unusedVariablesAcrossFiles = allDeclarations.filter(declaration => {
+      return !allUsages.some(usage => usage.variableId === declaration.id);
+    });
+
+    // Get lifecycles for global variables
+    const globalVariableLifecycles = allLifecycles.filter(lifecycle => {
+      return lifecycle.declaration.scope === 'global' || lifecycle.declaration.scope === 'module';
+    });
+
+    return {
+      globalVariableUsages,
+      crossModuleDependencies: allCrossModuleDeps,
+      unusedVariablesAcrossFiles,
+      globalVariableLifecycles
+    };
+  }
+
+  getVariableAnalysisStatistics(): {
+    totalVariables: number;
+    variablesByType: Record<string, number>;
+    variablesByScope: Record<string, number>;
+    unusedVariableCount: number;
+    globalVariableCount: number;
+    importedVariableCount: number;
+    exportedVariableCount: number;
+    averageUsageCount: number;
+    crossFileVariableCount: number;
+    variableLifespanDistribution: {
+      short: number; // 1-5 lines
+      medium: number; // 6-20 lines
+      long: number; // 21+ lines
+    };
+    mostUsedVariables: { name: string; usageCount: number; filePath: string }[];
+    unusedVariables: { name: string; type: string; filePath: string; lineNumber: number }[];
+  } {
+    const allDeclarations = Array.from(this.variableDeclarations.values()).flat();
+    const allUsages = Array.from(this.variableUsages.values()).flat();
+    const allLifecycles = Array.from(this.variableLifecycles.values()).flat();
+
+    if (allDeclarations.length === 0) {
+      return {
+        totalVariables: 0,
+        variablesByType: {},
+        variablesByScope: {},
+        unusedVariableCount: 0,
+        globalVariableCount: 0,
+        importedVariableCount: 0,
+        exportedVariableCount: 0,
+        averageUsageCount: 0,
+        crossFileVariableCount: 0,
+        variableLifespanDistribution: { short: 0, medium: 0, long: 0 },
+        mostUsedVariables: [],
+        unusedVariables: []
+      };
+    }
+
+    // Count variables by type
+    const variablesByType: Record<string, number> = {};
+    const variablesByScope: Record<string, number> = {};
+
+    for (const declaration of allDeclarations) {
+      variablesByType[declaration.type] = (variablesByType[declaration.type] || 0) + 1;
+      variablesByScope[declaration.scope] = (variablesByScope[declaration.scope] || 0) + 1;
+    }
+
+    // Calculate usage statistics
+    const usageCounts = allDeclarations.map(decl => {
+      const usageCount = allUsages.filter(usage => usage.variableId === decl.id).length;
+      return { declaration: decl, usageCount };
+    });
+
+    const totalUsages = usageCounts.reduce((sum, item) => sum + item.usageCount, 0);
+    const averageUsageCount = allDeclarations.length > 0 ? totalUsages / allDeclarations.length : 0;
+
+    // Find most used variables
+    const mostUsedVariables = usageCounts
+      .filter(item => item.usageCount > 0)
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 10)
+      .map(item => ({
+        name: item.declaration.name,
+        usageCount: item.usageCount,
+        filePath: item.declaration.filePath
+      }));
+
+    // Find unused variables
+    const unusedVariables = usageCounts
+      .filter(item => item.usageCount === 0)
+      .map(item => ({
+        name: item.declaration.name,
+        type: item.declaration.type,
+        filePath: item.declaration.filePath,
+        lineNumber: item.declaration.lineNumber
+      }));
+
+    // Calculate lifespan distribution
+    const lifespanDistribution = { short: 0, medium: 0, long: 0 };
+    for (const lifecycle of allLifecycles) {
+      if (lifecycle.firstUsage && lifecycle.lastUsage) {
+        const lifespan = lifecycle.lastUsage.lineNumber - lifecycle.declaration.lineNumber;
+        if (lifespan <= 5) lifespanDistribution.short++;
+        else if (lifespan <= 20) lifespanDistribution.medium++;
+        else lifespanDistribution.long++;
+      }
+    }
+
+    // Count cross-file variables
+    const crossFileVariableCount = allLifecycles.filter(l => l.crossFileUsageCount > 0).length;
+
+    return {
+      totalVariables: allDeclarations.length,
+      variablesByType,
+      variablesByScope,
+      unusedVariableCount: unusedVariables.length,
+      globalVariableCount: allDeclarations.filter(d => d.scope === 'global' || d.scope === 'module').length,
+      importedVariableCount: allDeclarations.filter(d => d.isImported).length,
+      exportedVariableCount: allDeclarations.filter(d => d.isExported).length,
+      averageUsageCount,
+      crossFileVariableCount,
+      variableLifespanDistribution: lifespanDistribution,
+      mostUsedVariables,
+      unusedVariables
+    };
+  }
+
+  getVariableUsagePatterns(): {
+    readWriteRatio: number;
+    conditionalUsagePercentage: number;
+    loopUsagePercentage: number;
+    asyncUsagePercentage: number;
+    propertyAccessPercentage: number;
+    functionCallPercentage: number;
+    commonAccessPatterns: { pattern: string; count: number }[];
+    usageByScope: Record<string, number>;
+  } {
+    const allUsages = Array.from(this.variableUsages.values()).flat();
+
+    if (allUsages.length === 0) {
+      return {
+        readWriteRatio: 0,
+        conditionalUsagePercentage: 0,
+        loopUsagePercentage: 0,
+        asyncUsagePercentage: 0,
+        propertyAccessPercentage: 0,
+        functionCallPercentage: 0,
+        commonAccessPatterns: [],
+        usageByScope: {}
+      };
+    }
+
+    const readUsages = allUsages.filter(u => u.usageType === 'read').length;
+    const writeUsages = allUsages.filter(u => u.usageType === 'write' || u.usageType === 'assignment').length;
+    const conditionalUsages = allUsages.filter(u => u.context.isConditional).length;
+    const loopUsages = allUsages.filter(u => u.context.isLoop).length;
+    const asyncUsages = allUsages.filter(u => u.context.isAsyncContext).length;
+    const propertyAccessUsages = allUsages.filter(u => u.usageType === 'property_access').length;
+    const functionCallUsages = allUsages.filter(u => u.usageType === 'call').length;
+
+    // Count access patterns
+    const accessPatternCounts = new Map<string, number>();
+    for (const usage of allUsages) {
+      if (usage.context.accessPattern) {
+        const count = accessPatternCounts.get(usage.context.accessPattern) || 0;
+        accessPatternCounts.set(usage.context.accessPattern, count + 1);
+      }
+    }
+
+    const commonAccessPatterns = Array.from(accessPatternCounts.entries())
+      .map(([pattern, count]) => ({ pattern, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Count usage by scope (get scope from variable declarations)
+    const allDeclarations = Array.from(this.variableDeclarations.values()).flat();
+    const usageByScope: Record<string, number> = {};
+    for (const usage of allUsages) {
+      const declaration = allDeclarations.find(d => d.id === usage.variableId);
+      if (declaration) {
+        usageByScope[declaration.scope] = (usageByScope[declaration.scope] || 0) + 1;
+      }
+    }
+
+    return {
+      readWriteRatio: writeUsages > 0 ? readUsages / writeUsages : readUsages,
+      conditionalUsagePercentage: (conditionalUsages / allUsages.length) * 100,
+      loopUsagePercentage: (loopUsages / allUsages.length) * 100,
+      asyncUsagePercentage: (asyncUsages / allUsages.length) * 100,
+      propertyAccessPercentage: (propertyAccessUsages / allUsages.length) * 100,
+      functionCallPercentage: (functionCallUsages / allUsages.length) * 100,
+      commonAccessPatterns,
+      usageByScope
     };
   }
 }

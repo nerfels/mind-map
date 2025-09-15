@@ -1,6 +1,6 @@
 export interface MindMapNode {
   id: string;
-  type: 'file' | 'directory' | 'function' | 'class' | 'error' | 'pattern' | 'episodic_memory' | 'call_pattern' | 'document' | 'link' | 'section';
+  type: 'file' | 'directory' | 'function' | 'class' | 'error' | 'pattern' | 'episodic_memory' | 'call_pattern' | 'document' | 'link' | 'section' | 'variable';
   name: string;
   path?: string;
   metadata: Record<string, any>;
@@ -15,7 +15,7 @@ export interface MindMapEdge {
   id: string;
   source: string;
   target: string;
-  type: 'contains' | 'imports' | 'calls' | 'fixes' | 'relates_to' | 'depends_on' | 'detects' | 'co_activates' | 'documents' | 'links_to' | 'references' | 'implements' | 'describes';
+  type: 'contains' | 'imports' | 'calls' | 'fixes' | 'relates_to' | 'depends_on' | 'detects' | 'co_activates' | 'documents' | 'links_to' | 'references' | 'implements' | 'describes' | 'used_by';
   weight?: number;
   confidence: number;
   metadata?: Record<string, any>;

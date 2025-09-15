@@ -1,6 +1,7 @@
 import { MindMapStorage } from '../MindMapStorage.js';
 import { FileScanner } from '../FileScanner.js';
 import { CodeAnalyzer } from '../CodeAnalyzer.js';
+import { CallPatternAnalyzer } from '../CallPatternAnalyzer.js';
 import { ParallelFileProcessor } from '../ParallelFileProcessor.js';
 import { ScalabilityManager } from '../ScalabilityManager.js';
 import { ProjectScale, ProcessingProgress } from '../../types/index.js';
@@ -19,6 +20,7 @@ export class ScanningService {
     private storage: MindMapStorage,
     private scanner: FileScanner,
     private codeAnalyzer: CodeAnalyzer,
+    private callPatternAnalyzer: CallPatternAnalyzer,
     private parallelProcessor: ParallelFileProcessor,
     private scalabilityManager: ScalabilityManager,
     private projectRoot: string
@@ -78,7 +80,34 @@ export class ScanningService {
       // Process the results and add to storage
       for (const fileInfo of result) {
         try {
-          const analysis = await this.codeAnalyzer.analyzeFile(fileInfo.path);
+          // Determine if we should use enhanced analysis for TypeScript/JavaScript files
+          const isJsTsFile = fileInfo.path.match(/\.(ts|tsx|js|jsx)$/i);
+
+          let analysis: any = null;
+          let callPatternResult: any = null;
+
+          if (isJsTsFile) {
+            // Use CallPatternAnalyzer for enhanced variable and call analysis
+            try {
+              console.log(`🔍 Running CallPatternAnalyzer on ${fileInfo.path}...`);
+              const startTime = Date.now();
+
+              callPatternResult = await this.callPatternAnalyzer.analyzeFile(fileInfo.path);
+
+              const duration = Date.now() - startTime;
+              console.log(`✅ CallPatternAnalyzer completed for ${fileInfo.path} in ${duration}ms`);
+              console.log(`   Variables: ${callPatternResult.variableAnalysis?.declarations.length || 0}`);
+              console.log(`   Nodes: ${callPatternResult.nodes.length}, Edges: ${callPatternResult.edges.length}`);
+
+              analysis = this.extractBasicStructureFromCallPattern(callPatternResult);
+            } catch (error) {
+              console.warn(`❌ Failed CallPatternAnalyzer for ${fileInfo.path}, falling back to CodeAnalyzer:`, error);
+              analysis = await this.codeAnalyzer.analyzeFile(fileInfo.path);
+            }
+          } else {
+            // Use CodeAnalyzer for other file types
+            analysis = await this.codeAnalyzer.analyzeFile(fileInfo.path);
+          }
 
           // Add the file node
           const fileNode = {
@@ -156,6 +185,11 @@ export class ScanningService {
               }
             }
           }
+
+          // If we used CallPatternAnalyzer, add the enhanced nodes and edges
+          if (callPatternResult) {
+            this.addCallPatternNodesToStorage(callPatternResult, fileInfo.path);
+          }
         } catch (error) {
           console.warn(`⚠️ Failed to analyze ${fileInfo.path}:`, error);
         }
@@ -191,7 +225,34 @@ export class ScanningService {
 
     for (const file of files) {
       try {
-        const analysis = await this.codeAnalyzer.analyzeFile(file.path);
+        // Determine if we should use enhanced analysis for TypeScript/JavaScript files
+        const isJsTsFile = file.path.match(/\.(ts|tsx|js|jsx)$/i);
+
+        let analysis: any = null;
+        let callPatternResult: any = null;
+
+        if (isJsTsFile) {
+          // Use CallPatternAnalyzer for enhanced variable and call analysis
+          try {
+            console.log(`🔍 [Legacy] Running CallPatternAnalyzer on ${file.path}...`);
+            const startTime = Date.now();
+
+            callPatternResult = await this.callPatternAnalyzer.analyzeFile(file.path);
+
+            const duration = Date.now() - startTime;
+            console.log(`✅ [Legacy] CallPatternAnalyzer completed for ${file.path} in ${duration}ms`);
+            console.log(`   Variables: ${callPatternResult.variableAnalysis?.declarations.length || 0}`);
+            console.log(`   Nodes: ${callPatternResult.nodes.length}, Edges: ${callPatternResult.edges.length}`);
+
+            analysis = this.extractBasicStructureFromCallPattern(callPatternResult);
+          } catch (error) {
+            console.warn(`❌ [Legacy] Failed CallPatternAnalyzer for ${file.path}, falling back to CodeAnalyzer:`, error);
+            analysis = await this.codeAnalyzer.analyzeFile(file.path);
+          }
+        } else {
+          // Use CodeAnalyzer for other file types
+          analysis = await this.codeAnalyzer.analyzeFile(file.path);
+        }
 
         // Add the file node
         this.storage.addNode({
@@ -267,6 +328,11 @@ export class ScanningService {
               });
             }
           }
+        }
+
+        // If we used CallPatternAnalyzer, add the enhanced nodes and edges
+        if (callPatternResult) {
+          this.addCallPatternNodesToStorage(callPatternResult, file.path);
         }
 
         processedFiles++;
@@ -657,6 +723,64 @@ export class ScanningService {
       console.log(`📊 Processing: ${progress.filesProcessed}/${progress.totalFiles} files (${percentage.toFixed(1)}%)`);
     } else {
       console.log(`🔍 Progress: ${progress.completedChunks}/${progress.totalChunks} chunks, ${progress.filesProcessed}/${progress.totalFiles} files (${percentage.toFixed(1)}%)`);
+    }
+  }
+
+  // Helper method to extract basic structure from CallPatternAnalyzer results
+  private extractBasicStructureFromCallPattern(callPatternResult: any): any {
+    const functions = Array.from(callPatternResult.callGraph.nodes.values()).map((node: any) => ({
+      name: node.name,
+      startLine: node.lineNumber,
+      endLine: node.lineNumber + 10, // Approximation
+      parameters: [],
+      returnType: undefined
+    }));
+
+    return {
+      functions,
+      classes: [], // CallPatternAnalyzer doesn't return classes in the same format
+      imports: [],
+      exports: []
+    };
+  }
+
+  // Helper method to add CallPatternAnalyzer nodes and edges to storage
+  private addCallPatternNodesToStorage(callPatternResult: any, filePath: string): void {
+    try {
+      let variableNodeCount = 0;
+      let functionNodeCount = 0;
+      let usageEdgeCount = 0;
+      let callEdgeCount = 0;
+
+      // Add all nodes from CallPatternAnalyzer (includes variables, functions, etc.)
+      for (const node of callPatternResult.nodes) {
+        this.storage.addNode({
+          ...node,
+          lastUpdated: new Date()
+        });
+
+        // Count node types
+        if (node.type === 'variable') variableNodeCount++;
+        if (node.type === 'function') functionNodeCount++;
+      }
+
+      // Add all edges from CallPatternAnalyzer (includes variable usage, calls, etc.)
+      for (const edge of callPatternResult.edges) {
+        this.storage.addEdge({
+          ...edge,
+          lastUpdated: new Date()
+        });
+
+        // Count edge types
+        if (edge.type === 'used_by') usageEdgeCount++;
+        if (edge.type === 'calls') callEdgeCount++;
+      }
+
+      console.log(`✅ Added enhanced nodes for ${filePath}:`);
+      console.log(`   📊 Variables: ${variableNodeCount}, Functions: ${functionNodeCount}`);
+      console.log(`   🔗 Usage edges: ${usageEdgeCount}, Call edges: ${callEdgeCount}`);
+    } catch (error) {
+      console.warn(`⚠️ Failed to add CallPatternAnalyzer results for ${filePath}:`, error);
     }
   }
 }
