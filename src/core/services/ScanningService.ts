@@ -79,15 +79,83 @@ export class ScanningService {
       for (const fileInfo of result) {
         try {
           const analysis = await this.codeAnalyzer.analyzeFile(fileInfo.path);
-          this.storage.addNode({
+
+          // Add the file node
+          const fileNode = {
             id: fileInfo.path,
             name: fileInfo.name,
-            type: fileInfo.type === 'directory' ? 'directory' : 'file',
+            type: (fileInfo.type === 'directory' ? 'directory' : 'file') as 'directory' | 'file',
             path: fileInfo.path,
             metadata: analysis || {},
             confidence: 0.8,
             lastUpdated: new Date()
-          });
+          };
+          this.storage.addNode(fileNode);
+
+          // If we have code analysis, add separate nodes for classes and functions
+          if (analysis && fileInfo.type === 'file') {
+            // Add class nodes
+            if (analysis.classes) {
+              for (const cls of analysis.classes) {
+                const classId = `${fileInfo.path}#class:${cls.name}`;
+                this.storage.addNode({
+                  id: classId,
+                  name: cls.name,
+                  type: 'class',
+                  path: fileInfo.path,
+                  metadata: {
+                    startLine: cls.startLine,
+                    endLine: cls.endLine,
+                    methods: cls.methods || [],
+                    properties: cls.properties || []
+                  },
+                  confidence: 0.9,
+                  lastUpdated: new Date()
+                });
+
+                // Add relationship: file contains class
+                this.storage.addEdge({
+                  id: `${fileInfo.path}->contains->${classId}`,
+                  source: fileInfo.path,
+                  target: classId,
+                  type: 'contains',
+                  confidence: 0.9,
+                  lastUpdated: new Date()
+                });
+              }
+            }
+
+            // Add function nodes
+            if (analysis.functions) {
+              for (const func of analysis.functions) {
+                const functionId = `${fileInfo.path}#function:${func.name}`;
+                this.storage.addNode({
+                  id: functionId,
+                  name: func.name,
+                  type: 'function',
+                  path: fileInfo.path,
+                  metadata: {
+                    startLine: func.startLine,
+                    endLine: func.endLine,
+                    parameters: func.parameters || [],
+                    returnType: func.returnType
+                  },
+                  confidence: 0.9,
+                  lastUpdated: new Date()
+                });
+
+                // Add relationship: file contains function
+                this.storage.addEdge({
+                  id: `${fileInfo.path}->contains->${functionId}`,
+                  source: fileInfo.path,
+                  target: functionId,
+                  type: 'contains',
+                  confidence: 0.9,
+                  lastUpdated: new Date()
+                });
+              }
+            }
+          }
         } catch (error) {
           console.warn(`⚠️ Failed to analyze ${fileInfo.path}:`, error);
         }
@@ -124,15 +192,83 @@ export class ScanningService {
     for (const file of files) {
       try {
         const analysis = await this.codeAnalyzer.analyzeFile(file.path);
+
+        // Add the file node
         this.storage.addNode({
           id: file.path,
           name: file.name,
-          type: file.type === 'directory' ? 'directory' : 'file',
+          type: (file.type === 'directory' ? 'directory' : 'file') as 'directory' | 'file',
           path: file.path,
           metadata: analysis || {},
           confidence: 0.8,
           lastUpdated: new Date()
         });
+
+        // If we have code analysis, add separate nodes for classes and functions
+        if (analysis && file.type === 'file') {
+          // Add class nodes
+          if (analysis.classes) {
+            for (const cls of analysis.classes) {
+              const classId = `${file.path}#class:${cls.name}`;
+              this.storage.addNode({
+                id: classId,
+                name: cls.name,
+                type: 'class',
+                path: file.path,
+                metadata: {
+                  startLine: cls.startLine,
+                  endLine: cls.endLine,
+                  methods: cls.methods || [],
+                  properties: cls.properties || []
+                },
+                confidence: 0.9,
+                lastUpdated: new Date()
+              });
+
+              // Add relationship: file contains class
+              this.storage.addEdge({
+                id: `${file.path}->contains->${classId}`,
+                source: file.path,
+                target: classId,
+                type: 'contains',
+                confidence: 0.9,
+                lastUpdated: new Date()
+              });
+            }
+          }
+
+          // Add function nodes
+          if (analysis.functions) {
+            for (const func of analysis.functions) {
+              const functionId = `${file.path}#function:${func.name}`;
+              this.storage.addNode({
+                id: functionId,
+                name: func.name,
+                type: 'function',
+                path: file.path,
+                metadata: {
+                  startLine: func.startLine,
+                  endLine: func.endLine,
+                  parameters: func.parameters || [],
+                  returnType: func.returnType
+                },
+                confidence: 0.9,
+                lastUpdated: new Date()
+              });
+
+              // Add relationship: file contains function
+              this.storage.addEdge({
+                id: `${file.path}->contains->${functionId}`,
+                source: file.path,
+                target: functionId,
+                type: 'contains',
+                confidence: 0.9,
+                lastUpdated: new Date()
+              });
+            }
+          }
+        }
+
         processedFiles++;
 
         if (processedFiles % 100 === 0) {

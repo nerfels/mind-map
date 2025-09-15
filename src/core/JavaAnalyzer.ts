@@ -80,8 +80,8 @@ export class JavaAnalyzer {
 
     try {
       // Process the compilation unit
-      if (parseResult && parseResult.children && parseResult.children.compilationUnit) {
-        const compilationUnit = parseResult.children.compilationUnit[0];
+      if (parseResult && parseResult.children && parseResult.children.ordinaryCompilationUnit) {
+        const compilationUnit = parseResult.children.ordinaryCompilationUnit[0];
         
         // Extract package declaration
         if (compilationUnit.children.packageDeclaration) {
@@ -183,11 +183,18 @@ export class JavaAnalyzer {
 
   private processClassDeclaration(classDecl: any, structure: JavaCodeStructure, content: string) {
     try {
-      const className = classDecl.children.Identifier?.[0]?.image || 'UnknownClass';
+      // Handle normalClassDeclaration structure
+      const normalClassDecl = classDecl.children.normalClassDeclaration?.[0];
+      if (!normalClassDecl) {
+        console.warn('No normalClassDeclaration found');
+        return;
+      }
+
+      const className = normalClassDecl.children.typeIdentifier?.[0]?.children?.Identifier?.[0]?.image || 'UnknownClass';
       
       // Calculate line numbers (simplified approach)
-      const startLine = this.getLineNumber(content, classDecl.location?.startOffset || 0);
-      const endLine = this.getLineNumber(content, classDecl.location?.endOffset || content.length);
+      const startLine = this.getLineNumber(content, normalClassDecl.location?.startOffset || 0);
+      const endLine = this.getLineNumber(content, normalClassDecl.location?.endOffset || content.length);
 
       const classInfo: any = {
         name: className,
@@ -199,17 +206,17 @@ export class JavaAnalyzer {
         decorators: []
       };
 
-      // Extract superclass
-      if (classDecl.children.superclass) {
-        const superclass = this.extractQualifiedName(classDecl.children.superclass[0].children.classType[0]);
+      // Extract superclass (if present in normalClassDeclaration)
+      if (normalClassDecl.children.superclass) {
+        const superclass = this.extractQualifiedName(normalClassDecl.children.superclass[0].children.classType[0]);
         if (superclass) {
           classInfo.baseClasses.push(superclass);
         }
       }
 
-      // Extract interfaces
-      if (classDecl.children.superinterfaces) {
-        const interfaces = classDecl.children.superinterfaces[0];
+      // Extract interfaces (if present in normalClassDeclaration)
+      if (normalClassDecl.children.superinterfaces) {
+        const interfaces = normalClassDecl.children.superinterfaces[0];
         if (interfaces.children.interfaceTypeList) {
           interfaces.children.interfaceTypeList[0].children.interfaceType?.forEach((intf: any) => {
             const interfaceName = this.extractQualifiedName(intf);
@@ -221,8 +228,8 @@ export class JavaAnalyzer {
       }
 
       // Process class body
-      if (classDecl.children.classBody) {
-        this.processClassBody(classDecl.children.classBody[0], classInfo, structure, content);
+      if (normalClassDecl.children.classBody) {
+        this.processClassBody(normalClassDecl.children.classBody[0], classInfo, structure, content);
       }
 
       structure.classes.push(classInfo);
@@ -248,16 +255,7 @@ export class JavaAnalyzer {
 
     classBody.children.classBodyDeclaration.forEach((bodyDecl: any) => {
       try {
-        // Process method declarations
-        if (bodyDecl.children.methodDeclaration) {
-          const method = this.processMethodDeclaration(bodyDecl.children.methodDeclaration[0], content);
-          if (method) {
-            classInfo.methods.push(method.name);
-            structure.functions.push(method);
-          }
-        }
-        
-        // Process constructor declarations
+        // Process constructor declarations directly
         if (bodyDecl.children.constructorDeclaration) {
           const constructor = this.processConstructorDeclaration(bodyDecl.children.constructorDeclaration[0], content);
           if (constructor) {
@@ -266,10 +264,24 @@ export class JavaAnalyzer {
           }
         }
 
-        // Process field declarations
-        if (bodyDecl.children.fieldDeclaration) {
-          const fields = this.processFieldDeclaration(bodyDecl.children.fieldDeclaration[0]);
-          classInfo.properties.push(...fields);
+        // Process class member declarations (methods and fields)
+        if (bodyDecl.children.classMemberDeclaration) {
+          const memberDecl = bodyDecl.children.classMemberDeclaration[0];
+
+          // Check for method declaration within classMemberDeclaration
+          if (memberDecl.children.methodDeclaration) {
+            const method = this.processMethodDeclaration(memberDecl.children.methodDeclaration[0], content);
+            if (method) {
+              classInfo.methods.push(method.name);
+              structure.functions.push(method);
+            }
+          }
+
+          // Check for field declaration within classMemberDeclaration
+          if (memberDecl.children.fieldDeclaration) {
+            const fields = this.processFieldDeclaration(memberDecl.children.fieldDeclaration[0]);
+            classInfo.properties.push(...fields);
+          }
         }
       } catch (error) {
         console.warn('Error processing class body declaration:', error);
@@ -279,7 +291,14 @@ export class JavaAnalyzer {
 
   private processMethodDeclaration(methodDecl: any, content: string): any | null {
     try {
-      const methodName = methodDecl.children.Identifier?.[0]?.image || 'unknownMethod';
+      // Navigate through methodHeader -> methodDeclarator -> Identifier
+      const methodHeader = methodDecl.children.methodHeader?.[0];
+      if (!methodHeader) return null;
+
+      const methodDeclarator = methodHeader.children.methodDeclarator?.[0];
+      if (!methodDeclarator) return null;
+
+      const methodName = methodDeclarator.children.Identifier?.[0]?.image || 'unknownMethod';
       const startLine = this.getLineNumber(content, methodDecl.location?.startOffset || 0);
       const endLine = this.getLineNumber(content, methodDecl.location?.endOffset || content.length);
 
@@ -313,7 +332,11 @@ export class JavaAnalyzer {
 
   private processConstructorDeclaration(constructorDecl: any, content: string): any | null {
     try {
-      const constructorName = constructorDecl.children.Identifier?.[0]?.image || 'constructor';
+      // Navigate through constructorDeclarator -> Identifier
+      const constructorDeclarator = constructorDecl.children.constructorDeclarator?.[0];
+      if (!constructorDeclarator) return null;
+
+      const constructorName = constructorDeclarator.children.Identifier?.[0]?.image || 'constructor';
       const startLine = this.getLineNumber(content, constructorDecl.location?.startOffset || 0);
       const endLine = this.getLineNumber(content, constructorDecl.location?.endOffset || content.length);
 
