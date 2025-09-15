@@ -1,6 +1,6 @@
 export interface MindMapNode {
   id: string;
-  type: 'file' | 'directory' | 'function' | 'class' | 'error' | 'pattern' | 'episodic_memory' | 'call_pattern';
+  type: 'file' | 'directory' | 'function' | 'class' | 'error' | 'pattern' | 'episodic_memory' | 'call_pattern' | 'document' | 'link' | 'section';
   name: string;
   path?: string;
   metadata: Record<string, any>;
@@ -15,7 +15,7 @@ export interface MindMapEdge {
   id: string;
   source: string;
   target: string;
-  type: 'contains' | 'imports' | 'calls' | 'fixes' | 'relates_to' | 'depends_on' | 'detects' | 'co_activates';
+  type: 'contains' | 'imports' | 'calls' | 'fixes' | 'relates_to' | 'depends_on' | 'detects' | 'co_activates' | 'documents' | 'links_to' | 'references' | 'implements' | 'describes';
   weight?: number;
   confidence: number;
   metadata?: Record<string, any>;
@@ -624,4 +624,97 @@ export interface ProjectInsight {
   priority: 'low' | 'medium' | 'high';
   evidence: string[];
   timestamp: Date;
+}
+
+// Document Intelligence Interfaces (Phase 7.5)
+export interface DocumentStructure {
+  headers: Array<{
+    level: number;
+    text: string;
+    id?: string;
+    lineNumber: number;
+  }>;
+  links: Array<{
+    type: 'internal' | 'external' | 'code' | 'image' | 'document';
+    url: string;
+    text: string;
+    lineNumber: number;
+    isValid?: boolean;
+  }>;
+  codeBlocks: Array<{
+    language?: string;
+    content: string;
+    lineNumber: number;
+    startLine: number;
+    endLine: number;
+  }>;
+  tables: Array<{
+    headers: string[];
+    rows: string[][];
+    lineNumber: number;
+  }>;
+  metadata: {
+    title?: string;
+    description?: string;
+    tags?: string[];
+    lastModified?: Date;
+    wordCount: number;
+    readingTime: number; // minutes
+  };
+}
+
+export interface DocumentLink {
+  id: string;
+  sourceDocument: string;
+  targetPath: string;
+  linkType: 'internal' | 'external' | 'code' | 'image' | 'document';
+  linkText: string;
+  context: string; // surrounding text
+  lineNumber: number;
+  confidence: number;
+  isValid: boolean;
+  validationError?: string;
+}
+
+export interface DocumentRelationship {
+  sourceDoc: string;
+  targetElement: string; // file, function, class, etc.
+  relationType: 'documents' | 'references' | 'implements' | 'describes' | 'configures';
+  confidence: number;
+  evidence: string[];
+  extractedFrom: 'link' | 'content' | 'filename' | 'structure';
+}
+
+export interface DocumentAnalysis {
+  documentPath: string;
+  documentType: 'markdown' | 'restructured_text' | 'asciidoc' | 'latex' | 'plain_text';
+  structure: DocumentStructure;
+  links: DocumentLink[];
+  relationships: DocumentRelationship[];
+  brokenLinks: DocumentLink[];
+  implementationGaps: Array<{
+    description: string;
+    documentedFeature: string;
+    missingImplementation: string[];
+    confidence: number;
+  }>;
+  documentationDebt: Array<{
+    codeElement: string;
+    missingDocumentation: string;
+    severity: 'low' | 'medium' | 'high';
+  }>;
+}
+
+export interface MultiFormatDocument {
+  path: string;
+  format: 'json' | 'yaml' | 'toml' | 'xml' | 'csv' | 'openapi' | 'json_schema' | 'graphql' | 'protobuf';
+  schema?: any;
+  data?: any;
+  structure: {
+    keys: string[];
+    nestedStructure: any;
+    references: string[];
+    imports: string[];
+  };
+  relationships: DocumentRelationship[];
 }

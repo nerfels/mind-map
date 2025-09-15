@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.6.0 🧠
+# Mind Map MCP Server v1.7.0 🧠
 
-**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, and **enhanced file ignore patterns** for next-generation code understanding.
+**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, **document intelligence**, and **enhanced file ignore patterns** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.6.0
+## 🚀 Current Status: Production Ready v1.7.0
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ CI/CD Pipeline**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Document Intelligence** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ CI/CD Pipeline**
 
-**🎯 Latest Update v1.6.0**: **Enhanced File Ignore Configuration** - Added comprehensive ignore pattern support with multi-source loading (.gitignore, .mindmapignore, custom patterns), 3 new MCP tools for pattern management, and 33% file filtering efficiency. Includes real-time pattern testing, performance analytics, and smart defaults for improved scan performance.
+**🎯 Latest Update v1.7.0**: **Document Intelligence Integration** - Added comprehensive document analysis with 5 new MCP tools for documentation-code relationship mapping, link validation, implementation gap detection, and quality analysis. Features advanced markdown parsing, multi-format support, brain-inspired document learning, and real-time documentation quality insights.
 
 ## 📦 Installation & Setup
 

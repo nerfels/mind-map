@@ -1225,6 +1225,63 @@ export const INIT_CLAUDE_CODE_TOOL: Tool = {
   }
 };
 
+// Document Intelligence Tools (Phase 7.5)
+export const ANALYZE_PROJECT_DOCUMENTATION_TOOL: Tool = {
+  name: 'analyze_project_documentation',
+  description: 'Analyze all documentation files in the project including markdown, restructured text, and configuration files. Provides comprehensive documentation analysis with brain-inspired relationship learning.',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const ANALYZE_DOCUMENT_TOOL: Tool = {
+  name: 'analyze_document',
+  description: 'Analyze a specific document file for structure, links, code relationships, and documentation quality',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      file_path: {
+        type: 'string',
+        description: 'Path to the document file to analyze'
+      }
+    },
+    required: ['file_path'],
+    additionalProperties: false
+  }
+};
+
+export const GET_DOCUMENTATION_STATISTICS_TOOL: Tool = {
+  name: 'get_documentation_statistics',
+  description: 'Get comprehensive statistics about project documentation including word counts, link analysis, and coverage metrics',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const GET_DOCUMENTATION_INSIGHTS_TOOL: Tool = {
+  name: 'get_documentation_insights',
+  description: 'Get intelligent insights about documentation quality, coverage gaps, broken links, and improvement recommendations',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
+export const GET_DOCUMENT_RELATIONSHIPS_TOOL: Tool = {
+  name: 'get_document_relationships',
+  description: 'Get relationships between documentation and code files, including implementation mappings and cross-references',
+  inputSchema: {
+    type: 'object',
+    properties: {},
+    additionalProperties: false
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -1275,5 +1332,10 @@ export const ALL_TOOLS: Tool[] = [
   UPDATE_IGNORE_PATTERNS_TOOL,
   TEST_IGNORE_PATTERNS_TOOL,
   GET_IGNORE_STATS_TOOL,
-  INIT_CLAUDE_CODE_TOOL
+  INIT_CLAUDE_CODE_TOOL,
+  ANALYZE_PROJECT_DOCUMENTATION_TOOL,
+  ANALYZE_DOCUMENT_TOOL,
+  GET_DOCUMENTATION_STATISTICS_TOOL,
+  GET_DOCUMENTATION_INSIGHTS_TOOL,
+  GET_DOCUMENT_RELATIONSHIPS_TOOL
 ];

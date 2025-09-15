@@ -30,6 +30,7 @@ import { AnalysisService } from './services/AnalysisService.js';
 import { ConfigurationService } from './services/ConfigurationService.js';
 import { LearningService } from './services/LearningService.js';
 import { ScanningService } from './services/ScanningService.js';
+import { DocumentIntelligenceService } from './services/DocumentIntelligenceService.js';
 
 import { MindMapNode, MindMapEdge, QueryOptions, QueryResult, FileInfo, ErrorPrediction, RiskAssessment, FixSuggestion, FixContext, HistoricalFix, FixGroup, ArchitecturalInsight, CacheStats, ProcessingProgress, InhibitionResult, ScalabilityConfig, ProjectScale, ResourceUsage, UserPreferences, CustomPatternRule, ProjectLearningConfig, PrivacySettings, UserFeedback } from '../types/index.js';
 import { join } from 'path';
@@ -68,6 +69,7 @@ export class MindMapEngine {
   private configurationService: ConfigurationService;
   private learningService: LearningService;
   private scanningService: ScanningService;
+  private documentIntelligenceService: DocumentIntelligenceService;
 
   constructor(projectRoot: string) {
     this.projectRoot = projectRoot;
@@ -163,6 +165,15 @@ export class MindMapEngine {
       this.codeAnalyzer,
       this.parallelProcessor,
       this.scalabilityManager,
+      this.projectRoot
+    );
+
+    this.documentIntelligenceService = new DocumentIntelligenceService(
+      this.storage,
+      this.hebbianLearning,
+      this.hierarchicalContext,
+      this.biTemporalModel,
+      this.patternPrediction,
       this.projectRoot
     );
   }
@@ -648,5 +659,29 @@ export class MindMapEngine {
 
   async analyzeAndPredict(): Promise<any> {
     return this.patternPrediction.analyzeAndPredict();
+  }
+
+  // Document Intelligence Methods (Phase 7.5)
+  async analyzeProjectDocumentation(): Promise<any> {
+    return await this.documentIntelligenceService.analyzeProjectDocumentation();
+  }
+
+  async analyzeDocument(filePath: string): Promise<any> {
+    return await this.documentIntelligenceService.analyzeDocument(filePath);
+  }
+
+  async getDocumentationStatistics(): Promise<any> {
+    const analysis = await this.documentIntelligenceService.analyzeProjectDocumentation();
+    return analysis.statistics;
+  }
+
+  async getDocumentationInsights(): Promise<any> {
+    const analysis = await this.documentIntelligenceService.analyzeProjectDocumentation();
+    return analysis.insights;
+  }
+
+  async getDocumentRelationships(): Promise<any> {
+    const analysis = await this.documentIntelligenceService.analyzeProjectDocumentation();
+    return analysis.relationships;
   }
 }

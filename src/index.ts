@@ -15,6 +15,7 @@ import { AnalysisHandlers } from './handlers/AnalysisHandlers.js';
 import { SystemHandlers } from './handlers/SystemHandlers.js';
 import { ToolingHandlers } from './handlers/ToolingHandlers.js';
 import { FrameworkHandlers } from './handlers/FrameworkHandlers.js';
+import { DocumentHandlers } from './handlers/DocumentHandlers.js';
 import { ResponseFormatter } from './middleware/ResponseFormatter.js';
 
 class MindMapMCPServer {
@@ -28,6 +29,7 @@ class MindMapMCPServer {
   private systemHandlers: SystemHandlers;
   private toolingHandlers: ToolingHandlers;
   private frameworkHandlers: FrameworkHandlers;
+  private documentHandlers: DocumentHandlers;
 
   constructor() {
     this.projectRoot = process.cwd();
@@ -55,6 +57,7 @@ class MindMapMCPServer {
     this.systemHandlers = new SystemHandlers(this.mindMap, this.projectRoot);
     this.toolingHandlers = new ToolingHandlers(this.mindMap);
     this.frameworkHandlers = new FrameworkHandlers(this.mindMap);
+    this.documentHandlers = new DocumentHandlers(this.mindMap);
 
     this.setupHandlers();
 
@@ -218,6 +221,18 @@ class MindMapMCPServer {
             return await this.handleAnalyzeAndPredict(args as any);
           case 'init_claude_code':
             return await this.handleInitClaudeCode(args as any);
+
+          // Document Intelligence handlers (Phase 7.5)
+          case 'analyze_project_documentation':
+            return await this.documentHandlers.handleAnalyzeProjectDocumentation(args as any);
+          case 'analyze_document':
+            return await this.documentHandlers.handleAnalyzeDocument(args as any);
+          case 'get_documentation_statistics':
+            return await this.documentHandlers.handleGetDocumentationStatistics(args as any);
+          case 'get_documentation_insights':
+            return await this.documentHandlers.handleGetDocumentationInsights(args as any);
+          case 'get_document_relationships':
+            return await this.documentHandlers.handleGetDocumentRelationships(args as any);
 
           default:
             throw new Error(`Unknown tool: ${name}`);
