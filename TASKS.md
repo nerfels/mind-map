@@ -138,17 +138,17 @@
    - **Priority**: High Impact improvements for better code relationship detection
 
    ### 8.1 Enhanced Code Analysis (High Priority)
-   - 🔄 **Dynamic Import Detection** (Week 15)
-     - Track runtime imports (`import()`, `require()` calls)
-     - Async module loading pattern detection
-     - Dynamic dependency relationship mapping
-     - Configuration-driven import analysis
+   - ✅ **Dynamic Import Detection** (Week 15) ✅ **COMPLETED v1.8.0**
+     - ✅ Track runtime imports (`import()`, `require()` calls)
+     - ✅ Async module loading pattern detection
+     - ✅ Dynamic dependency relationship mapping
+     - ✅ Configuration-driven import analysis
 
-   - 🔗 **Method Call Chain Analysis** (Week 15)
-     - Follow function call sequences deeper (A→B→C relationships)
-     - Cross-file method invocation tracking
-     - Call pattern visualization and analysis
-     - Performance impact assessment for call chains
+   - ✅ **Method Call Chain Analysis** (Week 15) ✅ **COMPLETED v1.9.0**
+     - ✅ Follow function call sequences deeper (A→B→C relationships)
+     - ✅ Cross-file method invocation tracking
+     - ✅ Call pattern visualization and analysis
+     - ✅ Performance impact assessment for call chains
 
    - 📋 **Variable Usage Tracking** (Week 16)
      - Detect where variables are used across files
