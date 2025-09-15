@@ -123,7 +123,7 @@ export class AggregateQueryEngine {
     const groups = this.groupData(filteredNodes, query.groupBy || []);
     
     // Apply aggregation functions
-    const aggregatedGroups = await this.applyAggregation(groups, query.aggregation);
+    const aggregatedGroups = await this.applyAggregation(groups, query.aggregation, query.groupBy);
     
     // Apply HAVING clause
     const havingFilteredGroups = query.having ? 
@@ -352,9 +352,9 @@ export class AggregateQueryEngine {
     if (value === null || value === undefined) {
       return 'null';
     }
-    
+
     const strValue = String(value);
-    
+
     switch (transform) {
       case 'date_trunc':
         // Simplified date truncation
@@ -392,11 +392,12 @@ export class AggregateQueryEngine {
     }
   }
 
-  private async applyAggregation(groups: Map<string, MindMapNode[]>, aggregation: AggregationType): Promise<AggregateGroup[]> {
+  private async applyAggregation(groups: Map<string, MindMapNode[]>, aggregation: AggregationType, groupByFields?: GroupByClause[]): Promise<AggregateGroup[]> {
     const result: AggregateGroup[] = [];
-    
+    const fieldNames = groupByFields?.map(g => g.field) || [];
+
     for (const [groupKey, nodes] of groups.entries()) {
-      const groupKeyObj = this.parseGroupKey(groupKey);
+      const groupKeyObj = this.parseGroupKey(groupKey, fieldNames);
       const values = nodes.map(node => this.getFieldValue(node, aggregation.field))
                         .filter(val => val !== null && val !== undefined);
       
@@ -474,14 +475,26 @@ export class AggregateQueryEngine {
     return result;
   }
 
-  private parseGroupKey(groupKey: string): Record<string, any> {
+  private parseGroupKey(groupKey: string, groupByFields?: string[]): Record<string, any> {
     if (groupKey === 'all') {
-      return {};
+      return { group: 'all' };
     }
-    
-    // Simple parsing - in production this would be more sophisticated
+
     const parts = groupKey.split('|');
-    return { group: parts.join('_') };
+    const result: Record<string, any> = {};
+
+    // If we have field names, map them to the parts
+    if (groupByFields && groupByFields.length > 0) {
+      groupByFields.forEach((field, index) => {
+        const value = parts[index] || 'null';
+        result[field] = value === 'null' ? null : value;
+      });
+    } else {
+      // Fallback to a generic structure
+      result.group = parts.join('_');
+    }
+
+    return result;
   }
 
   private evaluateHaving(group: AggregateGroup, having: HavingClause): boolean {
@@ -545,8 +558,19 @@ export class AggregateQueryEngine {
       }
       return value;
     }
-    
-    return (node as any)[field] || node.metadata[field];
+
+    // First check if the field exists directly on the node
+    if (field in node) {
+      return (node as any)[field];
+    }
+
+    // Then check in metadata
+    if (node.metadata && field in node.metadata) {
+      return node.metadata[field];
+    }
+
+    // Return null if not found
+    return null;
   }
 
   private getAggregationForMetric(metric: string): AggregationType['function'] {

@@ -360,22 +360,73 @@ export class QueryService {
 
   // Helper methods (copied from MindMapEngine)
   private isFilePathQuery(query: string): boolean {
+    // Check if it looks like a file path with directory separators
+    const hasPathSeparator = query.includes('/') || query.includes('\\');
+
+    // Check for file extensions
+    const hasFileExtension = /\.[a-zA-Z0-9]+$/.test(query);
+
+    // Common path patterns
     const pathPattern = /^[a-zA-Z]?[\/\\]?([a-zA-Z0-9_\-\.\/\\]+[\/\\][a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9]+)$/;
     const unixPathPattern = /^\.?\/([a-zA-Z0-9_\-\.\/])+\.[a-zA-Z0-9]+$/;
     const windowsPathPattern = /^[a-zA-Z]:[\/\\]([a-zA-Z0-9_\-\.\/\\])+\.[a-zA-Z0-9]+$/;
+    const relativePathPattern = /^(src|dist|tests|test|lib|bin|docs?)[\/\\]/;
 
-    return pathPattern.test(query) || unixPathPattern.test(query) || windowsPathPattern.test(query);
+    return (hasPathSeparator && hasFileExtension) ||
+           pathPattern.test(query) ||
+           unixPathPattern.test(query) ||
+           windowsPathPattern.test(query) ||
+           relativePathPattern.test(query);
   }
 
   private async queryFileContents(query: string, options: QueryOptions, limit: number, startTime: number): Promise<any> {
-    // Implementation would need to be copied from MindMapEngine
-    // For now, return empty result
+    // Find the file node and its contents (functions, classes)
+    const graph = this.storage.getGraph();
+    const results: MindMapNode[] = [];
+
+    // Normalize the query path
+    const normalizedQuery = query.replace(/\\/g, '/').toLowerCase();
+
+    for (const [nodeId, node] of graph.nodes) {
+      const nodePath = node.path?.replace(/\\/g, '/').toLowerCase() || '';
+
+      // Check for exact path match or ending with the query
+      if (nodePath === normalizedQuery ||
+          nodePath.endsWith('/' + normalizedQuery) ||
+          nodePath.endsWith(normalizedQuery)) {
+
+        // Add the file node itself with highest confidence
+        results.push({
+          ...node,
+          confidence: 1.4
+        });
+
+        // If it's a file, also find its contents (functions, classes)
+        if (node.type === 'file') {
+          // Find all functions and classes that belong to this file
+          for (const [childId, childNode] of graph.nodes) {
+            if ((childNode.type === 'function' || childNode.type === 'class') &&
+                childNode.path?.replace(/\\/g, '/').toLowerCase() === nodePath) {
+              results.push({
+                ...childNode,
+                confidence: 1.2
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Sort by confidence
+    results.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+
     return {
-      nodes: [],
+      nodes: results.slice(0, limit),
       edges: [],
-      totalMatches: 0,
+      totalMatches: results.length,
       queryTime: Date.now() - startTime,
-      cached: false
+      cached: false,
+      isFileQuery: true
     };
   }
 
@@ -394,18 +445,87 @@ export class QueryService {
   }
 
   private async queryLinear(query: string, queryLower: string, options: QueryOptions, limit: number, startTime: number): Promise<QueryResult> {
-    // Basic linear search implementation
+    // Enhanced linear search with multi-word and semantic support
     const graph = this.storage.getGraph();
     const results: MindMapNode[] = [];
 
+    // Handle multi-word queries by splitting and searching for all terms
+    const queryTerms = queryLower.split(/[\s\-_]+/).filter(term => term.length > 0);
+    const isMultiWord = queryTerms.length > 1;
+
+    // Create semantic mappings for common language terms
+    const semanticMappings: Record<string, string[]> = {
+      'typescript': ['.ts', 'typescript', 'ts'],
+      'javascript': ['.js', 'javascript', 'js'],
+      'python': ['.py', 'python', 'py'],
+      'java': ['java', '.java'],
+      'mindmap': ['mind', 'map', 'mindmap'],
+      'mind': ['mind', 'mindmap'],
+      'map': ['map', 'mindmap']
+    };
+
+    // Expand query terms with semantic equivalents
+    const expandedTerms = new Set<string>();
+    queryTerms.forEach(term => {
+      expandedTerms.add(term);
+      if (semanticMappings[term]) {
+        semanticMappings[term].forEach(equiv => expandedTerms.add(equiv));
+      }
+    });
+
     for (const [nodeId, node] of graph.nodes) {
       let relevanceScore = 0;
+      let matchedTerms = 0;
 
-      if (node.name.toLowerCase().includes(queryLower)) {
-        relevanceScore += 0.8;
+      const nodeName = node.name.toLowerCase();
+      const nodePath = node.path?.toLowerCase() || '';
+
+      // Check for exact match first (highest priority)
+      if (nodeName === queryLower || nodePath === queryLower) {
+        relevanceScore = 1.4;
       }
-      if (node.path && node.path.toLowerCase().includes(queryLower)) {
-        relevanceScore += 0.6;
+      // Check for exact path match (normalize slashes)
+      else if (nodePath && (nodePath.endsWith('/' + query) || nodePath === query.replace(/\\/g, '/'))) {
+        relevanceScore = 1.3;
+      }
+      // Multi-word query: check if all terms match
+      else if (isMultiWord) {
+        for (const term of expandedTerms) {
+          if (nodeName.includes(term) || nodePath.includes(term)) {
+            matchedTerms++;
+            relevanceScore += 0.5;
+          }
+        }
+        // Boost score if all original terms matched
+        if (matchedTerms >= queryTerms.length) {
+          relevanceScore *= 1.5;
+        }
+        // Penalize if not all terms matched
+        else if (matchedTerms < queryTerms.length) {
+          relevanceScore *= (matchedTerms / queryTerms.length);
+        }
+      }
+      // Single term query: standard includes check
+      else {
+        // Check all expanded terms for single-word queries too
+        for (const term of expandedTerms) {
+          if (nodeName.includes(term)) {
+            relevanceScore = Math.max(relevanceScore, 0.8);
+          }
+          if (nodePath.includes(term)) {
+            relevanceScore = Math.max(relevanceScore, 0.6);
+          }
+        }
+      }
+
+      // Check metadata for additional matching (functions, classes, etc.)
+      if (node.metadata) {
+        const metadataStr = JSON.stringify(node.metadata).toLowerCase();
+        for (const term of expandedTerms) {
+          if (metadataStr.includes(term)) {
+            relevanceScore += 0.3;
+          }
+        }
       }
 
       if (relevanceScore > 0) {

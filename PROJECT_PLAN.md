@@ -155,55 +155,118 @@ Project Knowledge Graph
   - Proactive pattern suggestions
   - Trend analysis and forecasting
 
-### 🚀 Phase 7: Advanced Cognitive Features (Weeks 5-12)
+### 🔍 Phase 7: Enhanced Mind Map Coverage (Weeks 5-8)
+**Priority**: Address coverage gaps identified through ScalabilityManager analysis
+**Research Basis**: Comprehensive relationship detection beyond traditional AST analysis
+**Expected Impact**: 95%+ code relationship coverage including unused components
 
-#### Phase 7.1: Neuromorphic Optimization (Weeks 5-6) 🔥🔥🔥
+#### Week 5: Enhanced Code Analysis (🔥🔥🔥 High ROI)
+- **Dynamic Import Detection**
+  - Track runtime imports (`import()`, `require()` calls)
+  - Async module loading pattern recognition
+  - Configuration-driven dependency analysis
+  - **Expected**: Find relationships missed by static analysis
+
+- **Method Call Chain Analysis**
+  - Follow function call sequences deeper (A→B→C relationships)
+  - Cross-file method invocation tracking
+  - Performance bottleneck identification
+  - **Expected**: Comprehensive call graph construction
+
+#### Week 6: Multi-Language Intelligence Enhancement
+- **Cross-Language API Detection**
+  - JSON/REST API endpoints across language boundaries
+  - gRPC service interface mapping
+  - WebAssembly module integration patterns
+  - **Expected**: Polyglot project understanding
+
+- **Config File Relationship Tracking**
+  - `.env`, `package.json`, `tsconfig.json` relationship mapping
+  - Environment-specific configuration analysis
+  - Build system integration patterns
+  - **Expected**: Configuration-code relationship mapping
+
+#### Week 7: Runtime Behavior Analysis
+- **Test Coverage Mapping**
+  - Link test files to implementation files
+  - Test scenario to code path correlation
+  - Coverage gap identification
+  - **Expected**: Test-driven development insights
+
+- **Error Propagation Path Enhancement**
+  - Track error flow through system layers
+  - Exception handling pattern analysis
+  - Failure point vulnerability mapping
+  - **Expected**: Robust error handling insights
+
+#### Week 8: Real-Time Analysis Integration
+- **File Watcher Integration**
+  - Real-time relationship updates on file changes
+  - Incremental dependency graph updates
+  - Change impact analysis
+  - **Expected**: Live code intelligence
+
+- **LSP Integration** (Future)
+  - Language Server Protocol integration
+  - IDE-level real-time analysis
+  - Symbol navigation enhancement
+  - **Expected**: Seamless development workflow
+
+#### Success Criteria for Phase 7
+- **Coverage**: Detect 95%+ of code relationships including unused components
+- **Real-time**: Sub-second updates for file changes
+- **Cross-language**: API boundary and data flow detection
+- **Integration**: Seamless development tool integration
+
+### 🚀 Phase 8: Advanced Cognitive Features (Weeks 9-16)
+
+#### Phase 8.1: Neuromorphic Optimization (Weeks 9-10) 🔥🔥🔥
 - **Loihi-2 Inspired Activation**: Event-driven processing with graded spikes
 - **Sparse Connectivity**: 10:1 sparse patterns like Hala Point system
 - **Energy-Aware Processing**: 100x efficiency gains through neuromorphic principles
 - **Asynchronous Networks**: Multi-chip scaling architecture
 
-#### Phase 7.2: Memory-Augmented Architecture (Weeks 7-8) 
+#### Phase 8.2: Memory-Augmented Architecture (Weeks 11-12)
 - **External Memory Systems**: DNC-inspired differentiable memory access
 - **Meta-Learning Integration**: Few-shot learning for new programming languages
 - **Content-Based Addressing**: Similarity-driven knowledge retrieval
 - **Analog In-Memory Computing**: Hardware-accelerated pattern storage
 
-#### Phase 7.3: Continual Learning Integration (Weeks 9-10)
+#### Phase 8.3: Continual Learning Integration (Weeks 13-14)
 - **Elastic Weight Consolidation**: EWC-based importance weighting
 - **CORE Cognitive Replay**: Memory rehearsal for stability-plasticity balance
 - **Task Boundary Detection**: Automatic segmentation of learning phases
 - **Catastrophic Forgetting Prevention**: Synaptic consolidation mechanisms
 
-#### Phase 7.4: Neural-Symbolic Reasoning (Weeks 11-12)
+#### Phase 8.4: Neural-Symbolic Reasoning (Weeks 15-16)
 - **Production Rule System**: ACT-R inspired cognitive architecture
 - **Logic Tensor Networks**: Differentiable symbolic reasoning
 - **Explainability Traces**: 90% interpretable decision pathways
 - **Theorem Proving**: AlphaGeometry-style mathematical reasoning
 
-#### Phase 7.5: Document Intelligence Integration (Weeks 13-14) 📚 COMPREHENSIVE KNOWLEDGE
+### 🚀 Phase 9: Document Intelligence Integration (Weeks 17-18) 📚 COMPREHENSIVE KNOWLEDGE
 **Research Basis**: Multi-modal knowledge graphs combining code + documentation + configuration
 **Expected Impact**: Complete project understanding through unified document-code intelligence
 
-##### 7.5.1 Markdown & Documentation Analysis 🔥🔥🔥 HIGH ROI
+##### 9.1 Markdown & Documentation Analysis 🔥🔥🔥 HIGH ROI
 - **MarkdownAnalyzer**: Extract structure, headers, links, code blocks
 - **Link Graph Analysis**: Internal/external link mapping with relationship types
 - **Documentation Relationships**: Map README ↔ code, API docs ↔ implementations
 - **Semantic Link Scoring**: Context-based link strength and relevance weighting
 
-##### 7.5.2 Multi-Format Document Support
+##### 9.2 Multi-Format Document Support
 - **Configuration Intelligence**: JSON Schema, OpenAPI, YAML configs, TOML dependencies
 - **Structured Data**: CSV schemas, XML configs, Protocol Buffers, GraphQL schemas
 - **Documentation Formats**: ReStructuredText, AsciiDoc, Wiki markup, LaTeX
 - **Project Metadata**: LICENSE analysis, CHANGELOG patterns, CONTRIBUTING workflows
 
-##### 7.5.3 Brain-Inspired Document Learning
+##### 9.3 Brain-Inspired Document Learning
 - **Document-Code Hebbian Learning**: Strengthen relationships via co-reference patterns
 - **Documentation Context Hierarchy**: Extend existing 4-level context with doc layer
 - **Link Pattern Prediction**: Predict missing docs, outdated content, documentation debt
 - **Inhibitory Documentation Learning**: Avoid suggesting previously failed doc patterns
 
-##### 7.5.4 Advanced Document Intelligence
+##### 9.4 Advanced Document Intelligence
 - **Cross-Document Association**: Semantic clustering via link traversal patterns
 - **Broken Link Detection**: Find orphaned references with confidence scoring
 - **Implementation Gap Analysis**: Code without docs, docs without implementations

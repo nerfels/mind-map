@@ -1,0 +1,201 @@
+  async query(query: string, options: QueryOptions = {}): Promise<QueryResult> {
+    const startTime = Date.now();
+    const queryLower = query.toLowerCase();
+    const limit = options.limit || 10;
+
+    // Special handling for file path queries - return contents of the file
+    if (this.isFilePathQuery(query)) {
+      return await this.queryFileContents(query, options, limit, startTime);
+    }
+
+    // Smart query routing - automatically route to optimal engine
+    const queryRoute = this.determineQueryRoute(query, options);
+
+    // Route to specialized engines for optimal results
+    if (queryRoute.engine === 'advanced') {
+      return await this.advancedQueryEngine.executeQuery(queryRoute.optimizedQuery || query, queryRoute.parameters || {});
+    } else if (queryRoute.engine === 'temporal') {
+      const timeRange = queryRoute.timeRange || {
+        start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        end: new Date()
+      };
+      const temporalResult = await this.temporalQueryEngine.executeTemporalQuery({
+        timeRange: {
+          start: typeof timeRange.start === 'string' ? new Date(timeRange.start) : timeRange.start,
+          end: typeof timeRange.end === 'string' ? new Date(timeRange.end) : timeRange.end,
+          granularity: 'day'
+        },
+        evolution: {
+          entity: queryRoute.entity || '*',
+          trackChanges: true,
+          includeRelationships: true
+        },
+        aggregation: {
+          metric: 'confidence_avg',
+          groupBy: 'time'
+        }
+      });
+
+      // Convert temporal result to QueryResult format
+      const nodes: any[] = temporalResult.timeline.flatMap(snapshot => snapshot.nodes);
+      return {
+        nodes: nodes.slice(0, limit),
+        edges: [],
+        totalMatches: nodes.length,
+        queryTime: Date.now() - startTime,
+        usedActivation: false,
+        temporalData: temporalResult
+      } as any;
+    } else if (queryRoute.engine === 'aggregate') {
+      const aggregateResult = await this.aggregateQueryEngine.executeAggregate({
+        aggregation: queryRoute.aggregation || { function: 'count', field: 'name' },
+        groupBy: queryRoute.groupBy,
+        filter: queryRoute.filter,
+        orderBy: [{ field: 'aggregation_result', direction: 'DESC' }],
+        limit: limit
+      });
+
+      // Convert aggregate result to QueryResult format
+      return {
+        nodes: [],
+        edges: [],
+        totalMatches: aggregateResult.groups.length,
+        queryTime: Date.now() - startTime,
+        usedActivation: false,
+        aggregateData: aggregateResult
+      } as any;
+    }
+
+    // Create context for caching
+    const context = this.createQueryContext(options);
+
+    // Try cache first (unless explicitly bypassed)
+    if (!options.bypassCache) {
+      const cachedResult = await this.queryCache.get(query, context);
+      if (cachedResult) {
+        return cachedResult;
+      }
+    }
+
+    // Enable activation spreading by default for better results
+    const useActivation = options.useActivation !== false;
+    const activationLevels = options.activationLevels || 3;
+
+    let result: QueryResult;
+    if (useActivation) {
+      result = await this.queryWithActivation(query, queryLower, options, limit, startTime);
+    } else {
+      result = await this.queryLinear(query, queryLower, options, limit, startTime);
+    }
+    
+    // Apply inhibitory learning (unless explicitly bypassed)
+    if (!options.bypassInhibition) {
+      const inhibitionResult = await this.inhibitoryLearning.applyInhibition(
+        result.nodes, 
+        query, 
+        context
+      );
+      
+      // Update result with inhibited nodes
+      result.nodes = inhibitionResult.inhibitedResults;
+      result.inhibitionApplied = inhibitionResult.appliedPatterns.length > 0;
+      result.inhibitionScore = inhibitionResult.inhibitionScore;
+      result.originalResultCount = inhibitionResult.originalResults.length;
+    }
+    
+    // Apply hierarchical context weighting for enhanced relevance
+    if (options.contextLevel || options.includeParentContext || options.includeChildContext) {
+      const contextQuery: ContextQuery = {
+        text: query,
+        level: (options.contextLevel as ContextLevel) || ContextLevel.IMMEDIATE,
+        includeParents: options.includeParentContext !== false, // Default true
+        includeChildren: options.includeChildContext || false,   // Default false
+        maxItems: limit * 2, // Get more candidates for context filtering
+        minRelevance: 0.1
+      };
+      
+      // Get context-enhanced scores
+      const contextScores = this.hierarchicalContext.getContextScores(result.nodes, contextQuery);
+      
+      // Re-sort nodes based on context-enhanced scores
+      const contextMap = new Map(contextScores.map(score => [score.nodeId, score]));
+      result.nodes = result.nodes
+        .map(node => {
+          const contextScore = contextMap.get(node.id);
+          return {
+            ...node,
+            confidence: contextScore ? 
+              Math.min(1.0, node.confidence + (contextScore.contextBoost * 0.3)) : 
+              node.confidence,
+            contextScore: contextScore?.finalScore || node.confidence
+          };
+        })
+        .sort((a, b) => (b as any).contextScore - (a as any).contextScore)
+        .slice(0, limit);
+    }
+
+    // Update hierarchical context with query activity
+    this.hierarchicalContext.updateFromActivity({
+      type: 'query',
+      data: { query, results: result.nodes },
+      files: result.nodes.filter(n => n.type === 'file').map(n => n.path || n.name),
+      functions: result.nodes.filter(n => n.type === 'function').map(n => n.name),
+      timestamp: new Date()
+    });
+
+    // Apply attention mechanisms for dynamic result focusing (unless bypassed)
+    if (result.nodes.length > 0 && !options.bypassAttention) {
+      const attentionContext: AttentionContext = {
+        currentTask: context,
+        activeFiles: options.activeFiles || [],
+        recentQueries: [query],
+        userGoals: options.sessionGoals || [],
+        frameworkContext: options.frameworkContext || [],
+        timeContext: {
+          sessionStart: new Date(Date.now() - 300000), // Assume 5 min session
+          lastActivity: new Date(),
+          taskDuration: Date.now() - startTime
+        }
+      };
+
+      // Apply attention-based result focusing
+      result = this.attentionSystem.applyAttentionToResults(result, attentionContext);
+      
+      // Allocate attention to top results for future queries
+      const attentionType = this.inferAttentionType(options, result);
+      this.attentionSystem.allocateAttention(result.nodes.slice(0, 3), attentionContext, attentionType);
+      
+      // Update attention from query activity
+      this.attentionSystem.updateAttentionFromActivity({
+        nodeIds: result.nodes.slice(0, 3).map(n => n.id),
+        queryText: query,
+        actionType: 'query',
+        timestamp: new Date(),
+        context: attentionContext
+      });
+    }
+
+    // Apply bi-temporal knowledge enhancement for temporal reasoning (unless bypassed)
+    if (result.nodes.length > 0 && !options.bypassBiTemporal) {
+      const queryTime = options.validAt || new Date();
+      result.nodes = this.biTemporalModel.enhanceQueryWithBiTemporal(
+        result.nodes,
+        queryTime,
+        options.includeHistory || false
+      );
+
+      // Create bi-temporal edges for newly discovered relationships
+      if (result.nodes.length > 1) {
+        for (let i = 0; i < result.nodes.length - 1; i++) {
+          for (let j = i + 1; j < Math.min(result.nodes.length, i + 3); j++) {
+            const sourceNode = result.nodes[i];
+            const targetNode = result.nodes[j];
+            
+            // Only create if confidence is high enough and no existing relationship
+            if (sourceNode.confidence > 0.7 && targetNode.confidence > 0.7) {
+              try {
+                await this.biTemporalModel.createBiTemporalEdge(
+                  sourceNode.id,
+                  targetNode.id,
+                  'relates_to',
+                  queryTime,

@@ -148,9 +148,15 @@ export class QueryHandlers {
 
     const result = await this.mindMap.executeTemporalQuery({
       timeRange,
-      entity,
-      analysis_type,
-      metric
+      evolution: {
+        entity,
+        trackChanges: true,
+        includeRelationships: true
+      },
+      aggregation: metric ? {
+        metric: metric as any,
+        groupBy: 'time'
+      } : undefined
     });
 
     const text = ResponseFormatter.formatTemporalQueryResults(result, timeRange, entity, analysis_type, metric);

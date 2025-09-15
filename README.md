@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.3.1 🧠
+# Mind Map MCP Server v1.4.0 🧠
 
 **Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, and **call pattern analysis** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.3.1
+## 🚀 Current Status: Production Ready v1.4.0
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ CI/CD Pipeline**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Enhanced Query System** | **✅ CI/CD Pipeline**
 
-**🎯 Latest Update v1.3.1**: **Fixed Java Code Structure Recognition** - Resolved critical issue where Java classes, methods, and functions were not being properly extracted and stored as separate nodes during project scanning. Java files now provide full code intelligence with class and method recognition at the same level as TypeScript/JavaScript.
+**🎯 Latest Update v1.4.0**: **Major Query System Enhancement** - Comprehensive improvements to the core query functionality with enhanced multi-word query support, semantic language mapping, exact file path matching, camelCase handling, and improved specialized query engines for temporal, advanced, and aggregate queries.
 
 ## 📦 Installation & Setup
 
@@ -545,7 +545,21 @@ The server consists of several key components:
 
 ## 📋 Version History
 
-### v1.1.5 (Current) 🚀
+### v1.4.0 (Current) 🚀
+- ✅ **Enhanced Query System**: Comprehensive improvements to core query functionality
+- ✅ **Multi-Word Query Support**: Perfect handling of queries like "mind map", "pattern analysis"
+- ✅ **Semantic Language Mapping**: "typescript" finds .ts files, "javascript" finds .js files
+- ✅ **Exact File Path Matching**: Direct file queries like "src/core/MindMapEngine.ts"
+- ✅ **Advanced CamelCase Handling**: Full support for camelCase, PascalCase, and mixed case queries
+- ✅ **Improved Temporal Queries**: Enhanced time-based analysis with evolution metrics
+- ✅ **Better Advanced Query Engine**: Cypher-like syntax improvements for complex graph queries
+- ✅ **Enhanced Aggregate Queries**: Improved grouping and field extraction for statistical analysis
+
+### v1.3.1
+- ✅ **Fixed Java Code Structure Recognition**: Resolved Java class/method extraction issues
+- ✅ **Enhanced Java AST Parsing**: Complete Java file code intelligence with proper node separation
+
+### v1.1.5
 - ✅ **Advanced Call Pattern Analysis**: Complete function call graph construction with 100% test success rate
 - ✅ **Constructor Call Detection**: Accurate class instantiation and constructor pattern recognition
 - ✅ **Enhanced Complexity Calculation**: Improved cyclomatic complexity with callback functions and control flow

@@ -206,12 +206,13 @@ export class AdvancedQueryEngine {
   }
 
   private parseWhereClause(whereClause: string): WhereClause {
-    // Simple WHERE clause parsing
+    // Enhanced WHERE clause parsing with better regex
     const conditions: Condition[] = [];
     const parts = whereClause.split(/\s+AND\s+|\s+OR\s+/i);
-    
+
     for (const part of parts) {
-      const conditionMatch = part.match(/(\w+\.?\w*)\s*(=|!=|>|<|>=|<=|CONTAINS|STARTS\s+WITH|ENDS\s+WITH|REGEX)\s*(.+)/i);
+      // Enhanced regex to handle quoted strings and property access better
+      const conditionMatch = part.match(/([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)?)\s*(=|!=|>|<|>=|<=|CONTAINS|STARTS\s+WITH|ENDS\s+WITH|REGEX)\s*(['"].*?['"]|\S+)/i);
       if (conditionMatch) {
         const [, left, op, right] = conditionMatch;
         conditions.push({
@@ -221,7 +222,7 @@ export class AdvancedQueryEngine {
         });
       }
     }
-    
+
     return {
       conditions,
       operator: whereClause.toUpperCase().includes(' OR ') ? 'OR' : 'AND'
@@ -446,7 +447,16 @@ export class AdvancedQueryEngine {
   private evaluateCondition(node: MindMapNode, condition: Condition): boolean {
     const nodeValue = this.getNodeValue(node, condition.left);
     const conditionValue = condition.right;
-    
+
+    // Debug logging - temporarily enabled
+    if (condition.left === 'name' && condition.operator === 'contains' && String(conditionValue).toLowerCase().includes('mindmap')) {
+      console.log(`[DEBUG] Evaluating condition: node.name="${nodeValue}" CONTAINS "${conditionValue}"`);
+      console.log(`[DEBUG] Node keys:`, Object.keys(node));
+      if (node.metadata) {
+        console.log(`[DEBUG] Metadata keys:`, Object.keys(node.metadata));
+      }
+    }
+
     switch (condition.operator) {
       case 'eq': return nodeValue === conditionValue;
       case 'ne': return nodeValue !== conditionValue;
@@ -465,13 +475,34 @@ export class AdvancedQueryEngine {
   private getNodeValue(node: MindMapNode, expression: string): any {
     const parts = expression.split('.');
     if (parts.length === 1) {
-      return (node as any)[parts[0]];
+      const field = parts[0];
+      // First check direct properties on the node
+      if (field in node) {
+        return (node as any)[field];
+      }
+      // Then check metadata
+      if (node.metadata && field in node.metadata) {
+        return node.metadata[field];
+      }
+      return undefined;
     } else {
       const [prefix, property] = parts;
       if (prefix === 'n' || prefix === 'node') {
-        return (node as any)[property] || node.metadata[property];
+        // First check direct properties
+        if (property in node) {
+          return (node as any)[property];
+        }
+        // Then check metadata
+        if (node.metadata && property in node.metadata) {
+          return node.metadata[property];
+        }
+        return undefined;
       }
-      return node.metadata[property];
+      // For other prefixes, assume it's metadata
+      if (node.metadata && property in node.metadata) {
+        return node.metadata[property];
+      }
+      return undefined;
     }
   }
 

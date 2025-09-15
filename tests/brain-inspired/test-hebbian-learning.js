@@ -5,7 +5,7 @@
  * Tests neural connection formation, strengthening, and statistics
  */
 
-import { MindMapEngine } from './dist/core/MindMapEngine.js';
+import { MindMapEngine } from '../../dist/core/MindMapEngine.js';
 
 async function testHebbianLearning() {
   console.log('🧠 Testing Hebbian Learning System...\n');

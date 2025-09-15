@@ -1,0 +1,369 @@
+{
+  "timestamp": "2025-09-14T17:45:29.375Z",
+  "summary": {
+    "issue": "Exact match queries find nodes but filter them out",
+    "workingQuery": "N/A",
+    "brokenQuery": "N/A"
+  },
+  "analyses": [
+    {
+      "query": "MindMapEngine",
+      "description": "BROKEN - Exact match that gets filtered",
+      "result": {
+        "nodes": [],
+        "edges": [],
+        "totalMatches": 0,
+        "queryTime": 2,
+        "usedActivation": false,
+        "aggregateData": {
+          "groups": [],
+          "totalGroups": 0,
+          "executionTime": 0,
+          "statistics": {
+            "rowsProcessed": 0,
+            "groupsGenerated": 0,
+            "cacheHit": false
+          }
+        }
+      },
+      "directNodes": [],
+      "matchingResults": [],
+      "logs": [
+        {
+          "step": "STEP_1",
+          "timestamp": "2025-09-14T17:45:29.342Z",
+          "message": "Checking if file path query",
+          "data": null
+        },
+        {
+          "step": "STEP_1_RESULT",
+          "timestamp": "2025-09-14T17:45:29.344Z",
+          "message": "File path query: false",
+          "data": null
+        },
+        {
+          "step": "STEP_2",
+          "timestamp": "2025-09-14T17:45:29.346Z",
+          "message": "Determining query route",
+          "data": null
+        },
+        {
+          "step": "STEP_2_RESULT",
+          "timestamp": "2025-09-14T17:45:29.347Z",
+          "message": "Query route determined",
+          "data": "{\n  \"engine\": \"aggregate\",\n  \"aggregation\": {\n    \"function\": \"count\",\n    \"field\": \"name\"\n  }\n}"
+        },
+        {
+          "step": "STEP_3",
+          "timestamp": "2025-09-14T17:45:29.357Z",
+          "message": "Executing query with bypass options",
+          "data": null
+        },
+        {
+          "step": "STEP_3_OPTIONS",
+          "timestamp": "2025-09-14T17:45:29.357Z",
+          "message": "Query options",
+          "data": "{\n  \"limit\": 10,\n  \"useActivation\": false,\n  \"bypassInhibition\": true,\n  \"bypassHebbianLearning\": true,\n  \"bypassAttention\": true,\n  \"bypassBiTemporal\": true,\n  \"includeParentContext\": false,\n  \"includeChildContext\": false,\n  \"bypassCache\": true,\n  \"bypassMultiModalFusion\": true,\n  \"confidence\": 0\n}"
+        },
+        {
+          "step": "STEP_3_RESULT",
+          "timestamp": "2025-09-14T17:45:29.361Z",
+          "message": "Raw query result",
+          "data": "{\n  \"foundNodes\": 0,\n  \"totalMatches\": 0,\n  \"queryTime\": 2\n}"
+        },
+        {
+          "step": "STEP_4",
+          "timestamp": "2025-09-14T17:45:29.361Z",
+          "message": "No nodes returned despite totalMatches > 0",
+          "data": null
+        },
+        {
+          "step": "STEP_5",
+          "timestamp": "2025-09-14T17:45:29.361Z",
+          "message": "Direct storage search",
+          "data": null
+        },
+        {
+          "step": "STEP_5_RESULT",
+          "timestamp": "2025-09-14T17:45:29.362Z",
+          "message": "Direct storage found 0 nodes",
+          "data": null
+        },
+        {
+          "step": "STEP_6",
+          "timestamp": "2025-09-14T17:45:29.362Z",
+          "message": "Testing matching logic",
+          "data": null
+        },
+        {
+          "step": "STEP_6_RESULT",
+          "timestamp": "2025-09-14T17:45:29.362Z",
+          "message": "Matching logic results",
+          "data": "[]"
+        }
+      ]
+    },
+    {
+      "query": "CodeAnalyzer",
+      "description": "WORKING - Query that returns MindMapEngine as result",
+      "result": {
+        "nodes": [],
+        "edges": [],
+        "totalMatches": 0,
+        "queryTime": 1,
+        "usedActivation": false
+      },
+      "directNodes": [],
+      "matchingResults": [],
+      "logs": [
+        {
+          "step": "STEP_1",
+          "timestamp": "2025-09-14T17:45:29.362Z",
+          "message": "Checking if file path query",
+          "data": null
+        },
+        {
+          "step": "STEP_1_RESULT",
+          "timestamp": "2025-09-14T17:45:29.362Z",
+          "message": "File path query: false",
+          "data": null
+        },
+        {
+          "step": "STEP_2",
+          "timestamp": "2025-09-14T17:45:29.362Z",
+          "message": "Determining query route",
+          "data": null
+        },
+        {
+          "step": "STEP_2_RESULT",
+          "timestamp": "2025-09-14T17:45:29.363Z",
+          "message": "Query route determined",
+          "data": "{\n  \"engine\": \"standard\"\n}"
+        },
+        {
+          "step": "STEP_3",
+          "timestamp": "2025-09-14T17:45:29.363Z",
+          "message": "Executing query with bypass options",
+          "data": null
+        },
+        {
+          "step": "STEP_3_OPTIONS",
+          "timestamp": "2025-09-14T17:45:29.363Z",
+          "message": "Query options",
+          "data": "{\n  \"limit\": 10,\n  \"useActivation\": false,\n  \"bypassInhibition\": true,\n  \"bypassHebbianLearning\": true,\n  \"bypassAttention\": true,\n  \"bypassBiTemporal\": true,\n  \"includeParentContext\": false,\n  \"includeChildContext\": false,\n  \"bypassCache\": true,\n  \"bypassMultiModalFusion\": true,\n  \"confidence\": 0\n}"
+        },
+        {
+          "step": "STEP_3_RESULT",
+          "timestamp": "2025-09-14T17:45:29.369Z",
+          "message": "Raw query result",
+          "data": "{\n  \"foundNodes\": 0,\n  \"totalMatches\": 0,\n  \"queryTime\": 1\n}"
+        },
+        {
+          "step": "STEP_4",
+          "timestamp": "2025-09-14T17:45:29.370Z",
+          "message": "No nodes returned despite totalMatches > 0",
+          "data": null
+        },
+        {
+          "step": "STEP_5",
+          "timestamp": "2025-09-14T17:45:29.370Z",
+          "message": "Direct storage search",
+          "data": null
+        },
+        {
+          "step": "STEP_5_RESULT",
+          "timestamp": "2025-09-14T17:45:29.370Z",
+          "message": "Direct storage found 0 nodes",
+          "data": null
+        },
+        {
+          "step": "STEP_6",
+          "timestamp": "2025-09-14T17:45:29.370Z",
+          "message": "Testing matching logic",
+          "data": null
+        },
+        {
+          "step": "STEP_6_RESULT",
+          "timestamp": "2025-09-14T17:45:29.370Z",
+          "message": "Matching logic results",
+          "data": "[]"
+        }
+      ]
+    },
+    {
+      "query": "FileScanner",
+      "description": "WORKING - Exact match that works",
+      "result": {
+        "nodes": [],
+        "edges": [],
+        "totalMatches": 0,
+        "queryTime": 0,
+        "usedActivation": false
+      },
+      "directNodes": [],
+      "matchingResults": [],
+      "logs": [
+        {
+          "step": "STEP_1",
+          "timestamp": "2025-09-14T17:45:29.371Z",
+          "message": "Checking if file path query",
+          "data": null
+        },
+        {
+          "step": "STEP_1_RESULT",
+          "timestamp": "2025-09-14T17:45:29.371Z",
+          "message": "File path query: false",
+          "data": null
+        },
+        {
+          "step": "STEP_2",
+          "timestamp": "2025-09-14T17:45:29.371Z",
+          "message": "Determining query route",
+          "data": null
+        },
+        {
+          "step": "STEP_2_RESULT",
+          "timestamp": "2025-09-14T17:45:29.371Z",
+          "message": "Query route determined",
+          "data": "{\n  \"engine\": \"standard\"\n}"
+        },
+        {
+          "step": "STEP_3",
+          "timestamp": "2025-09-14T17:45:29.371Z",
+          "message": "Executing query with bypass options",
+          "data": null
+        },
+        {
+          "step": "STEP_3_OPTIONS",
+          "timestamp": "2025-09-14T17:45:29.371Z",
+          "message": "Query options",
+          "data": "{\n  \"limit\": 10,\n  \"useActivation\": false,\n  \"bypassInhibition\": true,\n  \"bypassHebbianLearning\": true,\n  \"bypassAttention\": true,\n  \"bypassBiTemporal\": true,\n  \"includeParentContext\": false,\n  \"includeChildContext\": false,\n  \"bypassCache\": true,\n  \"bypassMultiModalFusion\": true,\n  \"confidence\": 0\n}"
+        },
+        {
+          "step": "STEP_3_RESULT",
+          "timestamp": "2025-09-14T17:45:29.372Z",
+          "message": "Raw query result",
+          "data": "{\n  \"foundNodes\": 0,\n  \"totalMatches\": 0,\n  \"queryTime\": 0\n}"
+        },
+        {
+          "step": "STEP_4",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "No nodes returned despite totalMatches > 0",
+          "data": null
+        },
+        {
+          "step": "STEP_5",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Direct storage search",
+          "data": null
+        },
+        {
+          "step": "STEP_5_RESULT",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Direct storage found 0 nodes",
+          "data": null
+        },
+        {
+          "step": "STEP_6",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Testing matching logic",
+          "data": null
+        },
+        {
+          "step": "STEP_6_RESULT",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Matching logic results",
+          "data": "[]"
+        }
+      ]
+    },
+    {
+      "query": "Engine",
+      "description": "WORKING - Partial match that finds MindMapEngine",
+      "result": {
+        "nodes": [],
+        "edges": [],
+        "totalMatches": 0,
+        "queryTime": 0,
+        "usedActivation": false
+      },
+      "directNodes": [],
+      "matchingResults": [],
+      "logs": [
+        {
+          "step": "STEP_1",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Checking if file path query",
+          "data": null
+        },
+        {
+          "step": "STEP_1_RESULT",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "File path query: false",
+          "data": null
+        },
+        {
+          "step": "STEP_2",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Determining query route",
+          "data": null
+        },
+        {
+          "step": "STEP_2_RESULT",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Query route determined",
+          "data": "{\n  \"engine\": \"standard\"\n}"
+        },
+        {
+          "step": "STEP_3",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Executing query with bypass options",
+          "data": null
+        },
+        {
+          "step": "STEP_3_OPTIONS",
+          "timestamp": "2025-09-14T17:45:29.373Z",
+          "message": "Query options",
+          "data": "{\n  \"limit\": 10,\n  \"useActivation\": false,\n  \"bypassInhibition\": true,\n  \"bypassHebbianLearning\": true,\n  \"bypassAttention\": true,\n  \"bypassBiTemporal\": true,\n  \"includeParentContext\": false,\n  \"includeChildContext\": false,\n  \"bypassCache\": true,\n  \"bypassMultiModalFusion\": true,\n  \"confidence\": 0\n}"
+        },
+        {
+          "step": "STEP_3_RESULT",
+          "timestamp": "2025-09-14T17:45:29.374Z",
+          "message": "Raw query result",
+          "data": "{\n  \"foundNodes\": 0,\n  \"totalMatches\": 0,\n  \"queryTime\": 0\n}"
+        },
+        {
+          "step": "STEP_4",
+          "timestamp": "2025-09-14T17:45:29.374Z",
+          "message": "No nodes returned despite totalMatches > 0",
+          "data": null
+        },
+        {
+          "step": "STEP_5",
+          "timestamp": "2025-09-14T17:45:29.374Z",
+          "message": "Direct storage search",
+          "data": null
+        },
+        {
+          "step": "STEP_5_RESULT",
+          "timestamp": "2025-09-14T17:45:29.374Z",
+          "message": "Direct storage found 0 nodes",
+          "data": null
+        },
+        {
+          "step": "STEP_6",
+          "timestamp": "2025-09-14T17:45:29.374Z",
+          "message": "Testing matching logic",
+          "data": null
+        },
+        {
+          "step": "STEP_6_RESULT",
+          "timestamp": "2025-09-14T17:45:29.374Z",
+          "message": "Matching logic results",
+          "data": "[]"
+        }
+      ]
+    }
+  ],
+  "conclusions": []
+}

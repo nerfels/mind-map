@@ -1,0 +1,70 @@
+// Backup of handleGetInsights method from src/index.ts
+// Created: 2025-09-14
+// Issue: Method hangs due to generateInsights() calling performComprehensiveAnalysis()
+
+  private async handleGetInsights(args: {
+    categories?: string[];
+    min_confidence?: number;
+    actionable_only?: boolean;
+  }) {
+    const {
+      categories,
+      min_confidence = 0.5,
+      actionable_only = false
+    } = args;
+
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Analysis timeout after 30 seconds')), 30000);
+    });
+
+    const analysisResult = await Promise.race([
+      this.mindMap.generateInsights(),
+      timeoutPromise
+    ]).catch(err => {
+      console.error('Analysis failed or timed out:', err);
+      return null;
+    });
+
+    // Debug: Check what we actually got
+    console.log('generateInsights result type:', typeof analysisResult);
+    console.log('generateInsights result:', analysisResult);
+
+    let text = `🧠 Project Insights:\n\n`;
+
+    // Handle null/timeout case
+    if (!analysisResult) {
+      text += `❌ Analysis failed or timed out. This could be due to:\n`;
+      text += `• Complex project structure requiring more processing time\n`;
+      text += `• Incomplete project scan - try running scan_project first\n`;
+      text += `• System resource constraints\n\n`;
+      text += `💡 Try: scan_project with force_rescan=true, then retry\n`;
+    }
+    // generateInsights returns an AnalysisResult object, not an array
+    else if (analysisResult && typeof analysisResult === 'object') {
+      text += `📊 Comprehensive Analysis Results:\n\n`;
+
+      if (analysisResult.architectural) {
+        text += `**🏗️ Architecture:** ${Array.isArray(analysisResult.architectural) ? analysisResult.architectural.length : 0} insights\n`;
+      }
+      if (analysisResult.frameworks) {
+        text += `**🎯 Frameworks:** ${Array.isArray(analysisResult.frameworks) ? analysisResult.frameworks.length : 0} detected\n`;
+      }
+      if (analysisResult.tooling) {
+        text += `**🔧 Tooling:** Analysis completed\n`;
+      }
+      if (analysisResult.errorPredictions) {
+        text += `**⚠️ Error Predictions:** ${Array.isArray(analysisResult.errorPredictions) ? analysisResult.errorPredictions.length : 0} potential issues\n`;
+      }
+      text += `\n`;
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text
+        }
+      ]
+    };
+  }
