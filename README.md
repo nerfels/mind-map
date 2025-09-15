@@ -1,12 +1,12 @@
 # Mind Map MCP Server v1.2.0 🧠
 
-**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, and **cross-project functionality** for next-generation code understanding.
+**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, and **call pattern analysis** for next-generation code understanding.
 
 ## 🚀 Current Status: Production Ready v1.2.0
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Cross-Project Support** | **✅ CI/CD Pipeline**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ CI/CD Pipeline**
 
-**🎯 Latest Update v1.2.0**: **Cross-Project Functionality** - Revolutionary cross-project support allowing MCP to work seamlessly across multiple project directories. Features automatic project detection, environment variable configuration, project-specific caching, and independent configuration management. Each project maintains its own mind map data and settings while sharing the same powerful MCP server.
+**🎯 Latest Update v1.2.0**: **Enhanced Project Configuration** - Improved project scanning and configuration management with environment variable support for flexible project targeting.
 
 ## 📦 Installation & Setup
 
