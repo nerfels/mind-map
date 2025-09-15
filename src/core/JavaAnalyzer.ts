@@ -86,8 +86,9 @@ export class JavaAnalyzer {
         // Extract package declaration
         if (compilationUnit.children.packageDeclaration) {
           const packageDecl = compilationUnit.children.packageDeclaration[0];
-          if (packageDecl.children.name) {
-            structure.packageDeclaration = this.extractQualifiedName(packageDecl.children.name[0]);
+          if (packageDecl.children.Identifier) {
+            // Direct identifier handling for package names like "com.example.demo"
+            structure.packageDeclaration = packageDecl.children.Identifier.map((id: any) => id.image).join('.');
           }
         }
 
@@ -121,12 +122,52 @@ export class JavaAnalyzer {
 
   private extractQualifiedName(nameNode: any): string {
     if (!nameNode) return '';
-    
+
+    // Handle direct identifier nodes
+    if (nameNode.image) {
+      return nameNode.image;
+    }
+
+    // Handle complex qualified names with multiple identifiers
     if (nameNode.children && nameNode.children.Identifier) {
       return nameNode.children.Identifier.map((id: any) => id.image).join('.');
     }
-    
-    return nameNode.image || '';
+
+    // Handle dot-separated qualified names
+    if (nameNode.children) {
+      const parts: string[] = [];
+
+      // Look for Identifier tokens
+      if (nameNode.children.Identifier) {
+        nameNode.children.Identifier.forEach((id: any) => {
+          if (id.image) parts.push(id.image);
+        });
+      }
+
+      // Handle nested qualified name structures
+      if (nameNode.children.qualifiedName) {
+        const nested = this.extractQualifiedName(nameNode.children.qualifiedName[0]);
+        if (nested) parts.push(nested);
+      }
+
+      // Handle individual components
+      Object.keys(nameNode.children).forEach(key => {
+        if (key === 'Identifier' || key === 'qualifiedName') return;
+
+        const nodes = nameNode.children[key];
+        if (Array.isArray(nodes)) {
+          nodes.forEach((node: any) => {
+            if (node.image && node.image !== '.') {
+              parts.push(node.image);
+            }
+          });
+        }
+      });
+
+      return parts.join('.');
+    }
+
+    return '';
   }
 
   private extractImport(importDecl: any): any | null {
@@ -142,16 +183,17 @@ export class JavaAnalyzer {
         javaImport.isStatic = true;
       }
 
-      // Extract qualified name
-      if (importDecl.children.name) {
-        const qualifiedName = this.extractQualifiedName(importDecl.children.name[0]);
-        javaImport.packagePath = qualifiedName;
+      // Extract qualified name from packageOrTypeName
+      if (importDecl.children.packageOrTypeName) {
+        const packageNode = importDecl.children.packageOrTypeName[0];
+        const qualifiedName = this.extractQualifiedName(packageNode);
 
-        // Check for wildcard import
-        if (qualifiedName.endsWith('*')) {
+        // Check for wildcard import (indicated by Star token)
+        if (importDecl.children.Star) {
           javaImport.isWildcard = true;
-          javaImport.packagePath = qualifiedName.slice(0, -2); // Remove ".*"
+          javaImport.packagePath = qualifiedName;
         } else {
+          javaImport.packagePath = qualifiedName;
           // Extract class name from qualified name
           const parts = qualifiedName.split('.');
           if (parts.length > 1) {
@@ -169,19 +211,22 @@ export class JavaAnalyzer {
 
   private processTypeDeclaration(typeDecl: any, structure: JavaCodeStructure, content: string) {
     try {
+      // Extract annotations from type declaration
+      const annotations = this.extractAnnotations(typeDecl);
+
       if (typeDecl.children.classDeclaration) {
-        this.processClassDeclaration(typeDecl.children.classDeclaration[0], structure, content);
+        this.processClassDeclaration(typeDecl.children.classDeclaration[0], structure, content, annotations);
       } else if (typeDecl.children.interfaceDeclaration) {
-        this.processInterfaceDeclaration(typeDecl.children.interfaceDeclaration[0], structure, content);
+        this.processInterfaceDeclaration(typeDecl.children.interfaceDeclaration[0], structure, content, annotations);
       } else if (typeDecl.children.enumDeclaration) {
-        this.processEnumDeclaration(typeDecl.children.enumDeclaration[0], structure, content);
+        this.processEnumDeclaration(typeDecl.children.enumDeclaration[0], structure, content, annotations);
       }
     } catch (error) {
       console.warn('Error processing type declaration:', error);
     }
   }
 
-  private processClassDeclaration(classDecl: any, structure: JavaCodeStructure, content: string) {
+  private processClassDeclaration(classDecl: any, structure: JavaCodeStructure, content: string, annotations: any[] = []) {
     try {
       // Handle normalClassDeclaration structure
       const normalClassDecl = classDecl.children.normalClassDeclaration?.[0];
@@ -203,7 +248,7 @@ export class JavaAnalyzer {
         methods: [],
         properties: [],
         baseClasses: [],
-        decorators: []
+        decorators: annotations
       };
 
       // Extract superclass (if present in normalClassDeclaration)
@@ -238,16 +283,16 @@ export class JavaAnalyzer {
     }
   }
 
-  private processInterfaceDeclaration(interfaceDecl: any, structure: JavaCodeStructure, content: string) {
+  private processInterfaceDeclaration(interfaceDecl: any, structure: JavaCodeStructure, content: string, annotations: any[] = []) {
     // Similar to class processing but for interfaces
     // For now, treat interfaces as classes for simplicity
-    this.processClassDeclaration(interfaceDecl, structure, content);
+    this.processClassDeclaration(interfaceDecl, structure, content, annotations);
   }
 
-  private processEnumDeclaration(enumDecl: any, structure: JavaCodeStructure, content: string) {
+  private processEnumDeclaration(enumDecl: any, structure: JavaCodeStructure, content: string, annotations: any[] = []) {
     // Similar to class processing but for enums
     // For now, treat enums as classes for simplicity
-    this.processClassDeclaration(enumDecl, structure, content);
+    this.processClassDeclaration(enumDecl, structure, content, annotations);
   }
 
   private processClassBody(classBody: any, classInfo: any, structure: JavaCodeStructure, content: string) {
@@ -302,17 +347,27 @@ export class JavaAnalyzer {
       const startLine = this.getLineNumber(content, methodDecl.location?.startOffset || 0);
       const endLine = this.getLineNumber(content, methodDecl.location?.endOffset || content.length);
 
-      // Extract parameters
+      // Extract parameters from methodDeclarator
       const parameters: string[] = [];
-      if (methodDecl.children.formalParameterList) {
-        // Process formal parameters (simplified)
-        parameters.push('param1', 'param2'); // Placeholder - would need more detailed parsing
+      if (methodDeclarator.children.formalParameterList) {
+        const paramList = methodDeclarator.children.formalParameterList[0];
+        if (paramList.children.formalParameter) {
+          paramList.children.formalParameter.forEach((param: any) => {
+            const paramType = this.extractParameterType(param);
+            const paramName = this.extractParameterName(param);
+            if (paramName) {
+              parameters.push(paramType ? `${paramType} ${paramName}` : paramName);
+            }
+          });
+        }
       }
 
-      // Extract return type
+      // Extract return type from methodHeader
       let returnType = 'void';
-      if (methodDecl.children.result) {
-        returnType = this.extractType(methodDecl.children.result[0]);
+      if (methodHeader.children.result) {
+        returnType = this.extractType(methodHeader.children.result[0]);
+      } else if (methodHeader.children.unannType) {
+        returnType = this.extractType(methodHeader.children.unannType[0]);
       }
 
       return {
@@ -355,20 +410,57 @@ export class JavaAnalyzer {
     }
   }
 
-  private processFieldDeclaration(fieldDecl: any): string[] {
+  private processFieldDeclaration(fieldDecl: any): any[] {
     try {
-      const fields: string[] = [];
+      const fields: any[] = [];
+
+      // Extract field type
+      let fieldType = 'Object';
+      if (fieldDecl.children.unannType) {
+        fieldType = this.extractType(fieldDecl.children.unannType[0]);
+      }
+
+      // Extract field modifiers
+      const modifiers: string[] = [];
+      if (fieldDecl.children.fieldModifier) {
+        fieldDecl.children.fieldModifier.forEach((modifier: any) => {
+          Object.keys(modifier.children || {}).forEach(key => {
+            if (key === 'Public' || key === 'Private' || key === 'Protected' ||
+                key === 'Static' || key === 'Final' || key === 'Volatile' || key === 'Transient') {
+              modifiers.push(key.toLowerCase());
+            }
+          });
+        });
+      }
+
+      // Extract field names
       if (fieldDecl.children.variableDeclaratorList) {
         const varList = fieldDecl.children.variableDeclaratorList[0];
         if (varList.children.variableDeclarator) {
           varList.children.variableDeclarator.forEach((varDecl: any) => {
-            const fieldName = varDecl.children.Identifier?.[0]?.image;
+            let fieldName = '';
+
+            // Try different ways to extract field name
+            if (varDecl.children.variableDeclaratorId) {
+              const varId = varDecl.children.variableDeclaratorId[0];
+              if (varId.children.Identifier) {
+                fieldName = varId.children.Identifier[0].image;
+              }
+            } else if (varDecl.children.Identifier) {
+              fieldName = varDecl.children.Identifier[0].image;
+            }
+
             if (fieldName) {
-              fields.push(fieldName);
+              fields.push({
+                name: fieldName,
+                type: fieldType,
+                modifiers: modifiers
+              });
             }
           });
         }
       }
+
       return fields;
     } catch (error) {
       console.warn('Error processing field declaration:', error);
@@ -376,14 +468,173 @@ export class JavaAnalyzer {
     }
   }
 
-  private extractType(typeNode: any): string {
-    // Simplified type extraction
-    if (typeNode.children.primitiveType) {
-      return typeNode.children.primitiveType[0].image || 'unknown';
+  private extractAnnotations(node: any): any[] {
+    const annotations: any[] = [];
+
+    try {
+      // Look for annotation nodes in various locations
+      if (node.children?.annotation) {
+        node.children.annotation.forEach((annotationNode: any) => {
+          const annotation = this.extractSingleAnnotation(annotationNode);
+          if (annotation) {
+            annotations.push(annotation);
+          }
+        });
+      }
+
+      // Look for class modifiers that might contain annotations
+      if (node.children?.classModifier) {
+        node.children.classModifier.forEach((modifier: any) => {
+          if (modifier.children?.annotation) {
+            modifier.children.annotation.forEach((annotationNode: any) => {
+              const annotation = this.extractSingleAnnotation(annotationNode);
+              if (annotation) {
+                annotations.push(annotation);
+              }
+            });
+          }
+        });
+      }
+
+      // Look for method modifiers that might contain annotations
+      if (node.children?.methodModifier) {
+        node.children.methodModifier.forEach((modifier: any) => {
+          if (modifier.children?.annotation) {
+            modifier.children.annotation.forEach((annotationNode: any) => {
+              const annotation = this.extractSingleAnnotation(annotationNode);
+              if (annotation) {
+                annotations.push(annotation);
+              }
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Error extracting annotations:', error);
     }
-    if (typeNode.children.classOrInterfaceType) {
+
+    return annotations;
+  }
+
+  private extractSingleAnnotation(annotationNode: any): any | null {
+    try {
+      if (!annotationNode.children) return null;
+
+      let annotationName = '';
+      const parameters: Record<string, any> = {};
+
+      // Extract annotation name
+      if (annotationNode.children.normalAnnotation) {
+        const normalAnnotation = annotationNode.children.normalAnnotation[0];
+        if (normalAnnotation.children.typeName) {
+          annotationName = this.extractQualifiedName(normalAnnotation.children.typeName[0]);
+        }
+
+        // Extract annotation parameters
+        if (normalAnnotation.children.elementValuePairList) {
+          const pairList = normalAnnotation.children.elementValuePairList[0];
+          if (pairList.children.elementValuePair) {
+            pairList.children.elementValuePair.forEach((pair: any) => {
+              const key = pair.children.Identifier?.[0]?.image;
+              // Simplified value extraction - could be improved
+              const value = 'annotationValue';
+              if (key) {
+                parameters[key] = value;
+              }
+            });
+          }
+        }
+      } else if (annotationNode.children.markerAnnotation) {
+        const markerAnnotation = annotationNode.children.markerAnnotation[0];
+        if (markerAnnotation.children.typeName) {
+          annotationName = this.extractQualifiedName(markerAnnotation.children.typeName[0]);
+        }
+      } else if (annotationNode.children.singleElementAnnotation) {
+        const singleAnnotation = annotationNode.children.singleElementAnnotation[0];
+        if (singleAnnotation.children.typeName) {
+          annotationName = this.extractQualifiedName(singleAnnotation.children.typeName[0]);
+        }
+        // Could extract the single element value here
+      }
+
+      if (annotationName) {
+        return {
+          name: annotationName,
+          target: 'class', // or method, field, etc.
+          parameters: Object.keys(parameters).length > 0 ? parameters : undefined
+        };
+      }
+    } catch (error) {
+      console.warn('Error extracting single annotation:', error);
+    }
+
+    return null;
+  }
+
+  private extractParameterType(param: any): string {
+    try {
+      if (param.children.unannType) {
+        return this.extractType(param.children.unannType[0]);
+      }
+      return 'Object';
+    } catch (error) {
+      return 'Object';
+    }
+  }
+
+  private extractParameterName(param: any): string {
+    try {
+      if (param.children.variableDeclaratorId) {
+        const varId = param.children.variableDeclaratorId[0];
+        if (varId.children.Identifier) {
+          return varId.children.Identifier[0].image;
+        }
+      }
+      return '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  private extractType(typeNode: any): string {
+    if (!typeNode) return 'unknown';
+
+    // Handle primitive types
+    if (typeNode.children?.primitiveType) {
+      const primitiveType = typeNode.children.primitiveType[0];
+      if (primitiveType.children) {
+        // Find the specific primitive type
+        const typeKeys = ['Int', 'Double', 'Boolean', 'Char', 'Byte', 'Short', 'Long', 'Float'];
+        for (const key of typeKeys) {
+          if (primitiveType.children[key]) {
+            return key.toLowerCase();
+          }
+        }
+      }
+      return primitiveType.image || 'unknown';
+    }
+
+    // Handle class or interface types
+    if (typeNode.children?.classOrInterfaceType) {
       return this.extractQualifiedName(typeNode.children.classOrInterfaceType[0]);
     }
+
+    // Handle array types
+    if (typeNode.children?.dims) {
+      const baseType = this.extractType({
+        children: {
+          primitiveType: typeNode.children.primitiveType,
+          classOrInterfaceType: typeNode.children.classOrInterfaceType
+        }
+      });
+      return baseType + '[]';
+    }
+
+    // Handle void return type
+    if (typeNode.children?.Void) {
+      return 'void';
+    }
+
     return 'unknown';
   }
 

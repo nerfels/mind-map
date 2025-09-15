@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.7.0 🧠
+# Mind Map MCP Server v1.7.1 🧠
 
-**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, **document intelligence**, and **enhanced file ignore patterns** for next-generation code understanding.
+**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, **document intelligence**, **enhanced Java AST analysis**, and **enhanced file ignore patterns** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.7.0
+## 🚀 Current Status: Production Ready v1.7.1
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Document Intelligence** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ CI/CD Pipeline**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Document Intelligence** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ Complete Java Support** | **✅ CI/CD Pipeline**
 
-**🎯 Latest Update v1.7.0**: **Document Intelligence Integration** - Added comprehensive document analysis with 5 new MCP tools for documentation-code relationship mapping, link validation, implementation gap detection, and quality analysis. Features advanced markdown parsing, multi-format support, brain-inspired document learning, and real-time documentation quality insights.
+**🎯 Latest Update v1.7.1**: **Complete Java AST Analysis Fix** - Fixed critical issues in Java file parsing including package declaration extraction, import path resolution, field detection, method signatures, and annotation support. Java projects now have full parity with TypeScript analysis, enabling Spring Boot framework detection and comprehensive Java code intelligence.
 
 ## 📦 Installation & Setup
 
