@@ -46,7 +46,7 @@ jobs:
 
         if [ "$HIGH_VULN" -gt 0 ]; then
           echo "❌ High/Critical vulnerabilities found: $HIGH_VULN"
-          npm audit --audit-level high
+          npm audit --audit-level high || echo "Audit complete"
           exit 1
         else
           echo "✅ No high/critical vulnerabilities found"
