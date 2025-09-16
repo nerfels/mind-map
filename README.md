@@ -1,12 +1,12 @@
-# Mind Map MCP Server v1.10.0 🧠
+# Mind Map MCP Server v1.11.0 🧠
 
-**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, **method call chain analysis**, **variable usage tracking**, **document intelligence**, **dynamic import detection**, and **enhanced file ignore patterns** for next-generation code understanding.
+**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, **method call chain analysis**, **variable usage tracking**, **generic/template tracking**, **document intelligence**, **dynamic import detection**, and **enhanced file ignore patterns** for next-generation code understanding.
 
-## 🚀 Current Status: Production Ready v1.10.0
+## 🚀 Current Status: Production Ready v1.11.0
 
-**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Method Call Chain Analysis** | **✅ Variable Usage Tracking** | **✅ Document Intelligence** | **✅ Dynamic Import Detection** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ Complete Java Support** | **✅ CI/CD Pipeline**
+**✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Method Call Chain Analysis** | **✅ Variable Usage Tracking** | **✅ Generic/Template Tracking** | **✅ Document Intelligence** | **✅ Dynamic Import Detection** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ Complete Java Support** | **✅ CI/CD Pipeline**
 
-**🎯 Latest Update v1.10.0**: **Variable Usage Tracking** - Comprehensive variable intelligence that tracks declaration, usage, and modification patterns across files. Features variable lifecycle analysis, cross-module dependency detection, unused variable identification, and variable relationship mapping. Creates 8,966+ variable nodes with 48,756+ usage relationships for complete code understanding. Completes Phase 8.1 enhanced code analysis with revolutionary variable intelligence.
+**🎯 Latest Update v1.11.0**: **Template/Generic Usage Enhancement** - Advanced TypeScript generics analysis with comprehensive type parameter detection, constraint validation, instantiation tracking, and variance analysis. Tracks generic usage patterns, detects constraint violations, analyzes type parameter flow across modules, and creates specialized type_parameter nodes with instantiated_as edges. Adds 20+ type parameters with full statistical analysis for complete generic intelligence.
 
 ## 📦 Installation & Setup
 

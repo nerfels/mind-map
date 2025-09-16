@@ -38,6 +38,41 @@ export interface CallChain {
   hasConditionalCalls: boolean;
 }
 
+export interface GenericTypeParameter {
+  id: string;
+  name: string;
+  constraint?: string;
+  defaultType?: string;
+  variance: 'covariant' | 'contravariant' | 'invariant';
+  usageCount: number;
+  sourceFile: string;
+  lineNumber: number;
+}
+
+export interface GenericInstantiation {
+  id: string;
+  genericId: string; // Reference to the generic declaration
+  typeArguments: string[];
+  sourceFile: string;
+  lineNumber: number;
+  context: {
+    isInferredType: boolean;
+    isExplicitType: boolean;
+    usageContext: 'function_call' | 'type_annotation' | 'variable_declaration' | 'return_type';
+  };
+}
+
+export interface TemplateUsagePattern {
+  genericId: string;
+  commonInstantiations: { types: string[]; count: number }[];
+  constraintViolations: string[];
+  crossModuleUsage: {
+    sourceFile: string;
+    targetFile: string;
+    typeFlow: string[];
+  }[];
+}
+
 export interface FunctionCallGraph {
   nodes: Map<string, CallGraphNode>;
   edges: CallPattern[];
@@ -58,6 +93,12 @@ export interface CallGraphNode {
   complexity: number;
   isRecursive: boolean;
   codeStyle?: CodeStyleMetrics;
+  generics?: {
+    typeParameters: GenericTypeParameter[];
+    constraints: string[];
+    hasGenerics: boolean;
+    isGenericFunction: boolean;
+  };
 }
 
 export interface CodeStyleMetrics {
@@ -146,6 +187,14 @@ export interface VariableAnalysisResult {
   importExportMapping: Map<string, string[]>; // file -> imported/exported variables
 }
 
+export interface GenericAnalysisResult {
+  typeParameters: GenericTypeParameter[];
+  instantiations: GenericInstantiation[];
+  usagePatterns: TemplateUsagePattern[];
+  constraintViolations: { genericId: string; violation: string; lineNumber: number }[];
+  crossModuleTypeFlow: { sourceFile: string; targetFile: string; typeParameters: string[] }[];
+}
+
 /**
  * Advanced Call Pattern Analyzer for tracking function calls, method invocations,
  * variable usage patterns, and code relationships within and across files
@@ -162,6 +211,12 @@ export class CallPatternAnalyzer {
   private crossModuleDependencies: Map<string, CrossModuleVariableDependency[]> = new Map();
   private scopeRegistry: Map<string, string> = new Map(); // scopeId -> filePath
 
+  // Generic/Template tracking storage
+  private genericTypeParameters: Map<string, GenericTypeParameter[]> = new Map();
+  private genericInstantiations: Map<string, GenericInstantiation[]> = new Map();
+  private templateUsagePatterns: Map<string, TemplateUsagePattern[]> = new Map();
+  private genericRegistry: Map<string, GenericTypeParameter> = new Map(); // genericId -> parameter
+
   constructor() {}
 
   async analyzeFile(filePath: string, content?: string): Promise<{
@@ -170,6 +225,7 @@ export class CallPatternAnalyzer {
     callPatterns: CallPattern[];
     callGraph: FunctionCallGraph;
     variableAnalysis: VariableAnalysisResult;
+    genericAnalysis: GenericAnalysisResult;
   }> {
     console.log(`[CallPatternAnalyzer] Starting analysis of: ${filePath}`);
 
@@ -184,7 +240,8 @@ export class CallPatternAnalyzer {
           edges: [],
           callPatterns: [],
           callGraph: this.createEmptyCallGraph(),
-          variableAnalysis: this.createEmptyVariableAnalysis()
+          variableAnalysis: this.createEmptyVariableAnalysis(),
+          genericAnalysis: this.createEmptyGenericAnalysis()
         });
       }, ANALYSIS_TIMEOUT);
 
@@ -223,8 +280,13 @@ export class CallPatternAnalyzer {
       const variableAnalysis = this.analyzeVariables(sourceFile, filePath, declarations);
       console.log(`[CallPatternAnalyzer] Found ${variableAnalysis.declarations.length} variables in: ${fileName}`);
 
-      // Create mind map nodes and edges (now includes variable nodes)
-      const { nodes, edges } = this.createMindMapElements(filePath, declarations, callPatterns, callGraph, variableAnalysis);
+      console.log(`[CallPatternAnalyzer] Starting generic analysis for: ${fileName}`);
+      // Extract generic/template analysis
+      const genericAnalysis = this.analyzeGenerics(sourceFile, filePath, declarations);
+      console.log(`[CallPatternAnalyzer] Found ${genericAnalysis.typeParameters.length} generic type parameters in: ${fileName}`);
+
+      // Create mind map nodes and edges (now includes variable and generic nodes)
+      const { nodes, edges } = this.createMindMapElements(filePath, declarations, callPatterns, callGraph, variableAnalysis, genericAnalysis);
 
       // Store patterns for cross-file analysis
       this.callPatterns.set(filePath, callPatterns);
@@ -238,8 +300,14 @@ export class CallPatternAnalyzer {
         this.crossModuleDependencies.set(filePath, variableAnalysis.crossModuleDependencies);
       }
 
+      // Store generic analysis results
+      this.genericTypeParameters.set(filePath, genericAnalysis.typeParameters);
+      this.genericInstantiations.set(filePath, genericAnalysis.instantiations);
+      this.templateUsagePatterns.set(filePath, genericAnalysis.usagePatterns);
+      genericAnalysis.typeParameters.forEach(param => this.genericRegistry.set(param.id, param));
+
         clearTimeout(timeoutId);
-        resolve({ nodes, edges, callPatterns, callGraph, variableAnalysis });
+        resolve({ nodes, edges, callPatterns, callGraph, variableAnalysis, genericAnalysis });
 
       } catch (error) {
         clearTimeout(timeoutId);
@@ -249,7 +317,8 @@ export class CallPatternAnalyzer {
           edges: [],
           callPatterns: [],
           callGraph: this.createEmptyCallGraph(),
-          variableAnalysis: this.createEmptyVariableAnalysis()
+          variableAnalysis: this.createEmptyVariableAnalysis(),
+          genericAnalysis: this.createEmptyGenericAnalysis()
         });
       }
     });
@@ -583,7 +652,8 @@ export class CallPatternAnalyzer {
     declarations: CallGraphNode[],
     patterns: CallPattern[],
     callGraph: FunctionCallGraph,
-    variableAnalysis?: VariableAnalysisResult
+    variableAnalysis?: VariableAnalysisResult,
+    genericAnalysis?: GenericAnalysisResult
   ): { nodes: MindMapNode[]; edges: MindMapEdge[] } {
     const nodes: MindMapNode[] = [];
     const edges: MindMapEdge[] = [];
@@ -704,6 +774,66 @@ export class CallPatternAnalyzer {
             confidence: dependency.confidence
           },
           confidence: dependency.confidence
+        };
+        edges.push(edge);
+      });
+    }
+
+    // Create nodes and edges for generic type parameters
+    if (genericAnalysis) {
+      // Create nodes for generic type parameters
+      genericAnalysis.typeParameters.forEach(param => {
+        const node: MindMapNode = {
+          id: `generic_${param.id.replace(/[^\w]/g, '_')}`,
+          type: 'type_parameter',
+          name: param.name,
+          path: filePath,
+          metadata: {
+            genericName: param.name,
+            constraint: param.constraint,
+            defaultType: param.defaultType,
+            variance: param.variance,
+            usageCount: param.usageCount,
+            lineNumber: param.lineNumber,
+            isGeneric: true
+          },
+          confidence: 0.9,
+          lastUpdated: new Date()
+        };
+        nodes.push(node);
+      });
+
+      // Create edges for generic instantiations
+      genericAnalysis.instantiations.forEach((instantiation, index) => {
+        const edge: MindMapEdge = {
+          id: `generic_instantiation_${index}_${filePath.replace(/[^\w]/g, '_')}`,
+          source: `generic_${instantiation.genericId.replace(/[^\w]/g, '_')}`,
+          target: `file_${filePath.replace(/[^\w]/g, '_')}`,
+          type: 'instantiated_as',
+          metadata: {
+            typeArguments: instantiation.typeArguments,
+            usageContext: instantiation.context.usageContext,
+            isInferred: instantiation.context.isInferredType,
+            isExplicit: instantiation.context.isExplicitType,
+            lineNumber: instantiation.lineNumber
+          },
+          confidence: 0.8
+        };
+        edges.push(edge);
+      });
+
+      // Create edges for constraint violations
+      genericAnalysis.constraintViolations.forEach((violation, index) => {
+        const edge: MindMapEdge = {
+          id: `constraint_violation_${index}_${filePath.replace(/[^\w]/g, '_')}`,
+          source: `generic_${violation.genericId.replace(/[^\w]/g, '_')}`,
+          target: `file_${filePath.replace(/[^\w]/g, '_')}`,
+          type: 'violates_constraint',
+          metadata: {
+            violation: violation.violation,
+            lineNumber: violation.lineNumber
+          },
+          confidence: 0.9
         };
         edges.push(edge);
       });
@@ -2346,6 +2476,302 @@ export class CallPatternAnalyzer {
       functionCallPercentage: (functionCallUsages / allUsages.length) * 100,
       commonAccessPatterns,
       usageByScope
+    };
+  }
+
+  // ==================== GENERIC/TEMPLATE ANALYSIS METHODS ====================
+
+  /**
+   * Analyze generic type parameters, instantiations, and usage patterns
+   */
+  private analyzeGenerics(sourceFile: ts.SourceFile, filePath: string, declarations: CallGraphNode[]): GenericAnalysisResult {
+    const typeParameters: GenericTypeParameter[] = [];
+    const instantiations: GenericInstantiation[] = [];
+    const usagePatterns: TemplateUsagePattern[] = [];
+    const constraintViolations: { genericId: string; violation: string; lineNumber: number }[] = [];
+    const crossModuleTypeFlow: { sourceFile: string; targetFile: string; typeParameters: string[] }[] = [];
+
+    let genericIdCounter = 0;
+
+    const visit = (node: ts.Node) => {
+      // Extract type parameters from function declarations
+      if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node) || ts.isClassDeclaration(node)) {
+        if (node.typeParameters) {
+          node.typeParameters.forEach(typeParam => {
+            const paramId = `${filePath}:generic:${typeParam.name.text}:${genericIdCounter++}`;
+            const lineNumber = this.getLineNumber(typeParam, sourceFile);
+
+            const genericParam: GenericTypeParameter = {
+              id: paramId,
+              name: typeParam.name.text,
+              constraint: typeParam.constraint ? this.getTypeText(typeParam.constraint) : undefined,
+              defaultType: typeParam.default ? this.getTypeText(typeParam.default) : undefined,
+              variance: this.analyzeVariance(typeParam),
+              usageCount: 0, // Will be updated during instantiation analysis
+              sourceFile: filePath,
+              lineNumber
+            };
+
+            typeParameters.push(genericParam);
+
+            // Update the declaration with generic info
+            const declaration = declarations.find(d => d.lineNumber === this.getLineNumber(node, sourceFile));
+            if (declaration) {
+              if (!declaration.generics) {
+                declaration.generics = {
+                  typeParameters: [],
+                  constraints: [],
+                  hasGenerics: true,
+                  isGenericFunction: true
+                };
+              }
+              declaration.generics.typeParameters.push(genericParam);
+              if (genericParam.constraint) {
+                declaration.generics.constraints.push(genericParam.constraint);
+              }
+            }
+          });
+        }
+      }
+
+      // Extract generic instantiations from type references and function calls
+      if (ts.isTypeReferenceNode(node) && node.typeArguments) {
+        this.analyzeGenericInstantiation(node, sourceFile, filePath, instantiations, typeParameters);
+      }
+
+      if (ts.isCallExpression(node) && node.typeArguments) {
+        this.analyzeGenericCallInstantiation(node, sourceFile, filePath, instantiations, typeParameters);
+      }
+
+      ts.forEachChild(node, visit);
+    };
+
+    visit(sourceFile);
+
+    // Analyze usage patterns and constraint violations
+    this.analyzeGenericUsagePatterns(typeParameters, instantiations, usagePatterns, constraintViolations);
+
+    // Update usage counts
+    typeParameters.forEach(param => {
+      param.usageCount = instantiations.filter(inst => inst.genericId === param.id).length;
+    });
+
+    return {
+      typeParameters,
+      instantiations,
+      usagePatterns,
+      constraintViolations,
+      crossModuleTypeFlow
+    };
+  }
+
+  private analyzeGenericInstantiation(
+    node: ts.TypeReferenceNode,
+    sourceFile: ts.SourceFile,
+    filePath: string,
+    instantiations: GenericInstantiation[],
+    typeParameters: GenericTypeParameter[]
+  ): void {
+    const typeName = node.typeName.getText();
+    const lineNumber = this.getLineNumber(node, sourceFile);
+
+    // Find matching generic parameter
+    const matchingGeneric = typeParameters.find(p => p.name === typeName);
+    if (matchingGeneric && node.typeArguments) {
+      const typeArguments = node.typeArguments.map(arg => this.getTypeText(arg));
+
+      const instantiation: GenericInstantiation = {
+        id: `${filePath}:instantiation:${instantiations.length}`,
+        genericId: matchingGeneric.id,
+        typeArguments,
+        sourceFile: filePath,
+        lineNumber,
+        context: {
+          isInferredType: false,
+          isExplicitType: true,
+          usageContext: 'type_annotation'
+        }
+      };
+
+      instantiations.push(instantiation);
+    }
+  }
+
+  private analyzeGenericCallInstantiation(
+    node: ts.CallExpression,
+    sourceFile: ts.SourceFile,
+    filePath: string,
+    instantiations: GenericInstantiation[],
+    typeParameters: GenericTypeParameter[]
+  ): void {
+    const lineNumber = this.getLineNumber(node, sourceFile);
+
+    if (node.typeArguments) {
+      const typeArguments = node.typeArguments.map(arg => this.getTypeText(arg));
+
+      // Try to identify the generic function being called
+      const functionName = node.expression.getText();
+      const matchingGeneric = typeParameters.find(p =>
+        p.name === functionName || p.sourceFile === filePath
+      );
+
+      if (matchingGeneric) {
+        const instantiation: GenericInstantiation = {
+          id: `${filePath}:call_instantiation:${instantiations.length}`,
+          genericId: matchingGeneric.id,
+          typeArguments,
+          sourceFile: filePath,
+          lineNumber,
+          context: {
+            isInferredType: false,
+            isExplicitType: true,
+            usageContext: 'function_call'
+          }
+        };
+
+        instantiations.push(instantiation);
+      }
+    }
+  }
+
+  private analyzeGenericUsagePatterns(
+    typeParameters: GenericTypeParameter[],
+    instantiations: GenericInstantiation[],
+    usagePatterns: TemplateUsagePattern[],
+    constraintViolations: { genericId: string; violation: string; lineNumber: number }[]
+  ): void {
+    typeParameters.forEach(param => {
+      const paramInstantiations = instantiations.filter(inst => inst.genericId === param.id);
+
+      // Count common instantiation patterns
+      const instantiationMap = new Map<string, number>();
+      paramInstantiations.forEach(inst => {
+        const key = inst.typeArguments.join(',');
+        instantiationMap.set(key, (instantiationMap.get(key) || 0) + 1);
+      });
+
+      const commonInstantiations = Array.from(instantiationMap.entries())
+        .map(([types, count]) => ({ types: types.split(','), count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      // Check constraint violations
+      const violations: string[] = [];
+      if (param.constraint) {
+        paramInstantiations.forEach(inst => {
+          inst.typeArguments.forEach(typeArg => {
+            if (!this.satisfiesConstraint(typeArg, param.constraint!)) {
+              violations.push(`Type '${typeArg}' does not satisfy constraint '${param.constraint}'`);
+              constraintViolations.push({
+                genericId: param.id,
+                violation: `Type '${typeArg}' does not satisfy constraint '${param.constraint}'`,
+                lineNumber: inst.lineNumber
+              });
+            }
+          });
+        });
+      }
+
+      const pattern: TemplateUsagePattern = {
+        genericId: param.id,
+        commonInstantiations,
+        constraintViolations: violations,
+        crossModuleUsage: []
+      };
+
+      usagePatterns.push(pattern);
+    });
+  }
+
+  private analyzeVariance(typeParam: ts.TypeParameterDeclaration): 'covariant' | 'contravariant' | 'invariant' {
+    // Simple heuristic: check for 'in' and 'out' modifiers in TypeScript 4.7+
+    const text = typeParam.getText();
+    if (text.includes('out ')) return 'covariant';
+    if (text.includes('in ')) return 'contravariant';
+    return 'invariant';
+  }
+
+  private getTypeText(typeNode: ts.TypeNode): string {
+    return typeNode.getText();
+  }
+
+  private satisfiesConstraint(typeArg: string, constraint: string): boolean {
+    // Simplified constraint checking - in a real implementation,
+    // this would need proper type resolution
+    if (constraint === 'string' && typeArg === 'string') return true;
+    if (constraint === 'number' && typeArg === 'number') return true;
+    if (constraint === 'object' && !['string', 'number', 'boolean'].includes(typeArg)) return true;
+
+    // For complex constraints, assume satisfied for now
+    return true;
+  }
+
+  private createEmptyGenericAnalysis(): GenericAnalysisResult {
+    return {
+      typeParameters: [],
+      instantiations: [],
+      usagePatterns: [],
+      constraintViolations: [],
+      crossModuleTypeFlow: []
+    };
+  }
+
+  /**
+   * Get comprehensive generic analysis statistics across all analyzed files
+   */
+  getGenericAnalysisStatistics(): {
+    totalTypeParameters: number;
+    totalInstantiations: number;
+    constraintViolationCount: number;
+    averageUsagePerGeneric: number;
+    mostUsedGenerics: { name: string; usageCount: number }[];
+    genericsByVariance: Record<string, number>;
+    constraintedGenerics: number;
+    crossModuleGenerics: number;
+  } {
+    const allTypeParameters: GenericTypeParameter[] = [];
+    const allInstantiations: GenericInstantiation[] = [];
+    let totalConstraintViolations = 0;
+
+    for (const params of this.genericTypeParameters.values()) {
+      allTypeParameters.push(...params);
+    }
+
+    for (const instantiations of this.genericInstantiations.values()) {
+      allInstantiations.push(...instantiations);
+    }
+
+    for (const patterns of this.templateUsagePatterns.values()) {
+      patterns.forEach(pattern => {
+        totalConstraintViolations += pattern.constraintViolations.length;
+      });
+    }
+
+    const genericsByVariance = allTypeParameters.reduce((acc, param) => {
+      acc[param.variance] = (acc[param.variance] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const mostUsedGenerics = allTypeParameters
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 5)
+      .map(param => ({ name: param.name, usageCount: param.usageCount }));
+
+    const constraintedGenerics = allTypeParameters.filter(param => param.constraint).length;
+    const crossModuleGenerics = allTypeParameters.filter(param =>
+      allInstantiations.some(inst => inst.genericId === param.id && inst.sourceFile !== param.sourceFile)
+    ).length;
+
+    return {
+      totalTypeParameters: allTypeParameters.length,
+      totalInstantiations: allInstantiations.length,
+      constraintViolationCount: totalConstraintViolations,
+      averageUsagePerGeneric: allTypeParameters.length > 0 ?
+        allInstantiations.length / allTypeParameters.length : 0,
+      mostUsedGenerics,
+      genericsByVariance,
+      constraintedGenerics,
+      crossModuleGenerics
     };
   }
 }

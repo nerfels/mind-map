@@ -1,6 +1,6 @@
 {
   "name": "mind-map-mcp",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "Mind Map Model Context Protocol server for Claude Code - intelligent project knowledge graph with brain-inspired intelligence",
   "main": "dist/index.js",
   "type": "module",
