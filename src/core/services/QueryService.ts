@@ -108,7 +108,14 @@ export class QueryService {
     if (!options.bypassCache) {
       const cachedResult = await this.queryCache.get(query, context);
       if (cachedResult) {
-        return cachedResult;
+        console.log(`[CACHE_HIT] Query "${query}" served from cache with ${cachedResult.nodes.length} nodes`);
+        return {
+          ...cachedResult,
+          cached: true,
+          queryTime: Date.now() - startTime // Update with current lookup time
+        };
+      } else {
+        console.log(`[CACHE_MISS] Query "${query}" not found in cache, executing fresh query`);
       }
     }
 
@@ -342,8 +349,11 @@ export class QueryService {
       result.nodes.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
     }
 
-    // Cache the result
-    await this.queryCache.set(query, context, result);
+    // Cache the result (only if not bypassed and result is meaningful)
+    if (!options.bypassCache && result.nodes.length > 0) {
+      await this.queryCache.set(query, context, result);
+      console.log(`[CACHE_SET] Cached query "${query}" with ${result.nodes.length} nodes`);
+    }
 
     // Final debug logging
     if (isDebugQuery) {
@@ -542,7 +552,25 @@ export class QueryService {
   }
 
   private createQueryContext(options: QueryOptions): string {
-    return JSON.stringify(options);
+    // Create deterministic cache key from options
+    const cacheKey = {
+      type: options.type || 'default',
+      limit: options.limit || 10,
+      useActivation: options.useActivation !== false,
+      activationLevels: options.activationLevels || 3,
+      includeMetadata: options.includeMetadata || false,
+      bypassCache: false, // Don't include this in cache key
+      // Include context-affecting options only
+      contextLevel: options.contextLevel,
+      includeParentContext: options.includeParentContext,
+      includeChildContext: options.includeChildContext,
+      activeFiles: options.activeFiles?.sort() || [], // Sort for consistency
+      sessionGoals: options.sessionGoals?.sort() || [], // Sort for consistency
+      frameworkContext: options.frameworkContext?.sort() || [] // Sort for consistency
+    };
+
+    // Create stable JSON string (sorted keys)
+    return JSON.stringify(cacheKey, Object.keys(cacheKey).sort());
   }
 
   private async queryWithActivation(query: string, queryLower: string, options: QueryOptions, limit: number, startTime: number): Promise<QueryResult> {
