@@ -641,6 +641,8 @@ class MindMapMCPServer {
   }
 }
 
-// Start the server
-const server = new MindMapMCPServer();
-server.run().catch(console.error);
+// Start the server only when run directly (not when imported)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const server = new MindMapMCPServer();
+  server.run().catch(console.error);
+}
