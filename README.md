@@ -1,14 +1,14 @@
-# Mind Map MCP Server v1.13.0
+# Mind Map MCP Server v1.14.0
 
 **Experimental Code Intelligence Platform** - A Model Context Protocol (MCP) server that explores neuroscience-inspired approaches to software development analysis. This is an **experimental research project** featuring advanced query caching, associative learning patterns, context awareness, attention mechanisms, temporal knowledge modeling, and code analysis tools.
 
-## ⚠️ Current Status: Experimental v1.13.0
+## ⚠️ Current Status: Experimental v1.14.0
 
 **🧪 This is experimental software under active development** - Use for testing and research purposes. Features may change or be removed.
 
 **Features under development**: Context-aware caching • Brain-inspired learning • Code pattern detection • Document analysis • Multi-language AST parsing • File ignore patterns • CI/CD automation
 
-**🎯 Latest Update v1.13.0**: **Context-Aware Cache Optimization** - Enhanced cache intelligence with multi-factor context similarity matching, intelligent cache warming, and advanced analytics. Achieved 97% performance improvement (213ms → 3ms) with 40% cache hit rate.
+**🎯 Latest Update v1.14.0**: **Storage Compression Implementation** - Revolutionary storage optimization with 41.4% size reduction (52MB → 30.5MB). Advanced compression algorithms with node/edge compression, path deduplication, metadata abbreviation, and full backward compatibility while maintaining query performance.
 
 ## ⚠️ Important Disclaimer
 

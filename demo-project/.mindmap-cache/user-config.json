@@ -1,0 +1,81 @@
+{
+  "version": "1.0.0",
+  "userId": "demo_project_user",
+  "projectRoot": "/data/data/com.termux/files/home/projects/mind-map/demo-project",
+  "projectName": "Demo Project",
+  "preferences": {
+    "theme": "auto",
+    "language": "en",
+    "timezone": "Asia/Jerusalem",
+    "enableIntelligentSuggestions": true,
+    "confidenceThreshold": 0.7,
+    "maxResults": 10,
+    "autoScanOnChange": true,
+    "enableLearning": true,
+    "learningRate": 0.05,
+    "rememberFailures": true,
+    "adaptToWorkflow": true,
+    "collectTelemetry": false,
+    "shareUsageData": false,
+    "localStorageOnly": true,
+    "maxMemoryUsage": 134217728,
+    "enableCaching": true,
+    "parallelProcessing": true,
+    "backgroundScanning": false
+  },
+  "projectConfigs": [
+    {
+      "name": "demo-project",
+      "path": "/data/data/com.termux/files/home/projects/mind-map/demo-project",
+      "description": "Demo project for testing MCP cross-project functionality",
+      "language": "javascript",
+      "framework": "express",
+      "scanPatterns": [
+        "src/**/*.js",
+        "tests/**/*.js",
+        "*.json",
+        "*.md"
+      ],
+      "excludePatterns": [
+        "node_modules/**",
+        ".git/**",
+        "dist/**",
+        "*.log"
+      ],
+      "customSettings": {
+        "focusOnAPI": true,
+        "trackTestCoverage": true,
+        "enableTypeAnalysis": false
+      }
+    }
+  ],
+  "customPatterns": [
+    {
+      "name": "express-routes",
+      "pattern": "app\\.(get|post|put|delete|patch)\\(",
+      "description": "Express.js route definitions"
+    },
+    {
+      "name": "test-cases",
+      "pattern": "(describe|test|it)\\(",
+      "description": "Jest test cases"
+    }
+  ],
+  "privacySettings": {
+    "collectUsageStatistics": false,
+    "collectErrorReports": false,
+    "collectPerformanceMetrics": false,
+    "encryptLocalData": false,
+    "localOnlyMode": true,
+    "dataRetentionDays": 30,
+    "shareAnonymizedData": false,
+    "shareWithTeam": false,
+    "exportDataEnabled": true,
+    "requireAuthentication": false,
+    "sessionTimeout": 3600000,
+    "auditLogging": false
+  },
+  "feedback": [],
+  "created": "2025-09-15T12:50:00.000Z",
+  "lastModified": "2025-09-15T12:50:00.000Z"
+}

@@ -1,0 +1,116 @@
+{
+  "nodes": [
+    [
+      ".mindmap-cache",
+      {
+        "id": ".mindmap-cache",
+        "name": ".mindmap-cache",
+        "type": "directory",
+        "path": ".mindmap-cache",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.164Z"
+      }
+    ],
+    [
+      ".mindmap-cache/mindmap.json",
+      {
+        "id": ".mindmap-cache/mindmap.json",
+        "name": "mindmap.json",
+        "type": "file",
+        "path": ".mindmap-cache/mindmap.json",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.164Z"
+      }
+    ],
+    [
+      "src",
+      {
+        "id": "src",
+        "name": "src",
+        "type": "directory",
+        "path": "src",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.164Z"
+      }
+    ],
+    [
+      "src/main",
+      {
+        "id": "src/main",
+        "name": "main",
+        "type": "directory",
+        "path": "src/main",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.164Z"
+      }
+    ],
+    [
+      "src/main/java",
+      {
+        "id": "src/main/java",
+        "name": "java",
+        "type": "directory",
+        "path": "src/main/java",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.164Z"
+      }
+    ],
+    [
+      "src/main/java/com",
+      {
+        "id": "src/main/java/com",
+        "name": "com",
+        "type": "directory",
+        "path": "src/main/java/com",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.164Z"
+      }
+    ],
+    [
+      "src/main/java/com/example",
+      {
+        "id": "src/main/java/com/example",
+        "name": "example",
+        "type": "directory",
+        "path": "src/main/java/com/example",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.164Z"
+      }
+    ],
+    [
+      "src/main/java/com/example/Calculator.java",
+      {
+        "id": "src/main/java/com/example/Calculator.java",
+        "name": "Calculator.java",
+        "type": "file",
+        "path": "src/main/java/com/example/Calculator.java",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.170Z"
+      }
+    ],
+    [
+      "src/main/java/com/example/MathUtils.java",
+      {
+        "id": "src/main/java/com/example/MathUtils.java",
+        "name": "MathUtils.java",
+        "type": "file",
+        "path": "src/main/java/com/example/MathUtils.java",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T12:14:56.171Z"
+      }
+    ]
+  ],
+  "edges": [],
+  "projectRoot": "/data/data/com.termux/files/home/projects/mind-map/test-java-project",
+  "lastScan": "2025-09-15T12:14:55.809Z",
+  "version": "0.1.0"
+}

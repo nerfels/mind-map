@@ -1,0 +1,336 @@
+{
+  "nodes": [
+    [
+      ".mindmap-cache",
+      {
+        "id": ".mindmap-cache",
+        "name": ".mindmap-cache",
+        "type": "directory",
+        "path": ".mindmap-cache",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      ".mindmap-cache/mcp.log",
+      {
+        "id": ".mindmap-cache/mcp.log",
+        "name": "mcp.log",
+        "type": "file",
+        "path": ".mindmap-cache/mcp.log",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      ".mindmap-cache/mindmap.json",
+      {
+        "id": ".mindmap-cache/mindmap.json",
+        "name": "mindmap.json",
+        "type": "file",
+        "path": ".mindmap-cache/mindmap.json",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      ".mindmap-cache/user-config.json",
+      {
+        "id": ".mindmap-cache/user-config.json",
+        "name": "user-config.json",
+        "type": "file",
+        "path": ".mindmap-cache/user-config.json",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "debug-mcp-context.cjs",
+      {
+        "id": "debug-mcp-context.cjs",
+        "name": "debug-mcp-context.cjs",
+        "type": "file",
+        "path": "debug-mcp-context.cjs",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "docs",
+      {
+        "id": "docs",
+        "name": "docs",
+        "type": "directory",
+        "path": "docs",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "FINAL-TEST-RESULTS.md",
+      {
+        "id": "FINAL-TEST-RESULTS.md",
+        "name": "FINAL-TEST-RESULTS.md",
+        "type": "file",
+        "path": "FINAL-TEST-RESULTS.md",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "final-validation-test.cjs",
+      {
+        "id": "final-validation-test.cjs",
+        "name": "final-validation-test.cjs",
+        "type": "file",
+        "path": "final-validation-test.cjs",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "mcp-fix-verification-complete.md",
+      {
+        "id": "mcp-fix-verification-complete.md",
+        "name": "mcp-fix-verification-complete.md",
+        "type": "file",
+        "path": "mcp-fix-verification-complete.md",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "package.json",
+      {
+        "id": "package.json",
+        "name": "package.json",
+        "type": "file",
+        "path": "package.json",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "README.md",
+      {
+        "id": "README.md",
+        "name": "README.md",
+        "type": "file",
+        "path": "README.md",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "src",
+      {
+        "id": "src",
+        "name": "src",
+        "type": "directory",
+        "path": "src",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.877Z"
+      }
+    ],
+    [
+      "src/index.js",
+      {
+        "id": "src/index.js",
+        "name": "index.js",
+        "type": "file",
+        "path": "src/index.js",
+        "metadata": {
+          "functions": [],
+          "classes": [
+            {
+              "name": "DemoApp",
+              "startLine": 4,
+              "endLine": 5,
+              "methods": [
+                "setupRoutes",
+                "getUsers",
+                "start"
+              ],
+              "properties": []
+            }
+          ],
+          "imports": [],
+          "exports": []
+        },
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.924Z"
+      }
+    ],
+    [
+      "src/utils.js",
+      {
+        "id": "src/utils.js",
+        "name": "utils.js",
+        "type": "file",
+        "path": "src/utils.js",
+        "metadata": {
+          "functions": [
+            {
+              "name": "validateEmail",
+              "startLine": 3,
+              "endLine": 4,
+              "parameters": [
+                "email"
+              ]
+            },
+            {
+              "name": "formatUserData",
+              "startLine": 8,
+              "endLine": 9,
+              "parameters": [
+                "users"
+              ]
+            },
+            {
+              "name": "calculateStats",
+              "startLine": 16,
+              "endLine": 17,
+              "parameters": [
+                "data"
+              ]
+            }
+          ],
+          "classes": [],
+          "imports": [],
+          "exports": []
+        },
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "test-created-in-demo.txt",
+      {
+        "id": "test-created-in-demo.txt",
+        "name": "test-created-in-demo.txt",
+        "type": "file",
+        "path": "test-created-in-demo.txt",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "test-cross-project-functionality.md",
+      {
+        "id": "test-cross-project-functionality.md",
+        "name": "test-cross-project-functionality.md",
+        "type": "file",
+        "path": "test-cross-project-functionality.md",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "test-mcp-fix-verification.cjs",
+      {
+        "id": "test-mcp-fix-verification.cjs",
+        "name": "test-mcp-fix-verification.cjs",
+        "type": "file",
+        "path": "test-mcp-fix-verification.cjs",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "test-mcp-scan-fixed.cjs",
+      {
+        "id": "test-mcp-scan-fixed.cjs",
+        "name": "test-mcp-scan-fixed.cjs",
+        "type": "file",
+        "path": "test-mcp-scan-fixed.cjs",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "test-mcp-scan.cjs",
+      {
+        "id": "test-mcp-scan.cjs",
+        "name": "test-mcp-scan.cjs",
+        "type": "file",
+        "path": "test-mcp-scan.cjs",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "test-mcp-with-env.cjs",
+      {
+        "id": "test-mcp-with-env.cjs",
+        "name": "test-mcp-with-env.cjs",
+        "type": "file",
+        "path": "test-mcp-with-env.cjs",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "test-proper-mcp-context.cjs",
+      {
+        "id": "test-proper-mcp-context.cjs",
+        "name": "test-proper-mcp-context.cjs",
+        "type": "file",
+        "path": "test-proper-mcp-context.cjs",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "tests",
+      {
+        "id": "tests",
+        "name": "tests",
+        "type": "directory",
+        "path": "tests",
+        "metadata": {},
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.936Z"
+      }
+    ],
+    [
+      "tests/utils.test.js",
+      {
+        "id": "tests/utils.test.js",
+        "name": "utils.test.js",
+        "type": "file",
+        "path": "tests/utils.test.js",
+        "metadata": {
+          "functions": [],
+          "classes": [],
+          "imports": [],
+          "exports": []
+        },
+        "confidence": 0.8,
+        "lastUpdated": "2025-09-15T09:55:00.943Z"
+      }
+    ]
+  ],
+  "edges": [],
+  "projectRoot": "/data/data/com.termux/files/home/projects/mind-map/demo-project",
+  "lastScan": "2025-09-15T09:55:00.943Z",
+  "version": "0.1.0"
+}
