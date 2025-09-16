@@ -1,12 +1,31 @@
-# Mind Map MCP Server v1.12.0 🧠
+# Mind Map MCP Server v1.12.12
 
-**Brain-Inspired Code Intelligence Platform** - A revolutionary Model Context Protocol (MCP) server that implements neuroscience-based intelligence for software development. Features **high-performance query caching**, Hebbian learning, hierarchical context awareness, attention mechanisms, bi-temporal knowledge modeling, pattern prediction, **episodic memory**, **call pattern analysis**, **method call chain analysis**, **variable usage tracking**, **generic/template tracking**, **document intelligence**, **dynamic import detection**, and **enhanced file ignore patterns** for next-generation code understanding.
+**Experimental Code Intelligence Platform** - A Model Context Protocol (MCP) server that explores neuroscience-inspired approaches to software development analysis. This is an **experimental research project** featuring query caching, associative learning patterns, context awareness, attention mechanisms, temporal knowledge modeling, and code analysis tools.
 
-## 🚀 Current Status: Production Ready v1.12.0
+## ⚠️ Current Status: Experimental v1.12.12
 
-**✅ Query Result Caching (78.6% hit rate!)** | **✅ Brain-Inspired Intelligence** | **✅ Hebbian Learning** | **✅ Multi-Level Context** | **✅ Attention System** | **✅ Temporal Reasoning** | **✅ Pattern Prediction** | **✅ Episodic Memory** | **✅ Call Pattern Analysis** | **✅ Method Call Chain Analysis** | **✅ Variable Usage Tracking** | **✅ Generic/Template Tracking** | **✅ Document Intelligence** | **✅ Dynamic Import Detection** | **✅ Enhanced Query System** | **✅ Automatic Query Routing** | **✅ File Ignore Patterns** | **✅ Complete Java Support** | **✅ CI/CD Pipeline**
+**🧪 This is experimental software under active development** - Use for testing and research purposes. Features may change or be removed.
 
-**🎯 Latest Update v1.12.0**: **Query Result Caching Performance Optimization** - Achieved **78.6% cache hit rate** (exceeding 65% target) with **<1ms cached response times**. Fixed critical cache key generation bug, implemented deterministic composite cache keys, and added context-aware caching with LRU eviction. Memory-efficient caching system with 100MB limit provides 5-10x performance improvement for repeated queries.
+**Features under development**: Query caching • Context analysis • Code pattern detection • Document analysis • Multi-language AST parsing • File ignore patterns • CI/CD automation
+
+**🎯 Latest Update v1.12.12**: Automated GitHub Actions workflow fixes and npm authentication improvements. Fixed performance test hanging issues and improved release pipeline reliability.
+
+## ⚠️ Important Disclaimer
+
+This is experimental software developed for research and testing purposes. It explores various approaches to code analysis and project understanding using Model Context Protocol (MCP).
+
+**Before using:**
+- Expect bugs, incomplete features, and breaking changes
+- Use in non-production environments only
+- Backup your projects before extensive use
+- Report issues and provide feedback to help improve the project
+
+**Use cases:**
+- **Improving coding workflows with Claude Code** - Enhanced project understanding and context
+- Experimenting with MCP server development
+- Testing code analysis and pattern detection approaches
+- Research into alternative programming assistance tools
+- Learning about AST parsing and project structure analysis
 
 ## 📦 Installation & Setup
 
@@ -108,28 +127,28 @@ After setup, restart Claude and verify the integration:
    ```
    Please scan the current project and show me the statistics.
    ```
-3. **Advanced Usage**: Test brain-inspired features:
+3. **Test Features**: Try experimental features:
    ```
-   Please analyze the project architecture and predict potential errors.
+   Please analyze the project architecture.
    ```
 
-### 🚀 Usage with Claude Code
+### 📝 Usage with Claude Code
 
-Once installed, you can use these powerful commands in Claude:
+Once installed, you can experiment with these commands in Claude:
 
-#### **Essential Workflow**
+#### **Sample Workflow**
 ```
-# Start every coding session with:
+# Start with basic scanning:
 Please scan the project and get initial statistics.
 
-# Before making changes:
-Please predict potential errors in [filename] and suggest improvements.
+# Explore analysis features:
+Please analyze the project structure and suggest areas of focus.
 
-# After completing work:
-Please update the mind map with the successful completion of [task description].
+# Test learning features:
+Please update the mind map with information about [task description].
 ```
 
-#### **🧠 Brain-Inspired Intelligence Features**
+#### **🔬 Experimental Analysis Features**
 ```
 # Hebbian Learning - "Neurons that fire together, wire together"
 Please show me the Hebbian learning statistics and top co-activation patterns.
