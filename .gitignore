@@ -19,3 +19,6 @@ Thumbs.db
 *.mindmap
 mindmap-data/
 .mindmap-cache/.mcpregistry_*
+
+# Learning documentation (personal insights)
+learning/

@@ -709,6 +709,20 @@ export class QueryService {
     return this.queryCache.getStats();
   }
 
+  getEnhancedCacheStats(): any {
+    return (this.queryCache as any).getEnhancedStats();
+  }
+
+  async warmCache(): Promise<number> {
+    // Create a query executor that uses this service
+    const queryExecutor = async (query: string, context: string) => {
+      const options = JSON.parse(context);
+      return this.query(query, { ...options, bypassCache: true });
+    };
+
+    return (this.queryCache as any).warmCache(queryExecutor);
+  }
+
   async clearCache(): Promise<void> {
     await this.queryCache.invalidate();
   }

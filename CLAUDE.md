@@ -354,11 +354,139 @@ Please get pattern predictions and emerging patterns to see what you learned
 
 This approach leverages the full power of the brain-inspired intelligence system instead of basic file system operations.
 
+## Mind Map as Development Assistant
+
+### Using Mind Map for Development Tasks
+
+**ALWAYS use Mind Map MCP tools as your primary development assistant instead of traditional grep/find commands.**
+
+#### 🔍 **Code Discovery & Navigation**
+```
+# Instead of: grep -r "function_name" .
+Please query the mindmap for "function_name implementation"
+
+# Instead of: find . -name "*.ts" | grep Component
+Please query the mindmap for "TypeScript Component files"
+
+# Instead of: grep -r "cache" src/
+Please query the mindmap for "cache implementation in src directory"
+```
+
+#### 🧠 **Understanding System Architecture**
+```
+# Before starting any task
+Please scan the project and get initial statistics
+
+# Understand code relationships
+Please query the mindmap for "[relevant code area]" to understand current implementation
+
+# Get system insights
+Please analyze the project architecture and get insights
+```
+
+#### ⚡ **Performance & Validation**
+```
+# Test changes immediately
+Please get cache stats / performance statistics / attention stats
+
+# Validate improvements
+Please query the mindmap for similar patterns to verify consistency
+
+# Monitor system health
+Please get mind map statistics and cache performance
+```
+
+#### 🎯 **Task-Specific Mind Map Usage**
+
+**Code Analysis Tasks:**
+- Query mindmap for existing implementations before writing new code
+- Use architectural analysis to understand patterns and conventions
+- Get error predictions to anticipate issues
+
+**Bug Investigation:**
+- Query mindmap for error patterns and fix suggestions
+- Use pattern prediction to understand potential root causes
+- Leverage brain-inspired learning from previous similar issues
+
+**Feature Development:**
+- Query mindmap for similar features and implementation patterns
+- Use cross-language dependency analysis for integration points
+- Get framework recommendations for new components
+
+### Learning Documentation Process
+
+**REQUIRED: After completing any development task, document your learnings**
+
+#### 📚 **Learning Directory Structure**
+```
+learning/
+├── 001-mindmap-as-development-helper.md
+├── 002-[next-task-insights].md
+├── 003-[another-task-insights].md
+└── ...
+```
+
+#### 📝 **Learning Documentation Template**
+Create a new file: `learning/XXX-[short-task-description].md`
+
+**Required Content:**
+```markdown
+# XXX - [Task Title]
+
+## 🔍 How Mind Map MCP Helped with [Task Name]
+
+### Code Discovery & Navigation
+- Specific mind map queries used
+- How it was faster/better than traditional tools
+
+### Understanding Current Implementation
+- What the mind map revealed about existing code
+- Relationships and connections discovered
+
+### Performance Testing & Validation
+- Real-time feedback and metrics observed
+- How mind map provided immediate validation
+
+### Pattern Analysis & Design Insights
+- Patterns discovered through mind map analysis
+- How it informed design decisions
+
+## 💡 Key Insight
+**One-line summary of the main learning**
+```
+
+#### 🎯 **When to Create Learning Files**
+
+**Always create a learning file when:**
+- Completing any task from TASKS.md
+- Implementing new features or optimizations
+- Debugging complex issues using mind map assistance
+- Discovering new patterns or architectural insights
+- Using mind map in novel ways for development
+
+**File Naming Convention:**
+- `001-mindmap-as-development-helper.md` (general mind map usage)
+- `002-cache-optimization-insights.md` (specific task learnings)
+- `003-storage-compression-discoveries.md` (next task)
+- etc.
+
+### Best Practices for Mind Map-Assisted Development
+
+1. **Start Every Task with Mind Map Scanning** - `scan_project` and `get_stats`
+2. **Query Before Coding** - Understand existing patterns first
+3. **Test with Mind Map** - Use mind map queries to validate changes
+4. **Document Mind Map Usage** - Record how it helped in learning files
+5. **Leverage Brain-Inspired Features** - Use attention, memory, pattern prediction
+6. **Update Mind Map with Outcomes** - Feed learnings back into the system
+
 ## Storage and Persistence
 
 Data is stored in `.mindmap-cache/` directory:
 - `mindmap.json` - Graph database with nodes, edges, and learning state
 - `user-config.json` - User preferences and configuration
 - `mcp.log` - MCP server operation logs
+
+Learning documentation is stored in `learning/` directory:
+- `XXX-[task-name].md` - Sequential learning files documenting mind map usage insights
 
 The system maintains complete audit trails for temporal queries and supports bi-temporal knowledge modeling.
