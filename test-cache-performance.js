@@ -111,6 +111,20 @@ async function testCachePerformance() {
   } catch (error) {
     console.error('❌ Error during cache testing:', error);
     console.error('Stack trace:', error.stack);
+  } finally {
+    // Ensure proper cleanup
+    if (engine) {
+      try {
+        // Clear any pending timers/intervals
+        await engine.clearCache();
+        console.log('✅ Cache cleared and engine cleaned up');
+      } catch (cleanupError) {
+        console.log('⚠️ Cleanup warning:', cleanupError.message);
+      }
+    }
+
+    // Force exit to prevent hanging
+    process.exit(0);
   }
 }
 

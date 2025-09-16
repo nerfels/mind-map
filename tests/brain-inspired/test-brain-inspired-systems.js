@@ -174,6 +174,10 @@ async function testBrainInspiredSystems() {
   } catch (error) {
     console.error('❌ Error testing brain-inspired systems:', error.message);
     if (error.stack) console.error(error.stack);
+    process.exit(1);
+  } finally {
+    // Force exit to prevent hanging
+    process.exit(0);
   }
 }
 

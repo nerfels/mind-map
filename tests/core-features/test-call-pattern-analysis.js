@@ -495,4 +495,9 @@ suite.runTest = async function(name, testFn) {
   }
 };
 
-suite.runAllTests().catch(console.error);
+suite.runAllTests().then(() => {
+  process.exit(0);
+}).catch(error => {
+  console.error('Test failed:', error);
+  process.exit(1);
+});
