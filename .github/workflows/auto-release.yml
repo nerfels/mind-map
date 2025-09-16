@@ -7,9 +7,14 @@ on:
     paths:
       - 'package.json'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   check-and-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v4
