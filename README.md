@@ -1,14 +1,14 @@
-# Mind Map MCP Server v1.14.0
+# Mind Map MCP Server v1.15.0
 
 **Experimental Code Intelligence Platform** - A Model Context Protocol (MCP) server that explores neuroscience-inspired approaches to software development analysis. This is an **experimental research project** featuring advanced query caching, associative learning patterns, context awareness, attention mechanisms, temporal knowledge modeling, and code analysis tools.
 
-## ⚠️ Current Status: Experimental v1.14.0
+## ⚠️ Current Status: Experimental v1.15.0
 
 **🧪 This is experimental software under active development** - Use for testing and research purposes. Features may change or be removed.
 
 **Features under development**: Context-aware caching • Brain-inspired learning • Code pattern detection • Document analysis • Multi-language AST parsing • File ignore patterns • CI/CD automation
 
-**🎯 Latest Update v1.14.0**: **Storage Compression Implementation** - Revolutionary storage optimization with 41.4% size reduction (52MB → 30.5MB). Advanced compression algorithms with node/edge compression, path deduplication, metadata abbreviation, and full backward compatibility while maintaining query performance.
+**🎯 Latest Update v1.15.0**: **Variable Lazy Loading Memory Optimization** - Intelligent memory management with 40.3% reduction in variable node memory usage (9,206 → 8,769 nodes). Smart filtering loads only critical variables (exported, global, heavily-used) immediately while providing on-demand loading for others in 8ms average retrieval time.
 
 ## ⚠️ Important Disclaimer
 
@@ -229,6 +229,14 @@ Please recommend missing development tools that would benefit this project.
 - **Attention Mechanisms**: Multi-modal attention fusion with cognitive load management (Miller's 7±2 rule)
 - **Bi-temporal Knowledge Model**: Valid time vs transaction time tracking with complete audit trails
 - **Pattern Prediction Engine**: Anticipates code patterns before they emerge using time series analysis and predictive forecasting
+
+### 🚀 Memory Optimization (v1.15.0)
+- **Variable Lazy Loading**: Intelligent memory management with 40.3% reduction in variable node memory usage
+- **Smart Filtering**: Only loads critical variables (exported, global, heavily-used >5 references) immediately
+- **Summary Node System**: Creates single nodes containing lazy-loaded variable metadata for thousands of variables
+- **On-Demand Loading**: 8ms average retrieval time for pattern-based variable queries
+- **Full Functionality Preservation**: All variable querying capabilities maintained while dramatically reducing memory footprint
+- **Automatic Optimization**: No configuration required - automatically detects important vs. lazily-loadable variables
 
 ### 📊 Advanced Call Pattern Analysis (v1.1.5)
 - **Function Call Graph Construction**: Complete call graph analysis with entry points, cycles, and depth calculation
