@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 
 import { spawn } from 'child_process';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = join(__dirname, '../..');
+const indexPath = join(projectRoot, 'dist/index.js');
 
 console.log('⚡ Testing Performance Optimization System\n');
 console.log('='.repeat(60));
@@ -92,13 +99,15 @@ function runTest() {
     console.log('✨ Performance optimization system is functional!');
     console.log(`⏱️ Total test time: ${totalTime}ms\n`);
     process.exit(0);
+    return;
   }
 
   const test = tests[currentTestIndex];
   console.log(`\n🧪 Running: ${test.name}`);
   const testStartTime = Date.now();
 
-  const serverProcess = spawn('node', ['../../dist/index.js'], {
+  const serverProcess = spawn('node', [indexPath], {
+    cwd: projectRoot,
     stdio: ['pipe', 'pipe', 'pipe']
   });
 
@@ -139,9 +148,9 @@ function runTest() {
           }
           
           setTimeout(() => {
-            serverProcess.kill();
+            serverProcess.kill('SIGKILL');
             currentTestIndex++;
-            
+
             // Small delay between tests to let system stabilize
             setTimeout(runTest, 500);
           }, 100);
@@ -168,7 +177,7 @@ function runTest() {
     if (!hasResult) {
       const testTime = Date.now() - testStartTime;
       console.log(`⏱️ Timeout for ${test.name} (${testTime}ms)`);
-      serverProcess.kill();
+      serverProcess.kill('SIGKILL');
       currentTestIndex++;
       runTest();
     }
@@ -176,4 +185,11 @@ function runTest() {
 }
 
 console.log('🚀 Starting performance benchmarks...\n');
+
+// Add overall timeout to prevent infinite hanging
+setTimeout(() => {
+  console.log('⏱️ Overall test timeout reached (60s) - forcing exit');
+  process.exit(1);
+}, 60000);
+
 runTest();
