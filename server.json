@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.nerfels/mind-map",
+  "description": "Experimental code intelligence platform for Claude Code with AST parsing and context analysis",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/nerfels/mind-map",
+    "source": "github"
+  },
+  "version": "1.12.13",
+  "packages": [
+    {
+      "registry_type": "npm",
+      "registry_base_url": "https://registry.npmjs.org",
+      "identifier": "mind-map-mcp",
+      "version": "1.12.13",
+      "transport": {
+        "type": "stdio"
+      },
+      "environment_variables": [
+        {
+          "description": "Project root directory for MCP to analyze (optional - uses current working directory if not specified)",
+          "is_required": false,
+          "format": "string",
+          "is_secret": false,
+          "name": "MCP_PROJECT_ROOT"
+        }
+      ]
+    }
+  ]
+}

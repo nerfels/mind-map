@@ -18,4 +18,4 @@ Thumbs.db
 # Mind map data
 *.mindmap
 mindmap-data/
-.mindmap-cache/
+.mindmap-cache/.mcpregistry_*
