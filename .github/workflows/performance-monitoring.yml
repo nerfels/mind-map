@@ -109,6 +109,11 @@ jobs:
           results.styleAnalysis = end4 - start4;
           console.log(`   Style analysis: ${results.styleAnalysis.toFixed(2)}ms`);
 
+          // Cleanup: Clear engine cache and force cleanup
+          if (engine && engine.clearCache) {
+            await engine.clearCache();
+          }
+
           return results;
         }
 
@@ -148,6 +153,7 @@ jobs:
 
           if (alertsTriggered === 0) {
             console.log('✅ All performance metrics within acceptable ranges');
+            process.exit(0);
           } else {
             console.log(`⚠️  ${alertsTriggered} performance alerts triggered`);
             process.exit(1);
@@ -156,6 +162,12 @@ jobs:
           console.error('❌ Performance test failed:', error);
           process.exit(1);
         });
+
+        // Add overall timeout to prevent infinite hanging
+        setTimeout(() => {
+          console.log('⏱️ Performance test timeout (60s) - forcing exit');
+          process.exit(1);
+        }, 60000);
         EOF
 
         node performance-test.js
