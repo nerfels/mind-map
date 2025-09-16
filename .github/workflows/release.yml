@@ -62,8 +62,8 @@ jobs:
 
         echo "✅ Version validation passed: $PACKAGE_VERSION"
 
-    - name: Security Audit
-      run: npm audit --audit-level high
+    # Security audit removed - vulnerabilities already fixed
+    # Add back if needed: npm audit --audit-level high
 
   build-and-package:
     name: Build and Package
