@@ -50,9 +50,9 @@ export class OptimizedMindMapStorage {
   private cacheInvalidTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
   constructor(projectRoot: string, storagePath?: string) {
-    // Validate and sanitize paths to prevent path traversal
+    // Validate and sanitize paths
     this.projectRoot = resolve(normalize(projectRoot));
-    
+
     if (storagePath) {
       const resolvedStoragePath = resolve(normalize(storagePath));
       if (!resolvedStoragePath.startsWith(this.projectRoot) && !resolvedStoragePath.startsWith('/tmp')) {
@@ -103,14 +103,20 @@ export class OptimizedMindMapStorage {
     this.performanceMonitor.timeSync('addNode', () => {
       // Validate node data to prevent injection
       this.validateNodeData(node);
-      
+
       // Remove from existing indexes if updating
       if (this.graph.nodes.has(node.id)) {
         this.removeFromNodeIndexes(node.id);
         this.removeFromCompositeIndexes(node.id);
       }
 
-      this.graph.nodes.set(node.id, node);
+      // Add node with updated timestamp
+      this.graph.nodes.set(node.id, {
+        ...node,
+        lastUpdated: new Date()
+      });
+
+      // Add to indexes
       this.addToNodeIndexes(node);
       this.addToCompositeIndexes(node);
     }, { nodeType: node.type, nodeId: node.id });
@@ -120,6 +126,114 @@ export class OptimizedMindMapStorage {
     return this.performanceMonitor.timeSync('getNode', () => {
       return this.graph.nodes.get(id);
     }, { nodeId: id });
+  }
+
+  removeNode(id: string): void {
+    this.performanceMonitor.timeSync('removeNode', () => {
+      const node = this.graph.nodes.get(id);
+      if (node) {
+        this.removeFromNodeIndexes(id);
+        this.removeFromCompositeIndexes(id);
+        this.graph.nodes.delete(id);
+
+        // Remove all edges connected to this node
+        const edgesToRemove: string[] = [];
+        for (const [edgeId, edge] of this.graph.edges) {
+          if (edge.source === id || edge.target === id) {
+            edgesToRemove.push(edgeId);
+          }
+        }
+        edgesToRemove.forEach(edgeId => this.removeEdge(edgeId));
+      }
+    }, { nodeId: id });
+  }
+
+  addEdge(edge: MindMapEdge): void {
+    this.performanceMonitor.timeSync('addEdge', () => {
+      // Remove from existing indexes if updating
+      if (this.graph.edges.has(edge.id)) {
+        this.removeFromEdgeIndexes(edge.id);
+      }
+
+      this.graph.edges.set(edge.id, edge);
+      this.addToEdgeIndexes(edge);
+    }, { edgeType: edge.type, edgeId: edge.id });
+  }
+
+  getEdge(id: string): MindMapEdge | undefined {
+    return this.performanceMonitor.timeSync('getEdge', () => {
+      return this.graph.edges.get(id);
+    }, { edgeId: id });
+  }
+
+  removeEdge(id: string): void {
+    this.performanceMonitor.timeSync('removeEdge', () => {
+      const edge = this.graph.edges.get(id);
+      if (edge) {
+        this.removeFromEdgeIndexes(id);
+        this.graph.edges.delete(id);
+      }
+    }, { edgeId: id });
+  }
+
+  findEdges(predicate: (edge: MindMapEdge) => boolean): MindMapEdge[] {
+    return this.performanceMonitor.timeSync('findEdges', () => {
+      return Array.from(this.graph.edges.values()).filter(predicate);
+    });
+  }
+
+  getConnectedNodes(nodeId: string, direction: 'incoming' | 'outgoing' | 'both' = 'both'): MindMapNode[] {
+    return this.performanceMonitor.timeSync('getConnectedNodes', () => {
+      const connectedIds = new Set<string>();
+
+      if (direction === 'outgoing' || direction === 'both') {
+        const outgoingEdges = this.edgeIndex.bySource.get(nodeId);
+        if (outgoingEdges) {
+          for (const edgeId of outgoingEdges) {
+            const edge = this.graph.edges.get(edgeId);
+            if (edge) connectedIds.add(edge.target);
+          }
+        }
+      }
+
+      if (direction === 'incoming' || direction === 'both') {
+        const incomingEdges = this.edgeIndex.byTarget.get(nodeId);
+        if (incomingEdges) {
+          for (const edgeId of incomingEdges) {
+            const edge = this.graph.edges.get(edgeId);
+            if (edge) connectedIds.add(edge.source);
+          }
+        }
+      }
+
+      return Array.from(connectedIds)
+        .map(id => this.graph.nodes.get(id))
+        .filter((node): node is MindMapNode => node !== undefined);
+    }, { nodeId, direction });
+  }
+
+  updateNodeConfidence(nodeId: string, confidence: number): void {
+    this.performanceMonitor.timeSync('updateNodeConfidence', () => {
+      const node = this.graph.nodes.get(nodeId);
+      if (node) {
+        // Update confidence bucket index
+        const oldBucket = Math.floor(node.confidence * 5);
+        const newBucket = Math.floor(confidence * 5);
+
+        if (oldBucket !== newBucket) {
+          const oldBucketSet = this.nodeIndex.byConfidence.get(oldBucket);
+          if (oldBucketSet) oldBucketSet.delete(nodeId);
+
+          if (!this.nodeIndex.byConfidence.has(newBucket)) {
+            this.nodeIndex.byConfidence.set(newBucket, new Set());
+          }
+          this.nodeIndex.byConfidence.get(newBucket)!.add(nodeId);
+        }
+
+        node.confidence = confidence;
+        node.lastUpdated = new Date();
+      }
+    }, { nodeId, confidence });
   }
 
   // Highly optimized search using indexes
@@ -371,62 +485,7 @@ export class OptimizedMindMapStorage {
     }, { terms, matchAllTerms });
   }
 
-  // Optimized edge operations
-  addEdge(edge: MindMapEdge): void {
-    this.performanceMonitor.timeSync('addEdge', () => {
-      // Remove from existing indexes if updating
-      if (this.graph.edges.has(edge.id)) {
-        this.removeFromEdgeIndexes(edge.id);
-      }
-      
-      this.graph.edges.set(edge.id, edge);
-      this.addToEdgeIndexes(edge);
-    }, { edgeType: edge.type, edgeId: edge.id });
-  }
 
-  findEdges(predicate?: (edge: MindMapEdge) => boolean): MindMapEdge[] {
-    return this.performanceMonitor.timeSync('findEdges', () => {
-      if (!predicate) {
-        return Array.from(this.graph.edges.values());
-      }
-      
-      return Array.from(this.graph.edges.values()).filter(predicate);
-    });
-  }
-
-  getConnectedNodes(nodeId: string, direction: 'incoming' | 'outgoing' | 'both' = 'both'): MindMapNode[] {
-    return this.performanceMonitor.timeSync('getConnectedNodes', () => {
-      const connectedIds = new Set<string>();
-      
-      if (direction === 'outgoing' || direction === 'both') {
-        const outgoingEdges = this.edgeIndex.bySource.get(nodeId);
-        if (outgoingEdges) {
-          for (const edgeId of outgoingEdges) {
-            const edge = this.graph.edges.get(edgeId);
-            if (edge) {
-              connectedIds.add(edge.target);
-            }
-          }
-        }
-      }
-      
-      if (direction === 'incoming' || direction === 'both') {
-        const incomingEdges = this.edgeIndex.byTarget.get(nodeId);
-        if (incomingEdges) {
-          for (const edgeId of incomingEdges) {
-            const edge = this.graph.edges.get(edgeId);
-            if (edge) {
-              connectedIds.add(edge.source);
-            }
-          }
-        }
-      }
-      
-      return Array.from(connectedIds)
-        .map(id => this.graph.nodes.get(id))
-        .filter((node): node is MindMapNode => node !== undefined);
-    }, { nodeId, direction });
-  }
 
   // Index management
   private addToNodeIndexes(node: MindMapNode): void {
@@ -764,6 +823,62 @@ export class OptimizedMindMapStorage {
     this.performanceMonitor.clear();
   }
 
+  // Public API methods for compatibility with MindMapStorage
+  getGraph(): MindMapGraph {
+    return this.graph;
+  }
+
+  clear(): void {
+    this.graph.nodes.clear();
+    this.graph.edges.clear();
+    this.nodeIndex.byType.clear();
+    this.nodeIndex.byPath.clear();
+    this.nodeIndex.byName.clear();
+    this.nodeIndex.byConfidence.clear();
+    this.nodeIndex.byFramework.clear();
+    this.nodeIndex.byLanguage.clear();
+    this.edgeIndex.bySource.clear();
+    this.edgeIndex.byTarget.clear();
+    this.edgeIndex.byType.clear();
+    this.compositeIndex.namePathTerms.clear();
+    this.compositeIndex.typeNameTerms.clear();
+    this.compositeIndex.typePathTerms.clear();
+    this.compositeIndex.semanticTerms.clear();
+    this.compositeIndex.normalizedPaths.clear();
+    this.compositeIndex.termCombinations.clear();
+    this.graph.lastScan = new Date();
+  }
+
+  getStats(): {
+    nodeCount: number;
+    edgeCount: number;
+    nodesByType: Record<string, number>;
+    averageConfidence: number;
+  } {
+    const nodesByType: Record<string, number> = {};
+    let totalConfidence = 0;
+
+    for (const node of this.graph.nodes.values()) {
+      nodesByType[node.type] = (nodesByType[node.type] || 0) + 1;
+      totalConfidence += node.confidence;
+    }
+
+    return {
+      nodeCount: this.graph.nodes.size,
+      edgeCount: this.graph.edges.size,
+      nodesByType,
+      averageConfidence: this.graph.nodes.size > 0 ? totalConfidence / this.graph.nodes.size : 0
+    };
+  }
+
+  getAllNodes(): MindMapNode[] {
+    return Array.from(this.graph.nodes.values());
+  }
+
+  getAllEdges(): MindMapEdge[] {
+    return Array.from(this.graph.edges.values());
+  }
+
   // Persistence (simplified for now - same as original)
   async save(): Promise<void> {
     return this.performanceMonitor.timeAsync('save', async () => {
@@ -868,16 +983,6 @@ export class OptimizedMindMapStorage {
     };
   }
 
-  // Statistics
-  getStats() {
-    return {
-      nodeCount: this.graph.nodes.size,
-      edgeCount: this.graph.edges.size,
-      nodesByType: this.getNodeCountsByType(),
-      averageConfidence: this.calculateAverageConfidence(),
-      indexStats: this.getIndexStats()
-    };
-  }
 
   private getNodeCountsByType(): Record<string, number> {
     const counts: Record<string, number> = {};
