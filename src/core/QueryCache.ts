@@ -40,8 +40,8 @@ export class QueryCache {
   async get(query: string, context: string): Promise<QueryResult | null> {
     this.stats.totalQueries++;
 
-    // Track query patterns for cache warming
-    this.trackQueryPattern(query);
+    // Fast path: skip expensive operations for simple queries
+    const isSimpleQuery = query.length <= 10 && /^[a-zA-Z0-9\-_.]+$/.test(query);
 
     const contextHash = this.hashContext(context);
     const exactKey = this.createKey(query, contextHash);
@@ -50,18 +50,24 @@ export class QueryCache {
     let entry = this.cache.get(exactKey);
 
     if (!entry) {
-      // Try similarity matching with enhanced context awareness
+      // Enable similarity matching for all queries (user prefers quality over speed)
       entry = this.findSimilarEntry(query, context, contextHash) || undefined;
     }
 
+    // Track query patterns only for cache misses
+    if (!entry) {
+      this.trackQueryPattern(query);
+    }
+
     if (entry && this.isEntryValid(entry)) {
-      // Update access tracking
-      this.updateAccess(exactKey, entry);
+      // Fast path: skip expensive tracking for simple queries
+      if (!isSimpleQuery) {
+        this.updateAccess(exactKey, entry);
+        this.updateWarmupCandidates(query, entry);
+      }
+
       this.stats.cacheHits++;
       this.stats.hitRate = this.stats.cacheHits / this.stats.totalQueries;
-
-      // Update warmup candidates based on access patterns
-      this.updateWarmupCandidates(query, entry);
 
       return entry.results;
     }
@@ -189,17 +195,68 @@ export class QueryCache {
    */
   private findSimilarEntry(query: string, context: string, contextHash: string): CacheEntry | null {
     const queryLower = query.toLowerCase().trim();
-    
+
+    // Fast path: try common context variations first
+    const commonVariations = [
+      contextHash,
+      this.hashContext('{}'), // Empty context
+      this.hashContext(JSON.stringify({})) // Default context
+    ];
+
+    for (const variation of commonVariations) {
+      const key = this.createKey(queryLower, variation);
+      const entry = this.cache.get(key);
+      if (entry && this.isEntryValid(entry)) {
+        return entry;
+      }
+    }
+
+    // Fallback: check similar queries with context similarity (limited iteration)
+    let checkedEntries = 0;
+    const maxChecks = 20; // Limit expensive similarity checks
+
     for (const [key, entry] of this.cache.entries()) {
+      if (++checkedEntries > maxChecks) break;
+
       if (entry.query.toLowerCase().trim() === queryLower) {
-        const similarity = this.calculateContextSimilarity(context, entry.context);
+        const similarity = this.calculateContextSimilarityFast(context, entry.context);
         if (similarity >= this.config.contextSimilarityThreshold) {
           return entry;
         }
       }
     }
-    
+
     return null;
+  }
+
+  /**
+   * Fast context similarity calculation for performance
+   */
+  private calculateContextSimilarityFast(context1: string, context2: string): number {
+    if (context1 === context2) return 1.0;
+
+    // Quick string comparison for simple cases
+    if (!context1 || !context2) return 0.0;
+
+    // Try JSON parsing for structured comparison
+    try {
+      const parsed1 = JSON.parse(context1);
+      const parsed2 = JSON.parse(context2);
+
+      // Simple key matching for performance
+      const keys1 = Object.keys(parsed1);
+      const keys2 = Object.keys(parsed2);
+
+      if (keys1.length === 0 && keys2.length === 0) return 1.0;
+
+      const commonKeys = keys1.filter(key => keys2.includes(key));
+      const similarity = commonKeys.length / Math.max(keys1.length, keys2.length);
+
+      return similarity;
+    } catch {
+      // Fallback to basic string similarity
+      return this.calculateStringSimilarity(context1, context2);
+    }
   }
 
   /**

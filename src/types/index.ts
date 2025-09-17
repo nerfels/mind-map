@@ -329,6 +329,8 @@ export interface QueryResult {
   }>;
   usedActivation?: boolean;
   activationLevels?: number;
+  // Fast path optimization for simple queries
+  fastPath?: boolean;
   // Specialized engine markers
   isAdvancedQuery?: boolean;
   isTemporalQuery?: boolean;

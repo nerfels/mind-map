@@ -119,47 +119,46 @@ export class QueryService {
       }
     }
 
-    // Enable activation spreading by default for better results
-    const useActivation = options.useActivation !== false;
-    const activationLevels = options.activationLevels || 3;
+    // Balanced approach: optimize for quality with reasonable performance (~200ms target)
+    const isSimpleQuery = query.length <= 10 && /^[a-zA-Z0-9\-_.]+$/.test(query);
+    const useFastPath = isSimpleQuery && options.useActivation === false; // Only when explicitly disabled
 
     let result: QueryResult;
-    if (useActivation) {
-      result = await this.queryWithActivation(query, queryLower, options, limit, startTime);
+    if (useFastPath) {
+      // Fast path only when activation explicitly disabled
+      result = await this.queryLinearFast(query, queryLower, limit, startTime);
     } else {
-      result = await this.queryLinear(query, queryLower, options, limit, startTime);
+      // Full processing with brain-inspired systems for better quality
+      const useActivation = options.useActivation !== false;
+      if (useActivation) {
+        result = await this.queryWithActivation(query, queryLower, options, limit, startTime);
+      } else {
+        result = await this.queryLinear(query, queryLower, options, limit, startTime);
+      }
     }
 
-    // Deep debug logging for exact match issue
-    const isDebugQuery = true; // Debug ALL queries temporarily
-
-    console.log(`[DEBUG_TEST] Query received in QueryService: "${query}"`);
+    // Performance: Only debug when needed
+    const isDebugQuery = process.env.MINDMAP_DEBUG === 'true';
 
     if (isDebugQuery) {
+      console.log(`[DEBUG_TEST] Query received in QueryService: "${query}"`);
       const debugMsg = `\n[DEEP_DEBUG] === Query: "${query}" ===\n` +
                       `[DEEP_DEBUG] After initial query: nodes=${result.nodes.length}, total=${result.totalMatches}\n` +
-                      `[DEEP_DEBUG] Query route: ${queryRoute?.engine || 'unknown'}\n` +
-                      `[DEEP_DEBUG] Options: ${JSON.stringify({
-                        useActivation: options.useActivation,
-                        bypassInhibition: options.bypassInhibition,
-                        bypassHebbianLearning: options.bypassHebbianLearning,
-                        bypassAttention: options.bypassAttention,
-                        bypassMultiModalFusion: options.bypassMultiModalFusion
-                      })}\n` +
-                      (result.nodes.length > 0 ?
-                        `[DEEP_DEBUG] First node: ${JSON.stringify({
-                          id: result.nodes[0].id,
-                          name: result.nodes[0].name,
-                          confidence: result.nodes[0].confidence
-                        })}\n` : '');
-
+                      `[DEEP_DEBUG] Query route: ${queryRoute?.engine || 'unknown'}\n`;
       console.log(debugMsg);
+    }
 
-      // Also write to debug file
-      try {
-        require('fs').appendFileSync('/data/data/com.termux/files/home/projects/mind-map/debug-query.log',
-          `${new Date().toISOString()} ${debugMsg}\n`);
-      } catch (e) { /* ignore */ }
+    // Skip expensive brain-inspired systems for fast path queries
+    if (useFastPath || result.fastPath) {
+      // Fast path: Cache and return immediately
+      if (!options.bypassCache) {
+        await this.queryCache.set(query, context, result);
+        console.log(`[CACHE_SET] Cached query "${query}" with ${result.nodes.length} nodes`);
+      }
+      return {
+        ...result,
+        queryTime: Date.now() - startTime
+      };
     }
 
     // Apply inhibitory learning (unless explicitly bypassed)
@@ -576,6 +575,55 @@ export class QueryService {
   private async queryWithActivation(query: string, queryLower: string, options: QueryOptions, limit: number, startTime: number): Promise<QueryResult> {
     // Implementation would need to be copied from MindMapEngine
     return this.queryLinear(query, queryLower, options, limit, startTime);
+  }
+
+  private async queryLinearFast(query: string, queryLower: string, limit: number, startTime: number): Promise<QueryResult> {
+    // Fast linear search for simple queries (mobile optimization)
+    const graph = this.storage.getGraph();
+    const results: MindMapNode[] = [];
+
+    // Simple exact and prefix matching only
+    for (const [nodeId, node] of graph.nodes) {
+      const nodeName = node.name.toLowerCase();
+      const nodePath = node.path?.toLowerCase() || '';
+
+      let relevanceScore = 0;
+
+      // Exact matches
+      if (nodeName === queryLower || nodePath.endsWith('/' + queryLower)) {
+        relevanceScore = 1.4;
+      }
+      // Prefix matches
+      else if (nodeName.startsWith(queryLower) || nodePath.includes('/' + queryLower)) {
+        relevanceScore = 1.0;
+      }
+      // Contains matches
+      else if (nodeName.includes(queryLower) || nodePath.includes(queryLower)) {
+        relevanceScore = 0.7;
+      }
+
+      if (relevanceScore > 0) {
+        results.push({
+          ...node,
+          confidence: relevanceScore
+        });
+
+        // Early exit for mobile performance
+        if (results.length >= limit * 2) break;
+      }
+    }
+
+    // Sort by relevance and return top results
+    results.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+
+    return {
+      nodes: results.slice(0, limit),
+      edges: [],
+      totalMatches: results.length,
+      queryTime: Date.now() - startTime,
+      usedActivation: false,
+      fastPath: true
+    };
   }
 
   private async queryLinear(query: string, queryLower: string, options: QueryOptions, limit: number, startTime: number): Promise<QueryResult> {
