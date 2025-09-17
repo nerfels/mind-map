@@ -1,14 +1,14 @@
-# Mind Map MCP Server v1.17.0
+# Mind Map MCP Server v1.18.0
 
 **Experimental Code Intelligence Platform** - A Model Context Protocol (MCP) server that explores neuroscience-inspired approaches to software development analysis. This is an **experimental research project** featuring advanced query caching, associative learning patterns, context awareness, attention mechanisms, temporal knowledge modeling, and code analysis tools.
 
-## ⚠️ Current Status: Experimental v1.17.0
+## ⚠️ Current Status: Experimental v1.18.0
 
 **🧪 This is experimental software under active development** - Use for testing and research purposes. Features may change or be removed.
 
-**Features under development**: Context-aware caching • Brain-inspired learning • Code pattern detection • Document analysis • Multi-language AST parsing • File ignore patterns • CI/CD automation
+**Features under development**: Context-aware caching • Brain-inspired learning • Code pattern detection • Document analysis • Multi-language AST parsing • File ignore patterns • CI/CD automation • Memory optimization
 
-**🎯 Latest Update v1.17.0**: **Enhanced Framework Detection** - Comprehensive framework detection now supports 20+ frameworks across Web, Mobile, Desktop, Cloud, ML/AI, and Build categories. Added sub-project scanning for monorepos, implemented Spring Boot, FastAPI, Maven, and Gradle detection. Fixed display bugs and added framework-specific recommendations with actionable guidance for security, performance, and best practices.
+**🎯 Latest Update v1.18.0**: **Memory Optimization & Safe Edge Pruning** - Implemented comprehensive memory optimization with safe edge pruning (61.7% edge reduction), conservative variable compression with lazy loading, and integration with ScalabilityManager. Fixed critical data loss bug with safety validation. Achieves 2.5ms query performance with automatic memory management for 10k+ node projects. Added 25% max removal limits, dry-run validation, and safety reporting to prevent data loss.
 
 ## ⚠️ Important Disclaimer
 

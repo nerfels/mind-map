@@ -489,14 +489,41 @@ export class ScalabilityManager {
   }
 
   /**
-   * Perform memory cleanup
+   * Perform comprehensive memory optimization including edge pruning and variable compression
    */
   private async performMemoryCleanup(): Promise<void> {
-    console.log('🧹 Performing memory cleanup...');
+    console.log('🧹 Performing comprehensive memory optimization...');
 
     const graph = this.storage.getGraph();
+    let totalMemoryReduced = 0;
 
-    // Clean up old nodes if memory limit exceeded
+    // 1. Edge pruning optimization - NEW FEATURE
+    if (this.storage && typeof (this.storage as any).pruneRedundantEdges === 'function') {
+      console.log('✂️ Pruning redundant edges...');
+      const edgePruningResult = (this.storage as any).pruneRedundantEdges({
+        threshold: 0.3,
+        keepTransitive: false,
+        dryRun: false
+      });
+
+      totalMemoryReduced += edgePruningResult.memoryReduced;
+      console.log(`✂️ Pruned ${edgePruningResult.removed} edges, freed ${(edgePruningResult.memoryReduced / 1024).toFixed(2)}KB`);
+    }
+
+    // 2. Variable node compression - NEW FEATURE
+    if (this.storage && typeof (this.storage as any).compressVariableNodes === 'function') {
+      console.log('📦 Compressing variable nodes...');
+      const compressionResult = (this.storage as any).compressVariableNodes({
+        enableLazyLoading: true,
+        deduplicateNames: true,
+        dryRun: false
+      });
+
+      totalMemoryReduced += compressionResult.memoryReduced;
+      console.log(`📦 Compressed ${compressionResult.compressed} variables, lazy-loaded ${compressionResult.lazyLoaded}, freed ${(compressionResult.memoryReduced / 1024).toFixed(2)}KB`);
+    }
+
+    // 3. Legacy cleanup for nodes exceeding limits
     if (graph.nodes.size > this.config.maxNodesInMemory) {
       const nodesToRemove = graph.nodes.size - this.config.maxNodesInMemory;
       console.log(`🧹 Removing ${nodesToRemove} old nodes to free memory`);
@@ -508,10 +535,11 @@ export class ScalabilityManager {
 
       for (const node of sortedNodes) {
         graph.nodes.delete(node.id);
+        totalMemoryReduced += this.estimateNodeMemoryUsage(node);
       }
     }
 
-    // Clean up old edges
+    // 4. Legacy cleanup for edges exceeding limits
     if (graph.edges.size > this.config.maxEdgesInMemory) {
       const edgesToRemove = graph.edges.size - this.config.maxEdgesInMemory;
       console.log(`🧹 Removing ${edgesToRemove} old edges to free memory`);
@@ -523,15 +551,52 @@ export class ScalabilityManager {
 
       for (const edge of sortedEdges) {
         graph.edges.delete(edge.id);
+        totalMemoryReduced += 200; // Estimate 200 bytes per edge
       }
     }
 
-    // Force garbage collection if available
+    // 5. Force garbage collection if available
     if (global.gc) {
       global.gc();
     }
 
+    console.log(`🎯 Total memory optimization: ${(totalMemoryReduced / 1024).toFixed(2)}KB freed`);
     this.lastCleanup = new Date();
+  }
+
+  /**
+   * Estimate memory usage of a node
+   */
+  private estimateNodeMemoryUsage(node: any): number {
+    const baseSize = 500; // Base node overhead
+    const metadataSize = node.metadata ? JSON.stringify(node.metadata).length : 0;
+    const nameSize = node.name ? node.name.length * 2 : 0; // Unicode characters
+    return baseSize + metadataSize + nameSize;
+  }
+
+  /**
+   * Trigger immediate memory optimization (for testing and manual execution)
+   */
+  async optimizeMemoryNow(): Promise<{
+    edgesPruned: number;
+    variablesCompressed: number;
+    memoryFreed: number;
+  }> {
+    console.log('🚀 Manual memory optimization triggered...');
+
+    const initialNodes = this.storage.getGraph().nodes.size;
+    const initialEdges = this.storage.getGraph().edges.size;
+
+    await this.performMemoryCleanup();
+
+    const finalNodes = this.storage.getGraph().nodes.size;
+    const finalEdges = this.storage.getGraph().edges.size;
+
+    return {
+      edgesPruned: initialEdges - finalEdges,
+      variablesCompressed: initialNodes - finalNodes,
+      memoryFreed: (initialNodes + initialEdges) * 300 // Rough estimate
+    };
   }
 
   /**
