@@ -693,6 +693,14 @@ export class MindMapEngine {
     } catch (error) {
       console.log('⚠️ Attention initialization failed:', error);
     }
+
+    // Enable Hebbian learning relationship caching (TASKS.md P1 - High Priority)
+    try {
+      const cacheResult = await this.hebbianLearning.enableRelationshipCaching();
+      console.log(`🧠 Hebbian relationship caching enabled: ${cacheResult.cachedRelationships} relationships`);
+    } catch (error) {
+      console.log('⚠️ Hebbian caching initialization failed:', error);
+    }
   }
 
   async save(): Promise<void> {
