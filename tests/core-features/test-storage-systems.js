@@ -239,12 +239,26 @@ class StorageSystemsTestSuite {
 
     // Check file content
     const savedData = JSON.parse(readFileSync(storagePath, 'utf8'));
-    if (!savedData.nodes || !savedData.edges) {
+
+    // Check for compressed format (new format) or legacy format
+    let nodeCount = 0;
+    let edgeCount = 0;
+
+    if (savedData.n && savedData.e) {
+      // New compressed format
+      nodeCount = savedData.n.length;
+      edgeCount = savedData.e.length;
+      console.log(`   ✓ Storage file format valid (compressed)`);
+    } else if (savedData.nodes && savedData.edges) {
+      // Legacy format
+      nodeCount = Object.keys(savedData.nodes).length;
+      edgeCount = Object.keys(savedData.edges).length;
+      console.log(`   ✓ Storage file format valid (legacy)`);
+    } else {
       throw new Error('Invalid storage format');
     }
 
-    console.log(`   ✓ Storage file format valid`);
-    console.log(`   📊 Saved ${Object.keys(savedData.nodes).length} nodes, ${Object.keys(savedData.edges).length} edges`);
+    console.log(`   📊 Saved ${nodeCount} nodes, ${edgeCount} edges`);
 
     // Create new storage instance and load
     const newStorage = new MindMapStorage(this.testDir);

@@ -328,8 +328,8 @@ export class MindMapEngine {
   }
 
   // Project Scanning Methods - delegate to ScanningService
-  async scanProject(forceRescan: boolean = false, includeAnalysis: boolean = true): Promise<void> {
-    await this.scanningService.scanProject(forceRescan, includeAnalysis);
+  async scanProject(forceRescan: boolean = false, includeAnalysis: boolean = true): Promise<any> {
+    return await this.scanningService.scanProject(forceRescan, includeAnalysis);
   }
 
   async scanProjectWithRoot(projectRoot: string, forceRescan: boolean = false, includeAnalysis: boolean = true): Promise<void> {
@@ -517,9 +517,6 @@ export class MindMapEngine {
   }
 
   // Learning Methods - delegate to LearningService
-  async recordCoActivation(nodeIds: string[], context?: any): Promise<void> {
-    await this.learningService.recordCoActivation(nodeIds.join(','), context);
-  }
 
   async getHebbianAssociations(nodeId: string, threshold: number = 0.5) {
     return [];
@@ -606,6 +603,10 @@ export class MindMapEngine {
     return await this.aggregateQueryEngine.executeAggregate(query);
   }
 
+  async analyzeProjectScale(): Promise<any> {
+    return await this.scalabilityManager.analyzeProjectScale();
+  }
+
   getSavedQueries(): any[] {
     return [];
   }
@@ -639,6 +640,10 @@ export class MindMapEngine {
 
   getHebbianLearningStats(): any {
     return this.hebbianLearning.getStats();
+  }
+
+  async recordCoActivation(primaryNodeId: string, coActivatedNodes: string[], context: string, strength: number): Promise<void> {
+    await this.hebbianLearning.recordCoActivation(primaryNodeId, coActivatedNodes, context, strength);
   }
 
   getMultiModalFusionStats(): any {

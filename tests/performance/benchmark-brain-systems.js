@@ -12,7 +12,7 @@
  * - Multi-Modal Confidence Fusion
  */
 
-import { MindMapEngine } from './dist/core/MindMapEngine.js';
+import { MindMapEngine } from '../../dist/core/MindMapEngine.js';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
