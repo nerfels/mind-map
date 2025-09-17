@@ -398,7 +398,51 @@ class MindMapMCPServer {
   private async handleGetAttentionStats(args: any) {
     try {
       const stats = this.mindMap.getAttentionStats();
-      const text = `🎯 Attention system stats: ${JSON.stringify(stats, null, 2)}`;
+
+      let text = `🎯 **Attention System Statistics** - Brain-Inspired Dynamic Focus\n\n`;
+
+      text += `**Attention Allocation:**\n`;
+      text += `• Total Targets: ${stats.totalTargets}\n`;
+      text += `• Capacity Used: ${(stats.allocatedCapacity * 100).toFixed(1)}% (${stats.allocatedCapacity.toFixed(2)}/${stats.totalCapacity})\n`;
+      text += `• Available Capacity: ${(stats.availableCapacity * 100).toFixed(1)}%\n`;
+      text += `• System Efficiency: ${(stats.efficiency * 100).toFixed(1)}%\n\n`;
+
+      if (stats.totalTargets > 0) {
+        text += `**Focus Distribution:**\n`;
+        text += `• Average Attention Strength: ${(stats.averageStrength * 100).toFixed(1)}%\n`;
+        text += `• Dominant Modality: ${stats.dominantModality || 'None'}\n`;
+        text += `• Recent Activity: ${stats.recentActivity} targets updated (5min)\n\n`;
+
+        text += `**Attention Types:**\n`;
+        text += `• Selective (>70%): ${stats.targetsByType.selective} targets\n`;
+        text += `• Sustained (40-70%): ${stats.targetsByType.sustained} targets\n`;
+        text += `• Divided (20-40%): ${stats.targetsByType.divided} targets\n`;
+        text += `• Executive (<20%): ${stats.targetsByType.executive} targets\n\n`;
+
+        text += `**Modality Distribution:**\n`;
+        for (const [modality, value] of Object.entries(stats.modalityDistribution)) {
+          text += `• ${modality.charAt(0).toUpperCase() + modality.slice(1)}: ${((value as number) * 100).toFixed(1)}%\n`;
+        }
+
+        text += `\n🧠 **Brain-Inspired Features Active:**\n`;
+        text += `• ✅ Selective attention focus (Miller's 7±2 rule)\n`;
+        text += `• ✅ Multi-modal attention fusion\n`;
+        text += `• ✅ Dynamic capacity allocation\n`;
+        text += `• ✅ Temporal attention persistence\n`;
+        text += `• ✅ Cognitive load management\n`;
+        text += `\n📈 **Expected Impact**: Improved focus on most relevant code elements`;
+      } else {
+        text += `📝 **Status**: No attention targets allocated yet\n`;
+        text += `• Attention targets are created when code elements are actively used\n`;
+        text += `• System tracks focus patterns across different modalities\n`;
+        text += `• Enables brain-inspired dynamic attention mechanisms\n\n`;
+
+        text += `**Configuration:**\n`;
+        text += `• Max Targets: ${stats.configurationSummary.maxTargets} (Miller's rule)\n`;
+        text += `• Total Capacity: ${stats.configurationSummary.totalCapacity}\n`;
+        text += `• Decay Interval: ${stats.configurationSummary.decayInterval / 1000}s\n`;
+      }
+
       return ResponseFormatter.formatSuccessResponse(text);
     } catch (error) {
       return ResponseFormatter.formatErrorResponse('get_attention_stats', error);

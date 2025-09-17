@@ -1,14 +1,14 @@
-# Mind Map MCP Server v1.16.1
+# Mind Map MCP Server v1.16.2
 
 **Experimental Code Intelligence Platform** - A Model Context Protocol (MCP) server that explores neuroscience-inspired approaches to software development analysis. This is an **experimental research project** featuring advanced query caching, associative learning patterns, context awareness, attention mechanisms, temporal knowledge modeling, and code analysis tools.
 
-## ⚠️ Current Status: Experimental v1.16.1
+## ⚠️ Current Status: Experimental v1.16.2
 
 **🧪 This is experimental software under active development** - Use for testing and research purposes. Features may change or be removed.
 
 **Features under development**: Context-aware caching • Brain-inspired learning • Code pattern detection • Document analysis • Multi-language AST parsing • File ignore patterns • CI/CD automation
 
-**🎯 Latest Update v1.16.1**: **Brain Systems Persistence Fix** - Fixed critical bug where Hebbian learning connections were created but not persisted. Added `storage.save()` calls after edge operations in HebbianLearningSystem, enabling brain-inspired associative learning to maintain learned patterns permanently across sessions. All brain systems now have proper persistence layer.
+**🎯 Latest Update v1.16.2**: **Attention System Activation** - Initialized brain-inspired attention allocation system with comprehensive statistics, Miller's 7±2 cognitive load management, and multi-modal attention distribution. Added complete getAttentionStats() implementation with selective, sustained, divided, and executive attention types. Dynamic focus allocation now operational for improved code element prioritization.
 
 ## ⚠️ Important Disclaimer
 

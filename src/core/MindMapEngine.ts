@@ -542,9 +542,6 @@ export class MindMapEngine {
     return {};
   }
 
-  getAttentionStats(): any {
-    return {};
-  }
 
   getBiTemporalStats(): any {
     return {};
@@ -661,6 +658,11 @@ export class MindMapEngine {
 
   async analyzeAndPredict(): Promise<any> {
     return this.patternPrediction.analyzeAndPredict();
+  }
+
+  // Attention System Methods
+  getAttentionStats(): any {
+    return this.attentionSystem.getAttentionStats();
   }
 
   // Document Intelligence Methods (Phase 7.5)

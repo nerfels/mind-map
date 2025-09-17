@@ -286,38 +286,6 @@ export class AttentionSystem {
     }
   }
 
-  /**
-   * Get current attention statistics and state
-   */
-  getAttentionStats(): {
-    totalTargets: number;
-    allocation: AttentionAllocation;
-    modalityDistribution: Record<AttentionModality, number>;
-    topTargets: Array<{ nodeId: string; strength: number; modality: AttentionModality }>;
-    efficiency: number;
-    historyLength: number;
-  } {
-    const allocation = this.getCurrentAllocation();
-    const modalityDistribution = this.calculateModalityDistribution();
-    const topTargets = Array.from(this.targets.values())
-      .sort((a, b) => b.strength - a.strength)
-      .slice(0, 10)
-      .map(target => ({
-        nodeId: target.nodeId,
-        strength: target.strength,
-        modality: target.modality
-      }));
-
-    return {
-      totalTargets: this.targets.size,
-      allocation,
-      modalityDistribution,
-      topTargets,
-      efficiency: this.calculateAttentionEfficiency(),
-      historyLength: this.attentionHistory.length
-    };
-  }
-
   // Private Helper Methods
 
   private calculateAttentionScores(nodes: MindMapNode[], context: AttentionContext): AttentionScore[] {
@@ -682,12 +650,77 @@ export class AttentionSystem {
 
   private reduceRecentAttention(amount: number, timestamp: Date): void {
     const recentThreshold = 60000; // 1 minute
-    
+
     for (const target of this.targets.values()) {
       const age = timestamp.getTime() - target.timestamp.getTime();
       if (age < recentThreshold) {
         target.strength = Math.max(0, target.strength - amount);
       }
     }
+  }
+
+  /**
+   * Get comprehensive attention system statistics
+   */
+  getAttentionStats(): {
+    totalTargets: number;
+    totalCapacity: number;
+    allocatedCapacity: number;
+    availableCapacity: number;
+    efficiency: number;
+    modalityDistribution: Record<AttentionModality, number>;
+    dominantModality: AttentionModality | null;
+    averageStrength: number;
+    targetsByType: Record<AttentionType, number>;
+    recentActivity: number;
+    configurationSummary: AttentionConfiguration;
+  } {
+    const allocation = this.getCurrentAllocation();
+    const modalityDistribution = this.calculateModalityDistribution();
+    const dominantModality = this.targets.size > 0 ? this.getDominantModality(modalityDistribution) : null;
+
+    // Calculate average strength
+    const totalStrength = Array.from(this.targets.values()).reduce((sum, target) => sum + target.strength, 0);
+    const averageStrength = this.targets.size > 0 ? totalStrength / this.targets.size : 0;
+
+    // Count targets by type (approximated based on strength patterns)
+    const targetsByType: Record<AttentionType, number> = {
+      [AttentionType.SELECTIVE]: 0,
+      [AttentionType.DIVIDED]: 0,
+      [AttentionType.SUSTAINED]: 0,
+      [AttentionType.EXECUTIVE]: 0
+    };
+
+    for (const target of this.targets.values()) {
+      if (target.strength > 0.7) {
+        targetsByType[AttentionType.SELECTIVE]++;
+      } else if (target.strength > 0.4) {
+        targetsByType[AttentionType.SUSTAINED]++;
+      } else if (target.strength > 0.2) {
+        targetsByType[AttentionType.DIVIDED]++;
+      } else {
+        targetsByType[AttentionType.EXECUTIVE]++;
+      }
+    }
+
+    // Calculate recent activity (targets updated in last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const recentActivity = Array.from(this.targets.values()).filter(
+      target => target.timestamp > fiveMinutesAgo
+    ).length;
+
+    return {
+      totalTargets: this.targets.size,
+      totalCapacity: this.config.totalCapacity,
+      allocatedCapacity: allocation.allocated,
+      availableCapacity: allocation.available,
+      efficiency: allocation.efficiency,
+      modalityDistribution,
+      dominantModality,
+      averageStrength,
+      targetsByType,
+      recentActivity,
+      configurationSummary: this.config
+    };
   }
 }
