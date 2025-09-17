@@ -266,6 +266,8 @@ export class HebbianLearningSystem {
         last_strengthened: connection.lastActivation.toISOString()
       };
       existingEdge.lastUpdated = new Date();
+      // Save the storage to persist the updated edge
+      await this.storage.save();
     } else {
       // Create new edge based on Hebbian learning
       const newEdge: MindMapEdge = {
@@ -286,6 +288,8 @@ export class HebbianLearningSystem {
       };
 
       await this.storage.addEdge(newEdge);
+      // Save the storage to persist the new edge
+      await this.storage.save();
     }
   }
 
