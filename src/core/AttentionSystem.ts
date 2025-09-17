@@ -127,6 +127,106 @@ export class AttentionSystem {
   }
 
   /**
+   * Initialize attention for frequently accessed nodes and key system components
+   * This provides the initial attention allocation mentioned in TASKS.md for 30-50% faster queries
+   */
+  async initializeFrequentNodeAttention(): Promise<AttentionAllocation> {
+    console.log('🎯 Initializing attention for frequent nodes...');
+
+    // Get high-confidence nodes that are likely to be frequently accessed
+    const coreSystemNodes = this.identifyKeySystemNodes();
+    const frameworkNodes = this.identifyFrameworkNodes();
+    const highConfidenceNodes = this.getHighConfidenceNodes();
+
+    // Combine and prioritize nodes
+    const candidateNodes = [...coreSystemNodes, ...frameworkNodes, ...highConfidenceNodes];
+
+    // Create attention context for initialization
+    const initializationContext: AttentionContext = {
+      currentTask: 'system_initialization',
+      activeFiles: [],
+      recentQueries: [],
+      userGoals: ['performance_optimization', 'frequent_access'],
+      frameworkContext: ['mind_map', 'brain_systems'],
+      timeContext: {
+        sessionStart: new Date(),
+        lastActivity: new Date(),
+        taskDuration: 0
+      }
+    };
+
+    // Allocate selective attention to these nodes
+    const allocation = this.allocateAttention(candidateNodes, initializationContext, AttentionType.SELECTIVE);
+
+    console.log(`✅ Initialized attention for ${allocation.targets.length} frequent nodes`);
+    console.log(`📊 Attention allocation: ${(allocation.allocated * 100).toFixed(1)}% of capacity used`);
+
+    return allocation;
+  }
+
+  /**
+   * Identify key system nodes that are central to the mind map functionality
+   */
+  private identifyKeySystemNodes(): MindMapNode[] {
+    const keyNodes: MindMapNode[] = [];
+
+    // Look for core system files and classes
+    const corePatterns = [
+      'MindMapEngine',
+      'AttentionSystem',
+      'HebbianLearningSystem',
+      'QueryService',
+      'MindMapStorage',
+      'AdvancedQueryEngine'
+    ];
+
+    for (const pattern of corePatterns) {
+      const matches = this.storage.findNodes(node =>
+        node.name.includes(pattern) &&
+        (node.type === 'class' || node.type === 'file') &&
+        node.confidence > 0.7
+      );
+      keyNodes.push(...matches);
+    }
+
+    return keyNodes;
+  }
+
+  /**
+   * Identify framework and library nodes that are frequently used
+   */
+  private identifyFrameworkNodes(): MindMapNode[] {
+    const frameworkNodes: MindMapNode[] = [];
+
+    // Look for nodes with framework metadata
+    const allNodes = this.storage.findNodes(node =>
+      node.metadata?.frameworks &&
+      node.metadata.frameworks.length > 0 &&
+      node.confidence > 0.6
+    );
+
+    // Sort by confidence and take top framework nodes
+    allNodes.sort((a, b) => b.confidence - a.confidence);
+    frameworkNodes.push(...allNodes.slice(0, 10));
+
+    return frameworkNodes;
+  }
+
+  /**
+   * Get high-confidence nodes that are likely to be frequently accessed
+   */
+  private getHighConfidenceNodes(): MindMapNode[] {
+    const highConfidenceNodes = this.storage.findNodes(node =>
+      node.confidence > 0.85 &&
+      (node.type === 'function' || node.type === 'class' || node.type === 'file')
+    );
+
+    // Sort by confidence and limit to prevent overwhelming attention system
+    highConfidenceNodes.sort((a, b) => b.confidence - a.confidence);
+    return highConfidenceNodes.slice(0, 15);
+  }
+
+  /**
    * Allocate attention to specific targets based on context and relevance
    */
   allocateAttention(nodes: MindMapNode[], context: AttentionContext, type: AttentionType = AttentionType.SELECTIVE): AttentionAllocation {

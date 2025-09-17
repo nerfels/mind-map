@@ -685,6 +685,14 @@ export class MindMapEngine {
     } catch (error) {
       console.log('ℹ️ No existing mind map data found, starting fresh');
     }
+
+    // Initialize attention for frequently accessed nodes (TASKS.md P1 - High Priority)
+    try {
+      await this.attentionSystem.initializeFrequentNodeAttention();
+      console.log('🎯 Attention system initialized for frequent nodes');
+    } catch (error) {
+      console.log('⚠️ Attention initialization failed:', error);
+    }
   }
 
   async save(): Promise<void> {
