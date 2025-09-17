@@ -637,7 +637,9 @@ export class ScalabilityManager {
       // Perform cleanup if memory pressure is high
       if (this.isMemoryPressureHigh() &&
           Date.now() - this.lastCleanup.getTime() > 60000) { // At least 1 minute between cleanups
-        this.performMemoryCleanup();
+        this.performMemoryCleanup().catch(err =>
+          console.error('Memory cleanup failed:', err)
+        );
       }
     }, 30000); // Check every 30 seconds
   }

@@ -1,6 +1,6 @@
 {
   "name": "mind-map-mcp",
-  "version": "1.18.0",
+  "version": "1.18.1",
   "mcpName": "io.github.nerfels/mind-map",
   "description": "Mind Map Model Context Protocol server for Claude Code - intelligent project knowledge graph with brain-inspired intelligence",
   "main": "dist/index.js",

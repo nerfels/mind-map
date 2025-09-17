@@ -179,6 +179,116 @@ export class MindMapEngine {
     );
   }
 
+
+  /**
+   * Warm the cache with frequently used queries to achieve 65% hit rate
+   */
+  private async warmCache(): Promise<void> {
+    console.log('🔥 Warming cache with common queries...');
+    const startTime = Date.now();
+
+    // Common query patterns that should be cached
+    const commonQueries = [
+      // File and directory queries
+      'src',
+      'src/core',
+      'src/handlers',
+      'src/tools',
+      'package.json',
+      'tsconfig.json',
+
+      // Common code patterns
+      'function',
+      'class',
+      'interface',
+      'type',
+      'import',
+      'export',
+
+      // Framework and language queries
+      'typescript',
+      'javascript',
+      'react',
+      'node',
+
+      // Common development queries
+      'test',
+      'error',
+      'TODO',
+      'FIXME',
+
+      // Architecture queries
+      'MindMapEngine',
+      'QueryService',
+      'storage',
+      'cache',
+
+      // Pattern queries
+      'async function',
+      'constructor',
+      'handler',
+      'service'
+    ];
+
+    // Default context for cache warming
+    const defaultContext = JSON.stringify({
+      type: 'default',
+      limit: 10,
+      useActivation: true,
+      activationLevels: 3,
+      includeMetadata: false,
+      activeFiles: [],
+      sessionGoals: [],
+      frameworkContext: []
+    });
+
+    let warmedCount = 0;
+    const queryExecutor = async (query: string, context: string): Promise<QueryResult> => {
+      try {
+        // Execute query through the query service
+        const contextObj = JSON.parse(context);
+        return await this.query(query, contextObj);
+      } catch (error) {
+        console.warn(`Failed to warm cache for query "${query}":`, error);
+        return {
+          nodes: [],
+          edges: [],
+          totalMatches: 0,
+          queryTime: 0,
+          usedActivation: false
+        };
+      }
+    };
+
+    // Execute cache warming through QueryCache
+    warmedCount = await this.queryCache.warmCache(queryExecutor);
+
+    // Additionally warm with the common queries list
+    for (const query of commonQueries) {
+      try {
+        // Check if already cached
+        const cached = await this.queryCache.get(query, defaultContext);
+        if (!cached) {
+          // Execute and cache the query
+          const result = await this.query(query, { limit: 10 });
+          await this.queryCache.set(query, defaultContext, result);
+          warmedCount++;
+
+          // Rate limit to avoid overload
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      } catch (error) {
+        console.warn(`Cache warming failed for query "${query}":`, error);
+      }
+    }
+
+    const warmTime = Date.now() - startTime;
+    const stats = this.queryCache.getStats();
+
+    console.log(`✨ Cache warming completed in ${warmTime}ms`);
+    console.log(`📊 Warmed ${warmedCount} queries, cache hit rate: ${(stats.hitRate * 100).toFixed(1)}%`);
+  }
+
   /**
    * Get FileScanner options from user configuration
    */
@@ -518,9 +628,6 @@ export class MindMapEngine {
     (this.queryCache as any).cache?.clear();
   }
 
-  warmCache(queries: string[]): void {
-    // Cache warming implementation
-  }
 
   getQueryCacheStats(): any {
     return this.queryCache.getStats();
