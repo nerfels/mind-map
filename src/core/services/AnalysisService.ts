@@ -127,8 +127,6 @@ export class AnalysisService {
   }
 
   async getFrameworkRecommendations(frameworkNames?: string[], recommendationType: string = 'all'): Promise<any[]> {
-    // For now, return placeholder recommendations since the method doesn't exist in the detector
-    // This should be implemented in the EnhancedFrameworkDetector class
     const recommendations: any[] = [];
 
     if (!frameworkNames || frameworkNames.length === 0) {
@@ -143,15 +141,142 @@ export class AnalysisService {
       });
     } else {
       frameworkNames.forEach(name => {
+        const frameworkSuggestions = this.getFrameworkSpecificRecommendations(name, recommendationType);
         recommendations.push({
           framework: name,
           type: recommendationType,
-          suggestions: [`Follow ${name} best practices`, `Keep ${name} dependencies up to date`]
+          suggestions: frameworkSuggestions
         });
       });
     }
 
     return recommendations;
+  }
+
+  private getFrameworkSpecificRecommendations(frameworkName: string, type: string): string[] {
+    const framework = frameworkName.toLowerCase();
+    const suggestions: string[] = [];
+
+    // Framework-specific recommendations
+    switch (framework) {
+      case 'react':
+        suggestions.push(
+          'Use React.StrictMode to catch potential problems',
+          'Implement proper component lifecycle and hooks',
+          'Use PropTypes or TypeScript for type checking',
+          'Consider React Testing Library for component testing',
+          'Use React DevTools for debugging'
+        );
+        break;
+
+      case 'vue':
+      case 'vue.js':
+        suggestions.push(
+          'Use Vue DevTools for debugging and performance monitoring',
+          'Implement proper component composition with Vue 3 Composition API',
+          'Use Pinia for state management instead of Vuex',
+          'Follow Vue style guide for consistent code structure',
+          'Consider Vue Test Utils for component testing'
+        );
+        break;
+
+      case 'express':
+      case 'express.js':
+        suggestions.push(
+          'Use helmet.js for security headers',
+          'Implement proper error handling middleware',
+          'Use express-rate-limit for API protection',
+          'Implement request validation with joi or express-validator',
+          'Use compression middleware for performance'
+        );
+        break;
+
+      case 'django':
+        suggestions.push(
+          'Follow Django security best practices',
+          'Use Django REST framework for APIs',
+          'Implement proper database migrations',
+          'Use Django debug toolbar for development',
+          'Consider using Celery for background tasks'
+        );
+        break;
+
+      case 'spring':
+      case 'spring boot':
+        suggestions.push(
+          'Use Spring Security for authentication and authorization',
+          'Implement proper exception handling with @ControllerAdvice',
+          'Use Spring Boot Actuator for monitoring',
+          'Follow Spring Boot best practices for configuration',
+          'Consider Spring Boot Test for comprehensive testing'
+        );
+        break;
+
+      case 'qt':
+        suggestions.push(
+          'Use Qt Creator IDE for development',
+          'Follow Qt coding style and conventions',
+          'Implement proper memory management with smart pointers',
+          'Use Qt Test framework for unit testing',
+          'Consider Qt Quick for modern UI development'
+        );
+        break;
+
+      case 'docker':
+        suggestions.push(
+          'Use multi-stage builds to reduce image size',
+          'Implement proper health checks in containers',
+          'Use .dockerignore to exclude unnecessary files',
+          'Run containers as non-root user for security',
+          'Use specific version tags instead of latest'
+        );
+        break;
+
+      case 'angular':
+        suggestions.push(
+          'Use Angular CLI for project scaffolding and building',
+          'Implement proper component lifecycle hooks',
+          'Use Angular services for data management',
+          'Follow Angular style guide for consistent code',
+          'Use Angular Testing utilities for comprehensive testing'
+        );
+        break;
+
+      case 'flask':
+        suggestions.push(
+          'Use Flask-Security for authentication',
+          'Implement proper error handling and logging',
+          'Use Flask-Migrate for database migrations',
+          'Consider using Flask-RESTful for API development',
+          'Use pytest for testing Flask applications'
+        );
+        break;
+
+      default:
+        suggestions.push(
+          `Follow ${frameworkName} official documentation and best practices`,
+          `Keep ${frameworkName} dependencies up to date`,
+          `Use ${frameworkName} recommended testing frameworks`,
+          `Implement proper error handling and logging`,
+          `Consider using ${frameworkName} official CLI tools`
+        );
+        break;
+    }
+
+    // Type-specific recommendations
+    if (type === 'best_practices' || type === 'all') {
+      suggestions.push(`Follow ${frameworkName} community standards and conventions`);
+    }
+
+    if (type === 'security' || type === 'all') {
+      suggestions.push(`Regularly audit ${frameworkName} dependencies for security vulnerabilities`);
+    }
+
+    if (type === 'performance' || type === 'all') {
+      suggestions.push(`Profile and optimize ${frameworkName} application performance`);
+    }
+
+    return suggestions.slice(0, 6); // Limit to 6 suggestions for readability
   }
 
   // Language Tooling Detection

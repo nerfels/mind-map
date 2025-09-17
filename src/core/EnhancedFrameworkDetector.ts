@@ -31,7 +31,34 @@ export class EnhancedFrameworkDetector {
   }
 
   /**
-   * Comprehensive framework detection across all supported languages
+   * Find all package.json files in the project including sub-projects
+   */
+  private async findAllPackageJsonFiles(projectRoot: string, fileNodes: MindMapNode[]): Promise<string[]> {
+    const packageJsonFiles: string[] = [];
+
+    // Find all package.json files in file nodes
+    const packageFiles = fileNodes.filter(node =>
+      node.name === 'package.json' &&
+      node.path &&
+      !node.path.includes('node_modules')
+    );
+
+    packageFiles.forEach(file => {
+      if (file.path) {
+        packageJsonFiles.push(dirname(file.path));
+      }
+    });
+
+    // Always include project root
+    if (!packageJsonFiles.includes(projectRoot)) {
+      packageJsonFiles.unshift(projectRoot);
+    }
+
+    return packageJsonFiles;
+  }
+
+  /**
+   * Comprehensive framework detection across all supported languages including sub-projects
    */
   async detectFrameworks(projectRoot: string, forceRefresh = false): Promise<Map<string, FrameworkInfo[]>> {
     if (!forceRefresh && this.frameworkCache.size > 0) {
@@ -42,14 +69,18 @@ export class EnhancedFrameworkDetector {
 
     // Get all file nodes for analysis
     const fileNodes = this.storage.findNodes(node => node.type === 'file');
-    
-    // Detect frameworks by language
-    frameworks.set('web', await this.detectWebFrameworks(projectRoot, fileNodes));
-    frameworks.set('mobile', await this.detectMobileFrameworks(projectRoot, fileNodes));
-    frameworks.set('desktop', await this.detectDesktopFrameworks(projectRoot, fileNodes));
-    frameworks.set('game', await this.detectGameEngines(projectRoot, fileNodes));
-    frameworks.set('ml_ai', await this.detectMLAIFrameworks(projectRoot, fileNodes));
-    frameworks.set('cloud', await this.detectCloudFrameworks(projectRoot, fileNodes));
+
+    // Find all package.json locations (sub-projects)
+    const packageDirs = await this.findAllPackageJsonFiles(projectRoot, fileNodes);
+
+    // Detect frameworks by language across all sub-projects
+    frameworks.set('web', await this.detectWebFrameworks(projectRoot, fileNodes, packageDirs));
+    frameworks.set('mobile', await this.detectMobileFrameworks(projectRoot, fileNodes, packageDirs));
+    frameworks.set('desktop', await this.detectDesktopFrameworks(projectRoot, fileNodes, packageDirs));
+    frameworks.set('game', await this.detectGameEngines(projectRoot, fileNodes, packageDirs));
+    frameworks.set('ml_ai', await this.detectMLAIFrameworks(projectRoot, fileNodes, packageDirs));
+    frameworks.set('cloud', await this.detectCloudFrameworks(projectRoot, fileNodes, packageDirs));
+    frameworks.set('build', await this.detectBuildTools(projectRoot, fileNodes, packageDirs));
 
     // Cache results
     this.frameworkCache = frameworks;
@@ -60,48 +91,81 @@ export class EnhancedFrameworkDetector {
    * Web Framework Detection
    * Express, React, Vue, Angular, Django, Flask, Spring Boot, FastAPI, Next.js, Nuxt.js
    */
-  private async detectWebFrameworks(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo[]> {
+  private async detectWebFrameworks(projectRoot: string, fileNodes: MindMapNode[], packageDirs: string[]): Promise<FrameworkInfo[]> {
     const frameworks: FrameworkInfo[] = [];
-    
-    // React Detection
-    const reactFramework = await this.detectReact(projectRoot, fileNodes);
-    if (reactFramework) frameworks.push(reactFramework);
 
-    // Vue Detection  
-    const vueFramework = await this.detectVue(projectRoot, fileNodes);
-    if (vueFramework) frameworks.push(vueFramework);
+    // Detect frameworks across all sub-projects
+    for (const packageDir of packageDirs) {
+      // React Detection
+      const reactFramework = await this.detectReact(packageDir, fileNodes);
+      if (reactFramework) {
+        reactFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(reactFramework);
+      }
 
-    // Angular Detection
-    const angularFramework = await this.detectAngular(projectRoot, fileNodes);
-    if (angularFramework) frameworks.push(angularFramework);
+      // Vue Detection
+      const vueFramework = await this.detectVue(packageDir, fileNodes);
+      if (vueFramework) {
+        vueFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(vueFramework);
+      }
 
-    // Express Detection
-    const expressFramework = await this.detectExpress(projectRoot, fileNodes);
-    if (expressFramework) frameworks.push(expressFramework);
+      // Angular Detection
+      const angularFramework = await this.detectAngular(packageDir, fileNodes);
+      if (angularFramework) {
+        angularFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(angularFramework);
+      }
 
-    // Django Detection
-    const djangoFramework = await this.detectDjango(projectRoot, fileNodes);
-    if (djangoFramework) frameworks.push(djangoFramework);
+      // Express Detection
+      const expressFramework = await this.detectExpress(packageDir, fileNodes);
+      if (expressFramework) {
+        expressFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(expressFramework);
+      }
 
-    // Flask Detection
-    const flaskFramework = await this.detectFlask(projectRoot, fileNodes);
-    if (flaskFramework) frameworks.push(flaskFramework);
+      // Django Detection
+      const djangoFramework = await this.detectDjango(packageDir, fileNodes);
+      if (djangoFramework) {
+        djangoFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(djangoFramework);
+      }
 
-    // Spring Boot Detection
-    const springFramework = await this.detectSpringBoot(projectRoot, fileNodes);
-    if (springFramework) frameworks.push(springFramework);
+      // Flask Detection
+      const flaskFramework = await this.detectFlask(packageDir, fileNodes);
+      if (flaskFramework) {
+        flaskFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(flaskFramework);
+      }
 
-    // FastAPI Detection
-    const fastApiFramework = await this.detectFastAPI(projectRoot, fileNodes);
-    if (fastApiFramework) frameworks.push(fastApiFramework);
+      // Spring Boot Detection
+      const springFramework = await this.detectSpringBoot(packageDir, fileNodes);
+      if (springFramework) {
+        springFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(springFramework);
+      }
 
-    // Next.js Detection
-    const nextFramework = await this.detectNextJS(projectRoot, fileNodes);
-    if (nextFramework) frameworks.push(nextFramework);
+      // FastAPI Detection
+      const fastApiFramework = await this.detectFastAPI(packageDir, fileNodes);
+      if (fastApiFramework) {
+        fastApiFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(fastApiFramework);
+      }
 
-    // Nuxt.js Detection
-    const nuxtFramework = await this.detectNuxtJS(projectRoot, fileNodes);
-    if (nuxtFramework) frameworks.push(nuxtFramework);
+      // Next.js Detection
+      const nextFramework = await this.detectNextJS(packageDir, fileNodes);
+      if (nextFramework) {
+        nextFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(nextFramework);
+      }
+
+      // Nuxt.js Detection
+      const nuxtFramework = await this.detectNuxtJS(packageDir, fileNodes);
+      if (nuxtFramework) {
+        nuxtFramework.evidence.unshift(`Found in sub-project: ${packageDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(nuxtFramework);
+      }
+    }
 
     return frameworks;
   }
@@ -607,12 +671,216 @@ export class EnhancedFrameworkDetector {
 
   // Placeholder implementations for other framework detections
   private async detectSpringBoot(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo | null> {
-    // Spring Boot detection logic - checking for @SpringBootApplication, pom.xml with Spring Boot dependencies
+    const evidence: string[] = [];
+    const patterns: FrameworkPattern[] = [];
+    const configurations: string[] = [];
+    let confidence = 0;
+    let version: string | undefined;
+
+    // Check for pom.xml with Spring Boot dependencies
+    try {
+      const pomPath = join(projectRoot, 'pom.xml');
+      const pomContent = await readFile(pomPath, 'utf-8');
+
+      if (pomContent.includes('spring-boot-starter-parent') || pomContent.includes('spring-boot-starter')) {
+        evidence.push('Spring Boot dependencies in pom.xml');
+        confidence += 40;
+        configurations.push('pom.xml');
+
+        // Extract version
+        const versionMatch = pomContent.match(/<version>(\d+\.\d+\.\d+)<\/version>/);
+        if (versionMatch) {
+          version = versionMatch[1];
+        }
+
+        patterns.push({
+          type: 'dependency',
+          description: 'Spring Boot Maven configuration',
+          files: ['pom.xml'],
+          confidence: 0.95
+        });
+      }
+    } catch (error) {
+      // pom.xml not found, check for build.gradle
+    }
+
+    // Check for build.gradle with Spring Boot dependencies
+    try {
+      const gradlePath = join(projectRoot, 'build.gradle');
+      const gradleContent = await readFile(gradlePath, 'utf-8');
+
+      if (gradleContent.includes('org.springframework.boot') || gradleContent.includes('spring-boot-starter')) {
+        evidence.push('Spring Boot dependencies in build.gradle');
+        confidence += 40;
+        configurations.push('build.gradle');
+
+        // Extract version
+        const versionMatch = gradleContent.match(/org\.springframework\.boot['"]\s*version\s*['"]([\d.]+)['"]/);
+        if (versionMatch) {
+          version = versionMatch[1];
+        }
+
+        patterns.push({
+          type: 'dependency',
+          description: 'Spring Boot Gradle configuration',
+          files: ['build.gradle'],
+          confidence: 0.95
+        });
+      }
+    } catch (error) {
+      // build.gradle not found
+    }
+
+    // Check for @SpringBootApplication annotation in Java files
+    for (const fileNode of fileNodes) {
+      if (fileNode.metadata.language === 'java' && fileNode.path) {
+        try {
+          const content = await readFile(fileNode.path, 'utf-8');
+
+          if (content.includes('@SpringBootApplication')) {
+            evidence.push('@SpringBootApplication annotation found');
+            confidence += 30;
+
+            patterns.push({
+              type: 'convention',
+              description: 'Spring Boot application main class',
+              files: [fileNode.path],
+              confidence: 0.9
+            });
+          }
+
+          if (content.includes('@RestController') || content.includes('@Controller')) {
+            evidence.push('Spring MVC controllers found');
+            confidence += 15;
+          }
+
+          if (content.includes('@Entity') || content.includes('@Repository')) {
+            evidence.push('Spring Data JPA components found');
+            confidence += 10;
+          }
+        } catch (error) {
+          // Continue if file can't be read
+        }
+      }
+    }
+
+    // Check for application.properties or application.yml
+    const configFiles = ['application.properties', 'application.yml', 'application.yaml'];
+    for (const configFile of configFiles) {
+      try {
+        await access(join(projectRoot, 'src/main/resources', configFile));
+        configurations.push(configFile);
+        evidence.push(`Spring Boot configuration: ${configFile}`);
+        confidence += 10;
+      } catch (error) {
+        // File doesn't exist, continue
+      }
+    }
+
+    if (confidence > 20) {
+      return {
+        name: 'Spring Boot',
+        version,
+        category: 'web',
+        confidence: Math.min(confidence / 100, 0.95),
+        evidence,
+        configurations,
+        patterns
+      };
+    }
+
     return null;
   }
 
   private async detectFastAPI(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo | null> {
-    // FastAPI detection logic - checking for FastAPI imports and decorators
+    const evidence: string[] = [];
+    const patterns: FrameworkPattern[] = [];
+    const configurations: string[] = [];
+    let confidence = 0;
+    let version: string | undefined;
+
+    // Check requirements.txt for FastAPI
+    try {
+      const reqPath = join(projectRoot, 'requirements.txt');
+      const reqContent = await readFile(reqPath, 'utf-8');
+
+      if (reqContent.includes('fastapi')) {
+        evidence.push('FastAPI dependency in requirements.txt');
+        confidence += 40;
+        configurations.push('requirements.txt');
+
+        // Extract version
+        const versionMatch = reqContent.match(/fastapi==([0-9.]+)/);
+        if (versionMatch) {
+          version = versionMatch[1];
+        }
+
+        patterns.push({
+          type: 'dependency',
+          description: 'FastAPI Python dependency',
+          files: ['requirements.txt'],
+          confidence: 0.9
+        });
+      }
+
+      if (reqContent.includes('uvicorn')) {
+        evidence.push('Uvicorn ASGI server detected');
+        confidence += 15;
+      }
+    } catch (error) {
+      // requirements.txt not found
+    }
+
+    // Check Python files for FastAPI imports and usage
+    for (const fileNode of fileNodes) {
+      if (fileNode.metadata.language === 'python' && fileNode.path) {
+        try {
+          const content = await readFile(fileNode.path, 'utf-8');
+
+          if (content.includes('from fastapi import') || content.includes('import fastapi')) {
+            evidence.push('FastAPI imports found');
+            confidence += 30;
+
+            patterns.push({
+              type: 'import',
+              description: 'FastAPI framework imports',
+              files: [fileNode.path],
+              confidence: 0.95
+            });
+          }
+
+          if (content.includes('FastAPI()')) {
+            evidence.push('FastAPI application instance found');
+            confidence += 25;
+          }
+
+          if (content.includes('@app.get') || content.includes('@app.post') || content.includes('@app.put')) {
+            evidence.push('FastAPI route decorators found');
+            confidence += 20;
+          }
+
+          if (content.includes('uvicorn.run')) {
+            evidence.push('Uvicorn server configuration found');
+            confidence += 15;
+          }
+        } catch (error) {
+          // Continue if file can't be read
+        }
+      }
+    }
+
+    if (confidence > 20) {
+      return {
+        name: 'FastAPI',
+        version,
+        category: 'web',
+        confidence: Math.min(confidence / 100, 0.95),
+        evidence,
+        configurations,
+        patterns
+      };
+    }
+
     return null;
   }
 
@@ -629,7 +897,7 @@ export class EnhancedFrameworkDetector {
   /**
    * Mobile Framework Detection
    */
-  private async detectMobileFrameworks(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo[]> {
+  private async detectMobileFrameworks(projectRoot: string, fileNodes: MindMapNode[], packageDirs: string[]): Promise<FrameworkInfo[]> {
     const frameworks: FrameworkInfo[] = [];
 
     // React Native
@@ -879,7 +1147,7 @@ export class EnhancedFrameworkDetector {
   /**
    * Desktop Framework Detection
    */
-  private async detectDesktopFrameworks(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo[]> {
+  private async detectDesktopFrameworks(projectRoot: string, fileNodes: MindMapNode[], packageDirs: string[]): Promise<FrameworkInfo[]> {
     const frameworks: FrameworkInfo[] = [];
 
     // Electron
@@ -1081,7 +1349,7 @@ export class EnhancedFrameworkDetector {
   /**
    * Game Engine Detection
    */
-  private async detectGameEngines(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo[]> {
+  private async detectGameEngines(projectRoot: string, fileNodes: MindMapNode[], packageDirs: string[]): Promise<FrameworkInfo[]> {
     const frameworks: FrameworkInfo[] = [];
 
     // Unity
@@ -1254,7 +1522,7 @@ export class EnhancedFrameworkDetector {
   /**
    * ML/AI Framework Detection
    */
-  private async detectMLAIFrameworks(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo[]> {
+  private async detectMLAIFrameworks(projectRoot: string, fileNodes: MindMapNode[], packageDirs: string[]): Promise<FrameworkInfo[]> {
     const frameworks: FrameworkInfo[] = [];
 
     // TensorFlow
@@ -1413,7 +1681,7 @@ export class EnhancedFrameworkDetector {
   /**
    * Cloud Framework Detection
    */
-  private async detectCloudFrameworks(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo[]> {
+  private async detectCloudFrameworks(projectRoot: string, fileNodes: MindMapNode[], packageDirs: string[]): Promise<FrameworkInfo[]> {
     const frameworks: FrameworkInfo[] = [];
 
     // Docker
@@ -1551,6 +1819,208 @@ export class EnhancedFrameworkDetector {
     }
 
     return recommendations;
+  }
+
+  /**
+   * Build Tools Detection
+   */
+  private async detectBuildTools(projectRoot: string, fileNodes: MindMapNode[], packageDirs: string[]): Promise<FrameworkInfo[]> {
+    const frameworks: FrameworkInfo[] = [];
+
+    // Find all Maven and Gradle project directories
+    const buildProjectDirs = new Set<string>();
+
+    // Add project root
+    buildProjectDirs.add(projectRoot);
+
+    // Find all pom.xml files
+    const pomFiles = fileNodes.filter(node =>
+      node.name === 'pom.xml' &&
+      node.path &&
+      !node.path.includes('node_modules')
+    );
+
+    pomFiles.forEach(file => {
+      if (file.path) {
+        buildProjectDirs.add(dirname(file.path));
+      }
+    });
+
+    // Find all build.gradle and build.gradle.kts files
+    const gradleFiles = fileNodes.filter(node =>
+      (node.name === 'build.gradle' || node.name === 'build.gradle.kts') &&
+      node.path &&
+      !node.path.includes('node_modules')
+    );
+
+    gradleFiles.forEach(file => {
+      if (file.path) {
+        buildProjectDirs.add(dirname(file.path));
+      }
+    });
+
+    // Detect build tools in all found directories
+    for (const buildDir of buildProjectDirs) {
+      // Maven Detection
+      const maven = await this.detectMaven(buildDir, fileNodes);
+      if (maven) {
+        maven.evidence.unshift(`Found in sub-project: ${buildDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(maven);
+      }
+
+      // Gradle Detection
+      const gradle = await this.detectGradle(buildDir, fileNodes);
+      if (gradle) {
+        gradle.evidence.unshift(`Found in sub-project: ${buildDir.replace(projectRoot, '.') || 'root'}`);
+        frameworks.push(gradle);
+      }
+    }
+
+    return frameworks;
+  }
+
+  private async detectMaven(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo | null> {
+    const evidence: string[] = [];
+    const patterns: FrameworkPattern[] = [];
+    const configurations: string[] = [];
+    let confidence = 0;
+    let version: string | undefined;
+
+    // Check for pom.xml
+    try {
+      const pomPath = join(projectRoot, 'pom.xml');
+      const pomContent = await readFile(pomPath, 'utf-8');
+
+      evidence.push('Maven project configuration found');
+      confidence += 50;
+      configurations.push('pom.xml');
+
+      // Extract Maven version
+      const versionMatch = pomContent.match(/<modelVersion>(\d+\.\d+\.\d+)<\/modelVersion>/);
+      if (versionMatch) {
+        version = versionMatch[1];
+      }
+
+      patterns.push({
+        type: 'config',
+        description: 'Maven POM configuration',
+        files: ['pom.xml'],
+        confidence: 0.95
+      });
+
+      // Check for Maven-specific elements
+      if (pomContent.includes('<groupId>') && pomContent.includes('<artifactId>')) {
+        evidence.push('Maven GAV coordinates found');
+        confidence += 20;
+      }
+
+      if (pomContent.includes('<dependencies>')) {
+        evidence.push('Maven dependencies configuration');
+        confidence += 15;
+      }
+
+      if (pomContent.includes('<build>') && pomContent.includes('<plugins>')) {
+        evidence.push('Maven build plugins configuration');
+        confidence += 10;
+      }
+    } catch (error) {
+      // pom.xml not found
+      return null;
+    }
+
+    return {
+      name: 'Maven',
+      version,
+      category: 'build',
+      confidence: Math.min(confidence / 100, 0.95),
+      evidence,
+      configurations,
+      patterns
+    };
+  }
+
+  private async detectGradle(projectRoot: string, fileNodes: MindMapNode[]): Promise<FrameworkInfo | null> {
+    const evidence: string[] = [];
+    const patterns: FrameworkPattern[] = [];
+    const configurations: string[] = [];
+    let confidence = 0;
+    let version: string | undefined;
+
+    // Check for build.gradle or build.gradle.kts
+    let gradleFile = '';
+    try {
+      const gradlePath = join(projectRoot, 'build.gradle');
+      await readFile(gradlePath, 'utf-8');
+      gradleFile = 'build.gradle';
+    } catch (error) {
+      try {
+        const gradleKtsPath = join(projectRoot, 'build.gradle.kts');
+        await readFile(gradleKtsPath, 'utf-8');
+        gradleFile = 'build.gradle.kts';
+      } catch (error) {
+        return null;
+      }
+    }
+
+    const gradleContent = await readFile(join(projectRoot, gradleFile), 'utf-8');
+
+    evidence.push(`Gradle build configuration found (${gradleFile})`);
+    confidence += 50;
+    configurations.push(gradleFile);
+
+    patterns.push({
+      type: 'config',
+      description: 'Gradle build configuration',
+      files: [gradleFile],
+      confidence: 0.95
+    });
+
+    // Check for Gradle-specific syntax
+    if (gradleContent.includes('plugins {') || gradleContent.includes('apply plugin:')) {
+      evidence.push('Gradle plugins configuration');
+      confidence += 20;
+    }
+
+    if (gradleContent.includes('dependencies {')) {
+      evidence.push('Gradle dependencies block');
+      confidence += 15;
+    }
+
+    if (gradleContent.includes('repositories {')) {
+      evidence.push('Gradle repositories configuration');
+      confidence += 10;
+    }
+
+    // Check for gradle.properties
+    try {
+      const propsPath = join(projectRoot, 'gradle.properties');
+      await readFile(propsPath, 'utf-8');
+      configurations.push('gradle.properties');
+      evidence.push('Gradle properties configuration');
+      confidence += 10;
+    } catch (error) {
+      // gradle.properties not found
+    }
+
+    // Check for gradlew wrapper
+    try {
+      const wrapperPath = join(projectRoot, 'gradlew');
+      await access(wrapperPath);
+      evidence.push('Gradle wrapper scripts found');
+      confidence += 15;
+    } catch (error) {
+      // gradlew not found
+    }
+
+    return {
+      name: 'Gradle',
+      version,
+      category: 'build',
+      confidence: Math.min(confidence / 100, 0.95),
+      evidence,
+      configurations,
+      patterns
+    };
   }
 
   /**

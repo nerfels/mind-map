@@ -86,18 +86,14 @@ export class FrameworkHandlers {
       if (framework_names && framework_names.length > 0) {
         const allFrameworks = await this.mindMap.detectEnhancedFrameworks();
 
-        for (const [category, frameworks] of allFrameworks) {
-          for (const framework of frameworks) {
-            if (framework_names.includes(framework.name)) {
-              frameworksToAnalyze.push(framework);
-            }
+        for (const framework of allFrameworks) {
+          if (framework_names.includes(framework.name)) {
+            frameworksToAnalyze.push(framework);
           }
         }
       } else {
         const allFrameworks = await this.mindMap.detectEnhancedFrameworks();
-        for (const [category, frameworks] of allFrameworks) {
-          frameworksToAnalyze.push(...frameworks.filter(f => f.confidence > 0.5));
-        }
+        frameworksToAnalyze.push(...allFrameworks.filter(f => f.confidence > 0.5));
       }
 
       if (frameworksToAnalyze.length === 0) {
@@ -105,7 +101,7 @@ export class FrameworkHandlers {
         return ResponseFormatter.formatSuccessResponse(text);
       }
 
-      const recommendations = await this.mindMap.getFrameworkRecommendations(frameworksToAnalyze);
+      const recommendations = await this.mindMap.getFrameworkRecommendations(frameworksToAnalyze.map(f => f.name));
 
       let text = `💡 **Framework Recommendations:**\n\n`;
 
@@ -115,7 +111,17 @@ export class FrameworkHandlers {
         text += `Based on your detected frameworks: ${frameworksToAnalyze.map(f => f.name).join(', ')}\n\n`;
 
         for (let i = 0; i < recommendations.length; i++) {
-          text += `${i + 1}. ${recommendations[i]}\n`;
+          const rec = recommendations[i];
+          if (typeof rec === 'string') {
+            text += `${i + 1}. ${rec}\n`;
+          } else if (rec.suggestions && Array.isArray(rec.suggestions)) {
+            text += `\n🔧 **${rec.framework || 'Framework'} (${rec.type || 'general'}):**\n`;
+            rec.suggestions.forEach((suggestion: string, idx: number) => {
+              text += `   ${idx + 1}. ${suggestion}\n`;
+            });
+          } else {
+            text += `${i + 1}. ${JSON.stringify(rec)}\n`;
+          }
         }
 
         // Add general framework recommendations

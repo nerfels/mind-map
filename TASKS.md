@@ -1,7 +1,7 @@
 # Mind-Map MCP Task Management
 
 ## 🎯 PROJECT OVERVIEW
-**Version**: v1.16.2 | **Status**: Production-Ready | **MCP Tools**: 33+ operational
+**Version**: v1.17.0 | **Status**: Production-Ready | **MCP Tools**: 33+ operational
 
 ## 🚨 CRITICAL ISSUES (Fix Immediately)
 
@@ -37,6 +37,20 @@
 - **Solution**: Edge pruning + variable compression
 - **Priority**: P1 - HIGH - NEXT TASK
 - **Time**: 1 day
+
+### ✅ Issue #5: Framework Detection Enhanced
+- **Status**: RESOLVED - Comprehensive framework detection with sub-project support
+- **Root Cause**: Missing implementations, no sub-project scanning, display bugs
+- **Solution Applied**:
+  - Fixed `.for is not iterable` error in FrameworkHandlers.ts
+  - Fixed `[object Object]` display bug in recommendations
+  - Added sub-project scanning for all package.json, pom.xml, build.gradle files
+  - Implemented Spring Boot, FastAPI, Maven, Gradle detection methods
+  - Enhanced recommendations with framework-specific guidance
+- **Impact**: Now detects 20+ frameworks across Web, Mobile, Desktop, Cloud, ML/AI, Build categories
+- **Files Modified**: src/handlers/FrameworkHandlers.ts, src/core/EnhancedFrameworkDetector.ts, src/core/services/AnalysisService.ts
+- **Priority**: COMPLETED
+- **Release**: v1.17.0
 
 ## 📊 CURRENT SPRINT (Week 1)
 
