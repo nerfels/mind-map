@@ -334,4 +334,99 @@ export class AnalysisHandlers {
     console.log('DEBUG: About to return result from handleGetInsights');
     return ResponseFormatter.formatSuccessResponse(text);
   }
+
+  async handleDetectCrossLanguageAPIs(args: {
+    api_types?: ('REST' | 'GraphQL' | 'gRPC' | 'WebSocket' | 'WebAssembly')[];
+    min_confidence?: number;
+    include_schemas?: boolean;
+  }) {
+    try {
+      const { api_types, min_confidence = 0.3, include_schemas = true } = args;
+
+      // Validate inputs
+      ValidationMiddleware.validateNumericRange(min_confidence, 0, 1, 'min_confidence');
+
+      await this.mindMap.initialize();
+
+      // Use the MindMapEngine's analysis service to run API detection
+      const result = await this.mindMap.detectCrossLanguageAPIs({
+        apiTypes: api_types,
+        minConfidence: min_confidence,
+        includeSchemas: include_schemas
+      });
+
+      let text = '🌐 Cross-Language API Detection Results\n';
+      text += '=' .repeat(50) + '\n\n';
+
+      text += `📊 **Summary:**\n`;
+      text += `• Total Endpoints: ${result.totalEndpoints}\n`;
+      text += `• API Coverage: ${result.apiCoverage.toFixed(1)}% of files contain APIs\n\n`;
+
+      if (result.endpointsByType.size > 0) {
+        text += `🎯 **API Types Found:**\n`;
+        for (const [type, count] of result.endpointsByType) {
+          text += `• ${type}: ${count} endpoint${count !== 1 ? 's' : ''}\n`;
+        }
+        text += '\n';
+      }
+
+      if (result.endpointsByLanguage.size > 0) {
+        text += `🗣️ **Languages with APIs:**\n`;
+        for (const [language, count] of result.endpointsByLanguage) {
+          text += `• ${language}: ${count} endpoint${count !== 1 ? 's' : ''}\n`;
+        }
+        text += '\n';
+      }
+
+      if (result.endpoints.length > 0) {
+        text += `🔍 **Detected Endpoints:**\n`;
+        result.endpoints.slice(0, 15).forEach((endpoint, i) => {
+          text += `${i + 1}. **${endpoint.type}** ${endpoint.method ? `${endpoint.method} ` : ''}${endpoint.path}\n`;
+          text += `   📁 File: ${endpoint.filePath.split('/').slice(-2).join('/')}\n`;
+          text += `   🗣️ Language: ${endpoint.language}${endpoint.framework ? ` (${endpoint.framework})` : ''}\n`;
+          text += `   🎯 Confidence: ${(endpoint.confidence * 100).toFixed(0)}%\n`;
+          if (endpoint.requestFormat || endpoint.responseFormat) {
+            text += `   📋 Format: ${endpoint.requestFormat || 'unknown'} → ${endpoint.responseFormat || 'unknown'}\n`;
+          }
+          text += '\n';
+        });
+
+        if (result.endpoints.length > 15) {
+          text += `... and ${result.endpoints.length - 15} more endpoints\n\n`;
+        }
+      }
+
+      if (include_schemas && result.schemas) {
+        const { openapi = [], graphql = [], grpc = [], wasm = [] } = result.schemas;
+        const totalSchemas = openapi.length + graphql.length + grpc.length + wasm.length;
+
+        if (totalSchemas > 0) {
+          text += `📄 **Schema Files Found:**\n`;
+          if (openapi.length > 0) text += `• OpenAPI/Swagger: ${openapi.length} file${openapi.length !== 1 ? 's' : ''}\n`;
+          if (graphql.length > 0) text += `• GraphQL: ${graphql.length} file${graphql.length !== 1 ? 's' : ''}\n`;
+          if (grpc.length > 0) text += `• gRPC Protocol Buffers: ${grpc.length} file${grpc.length !== 1 ? 's' : ''}\n`;
+          if (wasm.length > 0) text += `• WebAssembly: ${wasm.length} file${wasm.length !== 1 ? 's' : ''}\n`;
+          text += '\n';
+        }
+      }
+
+      if (result.totalEndpoints === 0) {
+        text += `ℹ️ No API endpoints found with confidence >= ${(min_confidence * 100).toFixed(0)}%\n`;
+        text += `Try lowering the min_confidence threshold or check if your project contains API code.\n\n`;
+        text += `📚 **Supported Patterns:**\n`;
+        text += `• **REST**: Flask (@app.route), Express (app.get/post), Spring Boot (@RequestMapping)\n`;
+        text += `• **GraphQL**: Schema definitions, resolvers, typeDefs\n`;
+        text += `• **gRPC**: Protocol buffer files (.proto), service definitions\n`;
+        text += `• **WebSocket**: Socket.IO, native WebSocket implementations\n`;
+        text += `• **WebAssembly**: .wasm/.wat files, FFI bindings\n`;
+      } else {
+        text += `✅ **API detection completed successfully!**\n`;
+        text += `Found ${result.totalEndpoints} endpoints across ${result.endpointsByLanguage.size} language${result.endpointsByLanguage.size !== 1 ? 's' : ''}\n`;
+      }
+
+      return ResponseFormatter.formatSuccessResponse(text);
+    } catch (error) {
+      return ResponseFormatter.formatErrorResponse('detect_cross_language_apis', error);
+    }
+  }
 }

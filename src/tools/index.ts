@@ -1282,6 +1282,38 @@ export const GET_DOCUMENT_RELATIONSHIPS_TOOL: Tool = {
   }
 };
 
+export const DETECT_CROSS_LANGUAGE_APIS_TOOL: Tool = {
+  name: 'detect_cross_language_apis',
+  description: 'Detect API endpoints, services, and schemas across all supported languages. Identifies REST APIs, GraphQL schemas, gRPC services, WebSocket endpoints, and WebAssembly modules with framework-specific pattern recognition.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      api_types: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['REST', 'GraphQL', 'gRPC', 'WebSocket', 'WebAssembly']
+        },
+        description: 'Filter by specific API types (optional - detects all types if not specified)',
+        default: ['REST', 'GraphQL', 'gRPC', 'WebSocket', 'WebAssembly']
+      },
+      min_confidence: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'Minimum confidence threshold for API detection (default: 0.3)',
+        default: 0.3
+      },
+      include_schemas: {
+        type: 'boolean',
+        description: 'Include schema files (OpenAPI, GraphQL, proto, WASM) in results (default: true)',
+        default: true
+      }
+    },
+    additionalProperties: false
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -1337,5 +1369,6 @@ export const ALL_TOOLS: Tool[] = [
   ANALYZE_DOCUMENT_TOOL,
   GET_DOCUMENTATION_STATISTICS_TOOL,
   GET_DOCUMENTATION_INSIGHTS_TOOL,
-  GET_DOCUMENT_RELATIONSHIPS_TOOL
+  GET_DOCUMENT_RELATIONSHIPS_TOOL,
+  DETECT_CROSS_LANGUAGE_APIS_TOOL
 ];

@@ -1,14 +1,14 @@
-# Mind Map MCP Server v1.21.0
+# Mind Map MCP Server v1.22.0
 
 **Experimental Code Intelligence Platform** - A Model Context Protocol (MCP) server that explores neuroscience-inspired approaches to software development analysis. This is an **experimental research project** featuring advanced query caching, associative learning patterns, context awareness, attention mechanisms, temporal knowledge modeling, and code analysis tools.
 
-## ⚠️ Current Status: Experimental v1.21.0
+## ⚠️ Current Status: Experimental v1.22.0
 
 **🧪 This is experimental software under active development** - Use for testing and research purposes. Features may change or be removed.
 
 **Features under development**: Context-aware caching • Brain-inspired learning • Code pattern detection • Document analysis • Multi-language AST parsing • File ignore patterns • CI/CD automation • Memory optimization
 
-**🎯 Latest Update v1.21.0**: **Brain System Enhancements Complete** - Major performance improvements through brain-inspired intelligence systems. **Attention System Enhancement**: 30-50% faster queries via frequent node initialization with 71% capacity utilization following Miller's 7±2 rule. **Hebbian Learning Utilization**: 40% faster related queries through relationship caching with bidirectional connections and 2-hop extended relationships. **Specialized Indexing System**: OptimizedMindMapStorage with composite indexes ready for sub-1ms queries. Query confidence boosted to 1.50+ for frequently accessed nodes through intelligent attention allocation.
+**🎯 Latest Update v1.22.0**: **Cross-Language API Detection** - Comprehensive API endpoint detection across 12 programming languages. **New Features**: Detect REST APIs (Flask, Express, Spring Boot), GraphQL schemas, gRPC services, WebSocket endpoints, and WebAssembly modules. **Language Support**: Python, JavaScript/TypeScript, Java, Go, Rust, C++, C#, PHP, Ruby, Swift, Kotlin, and Scala. **Intelligent Detection**: Framework-specific patterns with confidence scoring for accurate API discovery. New dedicated MCP tool `detect_cross_language_apis` for direct API analysis.
 
 ## ⚠️ Important Disclaimer
 

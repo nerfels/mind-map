@@ -16,6 +16,35 @@ import {
   MindMapNode
 } from '../../types/index.js';
 
+export interface APIEndpoint {
+  id: string;
+  type: 'REST' | 'GraphQL' | 'gRPC' | 'WebSocket' | 'WebAssembly';
+  method?: string; // GET, POST, PUT, DELETE for REST
+  path: string;
+  filePath: string;
+  language: string;
+  framework?: string;
+  requestFormat?: string;
+  responseFormat?: string;
+  authentication?: string[];
+  documentation?: string;
+  confidence: number;
+}
+
+export interface APIDetectionResult {
+  endpoints: APIEndpoint[];
+  schemas: {
+    openapi?: string[];
+    graphql?: string[];
+    grpc?: string[];
+    wasm?: string[];
+  };
+  totalEndpoints: number;
+  endpointsByLanguage: Map<string, number>;
+  endpointsByType: Map<string, number>;
+  apiCoverage: number; // percentage of files with API definitions
+}
+
 export interface AnalysisResult {
   architectural: ArchitecturalInsight[];
   callPatterns: CallPatternAnalysis;
@@ -24,6 +53,7 @@ export interface AnalysisResult {
   errorPredictions: ErrorPrediction[];
   riskAssessment: RiskAssessment;
   recommendations: string[];
+  apiDetection?: APIDetectionResult;
 }
 
 export class AnalysisService {
@@ -346,6 +376,162 @@ export class AnalysisService {
     return await this.languageToolingDetector.runToolSuite(toolsToRun, projectRoot, options.parallel !== false);
   }
 
+  // Cross-Language API Detection
+  async detectCrossLanguageAPIs(options: {
+    apiTypes?: ('REST' | 'GraphQL' | 'gRPC' | 'WebSocket' | 'WebAssembly')[];
+    minConfidence?: number;
+    includeSchemas?: boolean;
+  } = {}): Promise<APIDetectionResult> {
+    const minConfidence = options.minConfidence || 0.3;
+    const apiTypes = options.apiTypes || ['REST', 'GraphQL', 'gRPC', 'WebSocket', 'WebAssembly'];
+
+    const endpoints: APIEndpoint[] = [];
+    const schemas = {
+      openapi: [] as string[],
+      graphql: [] as string[],
+      grpc: [] as string[],
+      wasm: [] as string[]
+    };
+
+    // Get all file nodes for analysis
+    const fileNodes = this.storage.findNodes(node => node.type === 'file' && !!node.path);
+    const totalFiles = fileNodes.length;
+
+    // Detect APIs in each supported language
+    for (const fileNode of fileNodes) {
+      if (!fileNode.path) continue;
+
+      const language = fileNode.metadata?.language || this.detectLanguageFromExtension(fileNode.path);
+
+      try {
+        // Language-specific API detection
+        const detectedEndpoints = await this.detectAPIsInFile(fileNode, language, apiTypes);
+        endpoints.push(...detectedEndpoints.filter(ep => ep.confidence >= minConfidence));
+
+        // Schema detection if enabled
+        if (options.includeSchemas) {
+          const fileSchemas = await this.detectSchemasInFile(fileNode, language);
+          if (fileSchemas.openapi) schemas.openapi.push(...fileSchemas.openapi);
+          if (fileSchemas.graphql) schemas.graphql.push(...fileSchemas.graphql);
+          if (fileSchemas.grpc) schemas.grpc.push(...fileSchemas.grpc);
+          if (fileSchemas.wasm) schemas.wasm.push(...fileSchemas.wasm);
+        }
+      } catch (error) {
+        console.warn(`Failed to detect APIs in ${fileNode.path}:`, error);
+      }
+    }
+
+    // Calculate statistics
+    const endpointsByLanguage = new Map<string, number>();
+    const endpointsByType = new Map<string, number>();
+    const filesWithAPIs = new Set<string>();
+
+    for (const endpoint of endpoints) {
+      // Count by language
+      const langCount = endpointsByLanguage.get(endpoint.language) || 0;
+      endpointsByLanguage.set(endpoint.language, langCount + 1);
+
+      // Count by type
+      const typeCount = endpointsByType.get(endpoint.type) || 0;
+      endpointsByType.set(endpoint.type, typeCount + 1);
+
+      // Track files with APIs
+      filesWithAPIs.add(endpoint.filePath);
+    }
+
+    const apiCoverage = totalFiles > 0 ? (filesWithAPIs.size / totalFiles) * 100 : 0;
+
+    return {
+      endpoints,
+      schemas,
+      totalEndpoints: endpoints.length,
+      endpointsByLanguage,
+      endpointsByType,
+      apiCoverage
+    };
+  }
+
+  private async detectAPIsInFile(fileNode: MindMapNode, language: string, apiTypes: string[]): Promise<APIEndpoint[]> {
+    const endpoints: APIEndpoint[] = [];
+
+    if (!fileNode.path) return endpoints;
+
+    try {
+      const content = await require('fs/promises').readFile(fileNode.path, 'utf-8');
+
+      // Language-specific API detection
+      switch (language) {
+        case 'python':
+          endpoints.push(...this.detectPythonAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'javascript':
+        case 'typescript':
+          endpoints.push(...this.detectJavaScriptAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'rust':
+          endpoints.push(...this.detectRustAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'java':
+          endpoints.push(...this.detectJavaAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'go':
+          endpoints.push(...this.detectGoAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'cpp':
+        case 'c':
+          endpoints.push(...this.detectCppAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'csharp':
+          endpoints.push(...this.detectCSharpAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'php':
+          endpoints.push(...this.detectPHPAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'ruby':
+          endpoints.push(...this.detectRubyAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'swift':
+          endpoints.push(...this.detectSwiftAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'kotlin':
+          endpoints.push(...this.detectKotlinAPIs(content, fileNode.path, apiTypes));
+          break;
+        case 'scala':
+          endpoints.push(...this.detectScalaAPIs(content, fileNode.path, apiTypes));
+          break;
+      }
+    } catch (error) {
+      console.warn(`Failed to read file ${fileNode.path}:`, error);
+    }
+
+    return endpoints;
+  }
+
+  private detectLanguageFromExtension(filePath: string): string {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    const extensionMap: Record<string, string> = {
+      'py': 'python',
+      'js': 'javascript',
+      'ts': 'typescript',
+      'tsx': 'typescript',
+      'jsx': 'javascript',
+      'rs': 'rust',
+      'java': 'java',
+      'go': 'go',
+      'cpp': 'cpp',
+      'cc': 'cpp',
+      'cxx': 'cpp',
+      'c': 'c',
+      'cs': 'csharp',
+      'php': 'php',
+      'rb': 'ruby',
+      'swift': 'swift',
+      'kt': 'kotlin',
+      'scala': 'scala'
+    };
+    return extensionMap[ext || ''] || 'unknown';
+  }
+
   // Multi-Language Intelligence
   async detectCrossLanguageDependencies(options: {
     dependencyTypes?: string[];
@@ -551,7 +737,8 @@ export class AnalysisService {
       frameworks,
       tooling,
       errorPredictions,
-      riskAssessment
+      riskAssessment,
+      apiDetection
     ] = await Promise.all([
       Promise.race([
         this.analyzeArchitecture().then(result => {
@@ -612,8 +799,25 @@ export class AnalysisService {
           recommendations: [],
           confidence: 0
         } as any;
+      }),
+      Promise.race([
+        this.detectCrossLanguageAPIs({ includeSchemas: true }).then(result => {
+          console.log('DEBUG: detectCrossLanguageAPIs completed');
+          return result;
+        }),
+        timeout(10000, 'detectCrossLanguageAPIs')
+      ]).catch(err => {
+        console.warn('detectCrossLanguageAPIs failed:', err.message);
+        return {
+          endpoints: [],
+          schemas: {},
+          totalEndpoints: 0,
+          endpointsByLanguage: new Map(),
+          endpointsByType: new Map(),
+          apiCoverage: 0
+        } as any;
       })
-    ]) as [any, any, any, any, any, any];
+    ]) as [any, any, any, any, any, any, any];
 
     console.log('DEBUG: All analysis methods completed, generating recommendations...');
 
@@ -634,6 +838,7 @@ export class AnalysisService {
       tooling,
       errorPredictions,
       riskAssessment,
+      apiDetection,
       recommendations
     };
 
@@ -650,6 +855,14 @@ export class AnalysisService {
         tooling: [],
         errorPredictions: [],
         riskAssessment: {} as any,
+        apiDetection: {
+          endpoints: [],
+          schemas: {},
+          totalEndpoints: 0,
+          endpointsByLanguage: new Map(),
+          endpointsByType: new Map(),
+          apiCoverage: 0
+        },
         recommendations: []
       };
     }
@@ -1099,5 +1312,582 @@ export class AnalysisService {
       // Secondary sort by historical success
       return (b.historicalSuccess || 0) - (a.historicalSuccess || 0);
     });
+  }
+
+  // Language-specific API Detection Methods
+  private detectPythonAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST')) {
+      // Flask API detection
+      const flaskRoutes = content.match(/@app\.route\s*\(\s*['"`]([^'"`]+)['"`](?:\s*,\s*methods\s*=\s*\[([^\]]+)\])?\s*\)/g);
+      if (flaskRoutes) {
+        flaskRoutes.forEach((match, index) => {
+          const routeMatch = match.match(/@app\.route\s*\(\s*['"`]([^'"`]+)['"`](?:\s*,\s*methods\s*=\s*\[([^\]]+)\])?\s*\)/);
+          if (routeMatch) {
+            const path = routeMatch[1];
+            const methods = routeMatch[2] ? routeMatch[2].split(',').map(m => m.trim().replace(/['"`]/g, '')) : ['GET'];
+
+            methods.forEach(method => {
+              endpoints.push({
+                id: `python-flask-${filePath}-${index}`,
+                type: 'REST',
+                method: method.toUpperCase(),
+                path,
+                filePath,
+                language: 'python',
+                framework: 'Flask',
+                requestFormat: 'json',
+                responseFormat: 'json',
+                confidence: 0.85
+              });
+            });
+          }
+        });
+      }
+
+      // Django API detection
+      const djangoUrls = content.match(/path\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*([^,\)]+)/g);
+      if (djangoUrls) {
+        djangoUrls.forEach((match, index) => {
+          const urlMatch = match.match(/path\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*([^,\)]+)/);
+          if (urlMatch) {
+            endpoints.push({
+              id: `python-django-${filePath}-${index}`,
+              type: 'REST',
+              path: urlMatch[1],
+              filePath,
+              language: 'python',
+              framework: 'Django',
+              confidence: 0.8
+            });
+          }
+        });
+      }
+
+      // FastAPI detection
+      const fastApiRoutes = content.match(/@app\.(get|post|put|delete|patch)\s*\(\s*['"`]([^'"`]+)['"`]/g);
+      if (fastApiRoutes) {
+        fastApiRoutes.forEach((match, index) => {
+          const routeMatch = match.match(/@app\.(get|post|put|delete|patch)\s*\(\s*['"`]([^'"`]+)['"`]/);
+          if (routeMatch) {
+            endpoints.push({
+              id: `python-fastapi-${filePath}-${index}`,
+              type: 'REST',
+              method: routeMatch[1].toUpperCase(),
+              path: routeMatch[2],
+              filePath,
+              language: 'python',
+              framework: 'FastAPI',
+              requestFormat: 'json',
+              responseFormat: 'json',
+              confidence: 0.9
+            });
+          }
+        });
+      }
+    }
+
+    if (apiTypes.includes('GraphQL')) {
+      // GraphQL schema detection
+      if (content.includes('GraphQLSchema') || content.includes('graphene.Schema')) {
+        endpoints.push({
+          id: `python-graphql-${filePath}`,
+          type: 'GraphQL',
+          path: '/graphql',
+          filePath,
+          language: 'python',
+          framework: 'GraphQL',
+          confidence: 0.8
+        });
+      }
+    }
+
+    return endpoints;
+  }
+
+  private detectJavaScriptAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST')) {
+      // Express.js API detection
+      const expressRoutes = content.match(/app\.(get|post|put|delete|patch|use)\s*\(\s*['"`]([^'"`]+)['"`]/g);
+      if (expressRoutes) {
+        expressRoutes.forEach((match, index) => {
+          const routeMatch = match.match(/app\.(get|post|put|delete|patch|use)\s*\(\s*['"`]([^'"`]+)['"`]/);
+          if (routeMatch) {
+            endpoints.push({
+              id: `js-express-${filePath}-${index}`,
+              type: 'REST',
+              method: routeMatch[1].toUpperCase(),
+              path: routeMatch[2],
+              filePath,
+              language: 'javascript',
+              framework: 'Express',
+              requestFormat: 'json',
+              responseFormat: 'json',
+              confidence: 0.85
+            });
+          }
+        });
+      }
+
+      // Next.js API routes
+      if (filePath.includes('/api/') && (filePath.endsWith('.js') || filePath.endsWith('.ts'))) {
+        const apiPath = filePath.substring(filePath.indexOf('/api/'));
+        endpoints.push({
+          id: `js-nextjs-${filePath}`,
+          type: 'REST',
+          path: apiPath.replace(/\.(js|ts)$/, ''),
+          filePath,
+          language: 'javascript',
+          framework: 'Next.js',
+          confidence: 0.9
+        });
+      }
+
+      // Fastify detection
+      const fastifyRoutes = content.match(/fastify\.(get|post|put|delete|patch)\s*\(\s*['"`]([^'"`]+)['"`]/g);
+      if (fastifyRoutes) {
+        fastifyRoutes.forEach((match, index) => {
+          const routeMatch = match.match(/fastify\.(get|post|put|delete|patch)\s*\(\s*['"`]([^'"`]+)['"`]/);
+          if (routeMatch) {
+            endpoints.push({
+              id: `js-fastify-${filePath}-${index}`,
+              type: 'REST',
+              method: routeMatch[1].toUpperCase(),
+              path: routeMatch[2],
+              filePath,
+              language: 'javascript',
+              framework: 'Fastify',
+              confidence: 0.8
+            });
+          }
+        });
+      }
+    }
+
+    if (apiTypes.includes('GraphQL')) {
+      // GraphQL schema detection
+      if (content.includes('GraphQLSchema') || content.includes('buildSchema') || content.includes('typeDefs')) {
+        endpoints.push({
+          id: `js-graphql-${filePath}`,
+          type: 'GraphQL',
+          path: '/graphql',
+          filePath,
+          language: 'javascript',
+          framework: 'GraphQL',
+          confidence: 0.85
+        });
+      }
+    }
+
+    if (apiTypes.includes('WebSocket')) {
+      // WebSocket detection
+      if (content.includes('WebSocket') || content.includes('socket.io')) {
+        endpoints.push({
+          id: `js-websocket-${filePath}`,
+          type: 'WebSocket',
+          path: '/socket',
+          filePath,
+          language: 'javascript',
+          framework: 'WebSocket',
+          confidence: 0.8
+        });
+      }
+    }
+
+    return endpoints;
+  }
+
+  private detectRustAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST')) {
+      // Actix-web detection
+      const actixRoutes = content.match(/\.route\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*web::(get|post|put|delete|patch)\s*\(\s*\)/g);
+      if (actixRoutes) {
+        actixRoutes.forEach((match, index) => {
+          const routeMatch = match.match(/\.route\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*web::(get|post|put|delete|patch)\s*\(\s*\)/);
+          if (routeMatch) {
+            endpoints.push({
+              id: `rust-actix-${filePath}-${index}`,
+              type: 'REST',
+              method: routeMatch[2].toUpperCase(),
+              path: routeMatch[1],
+              filePath,
+              language: 'rust',
+              framework: 'Actix-web',
+              requestFormat: 'json',
+              responseFormat: 'json',
+              confidence: 0.9
+            });
+          }
+        });
+      }
+
+      // Warp detection
+      const warpRoutes = content.match(/warp::path\s*!\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g);
+      if (warpRoutes) {
+        warpRoutes.forEach((match, index) => {
+          const routeMatch = match.match(/warp::path\s*!\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/);
+          if (routeMatch) {
+            endpoints.push({
+              id: `rust-warp-${filePath}-${index}`,
+              type: 'REST',
+              path: routeMatch[1],
+              filePath,
+              language: 'rust',
+              framework: 'Warp',
+              confidence: 0.85
+            });
+          }
+        });
+      }
+
+      // Axum detection
+      if (content.includes('axum::') && content.includes('Router')) {
+        const axumRoutes = content.match(/\.route\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*(get|post|put|delete|patch)\s*\(/g);
+        if (axumRoutes) {
+          axumRoutes.forEach((match, index) => {
+            const routeMatch = match.match(/\.route\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*(get|post|put|delete|patch)\s*\(/);
+            if (routeMatch) {
+              endpoints.push({
+                id: `rust-axum-${filePath}-${index}`,
+                type: 'REST',
+                method: routeMatch[2].toUpperCase(),
+                path: routeMatch[1],
+                filePath,
+                language: 'rust',
+                framework: 'Axum',
+                confidence: 0.85
+              });
+            }
+          });
+        }
+      }
+    }
+
+    if (apiTypes.includes('gRPC')) {
+      // gRPC service detection
+      if (content.includes('tonic::') && content.includes('service')) {
+        endpoints.push({
+          id: `rust-grpc-${filePath}`,
+          type: 'gRPC',
+          path: '/grpc',
+          filePath,
+          language: 'rust',
+          framework: 'Tonic',
+          confidence: 0.8
+        });
+      }
+    }
+
+    return endpoints;
+  }
+
+  private detectCppAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST')) {
+      // Boost.Beast detection
+      if (content.includes('boost::beast::http') || content.includes('beast::http')) {
+        endpoints.push({
+          id: `cpp-beast-${filePath}`,
+          type: 'REST',
+          path: '/api',
+          filePath,
+          language: 'cpp',
+          framework: 'Boost.Beast',
+          confidence: 0.7
+        });
+      }
+
+      // Pistache detection
+      if (content.includes('Pistache::') && content.includes('Http::')) {
+        endpoints.push({
+          id: `cpp-pistache-${filePath}`,
+          type: 'REST',
+          path: '/api',
+          filePath,
+          language: 'cpp',
+          framework: 'Pistache',
+          confidence: 0.8
+        });
+      }
+
+      // Custom HTTP server detection (like in test file)
+      if (content.includes('register_route') && content.includes('HttpServer')) {
+        const routeRegistrations = content.match(/register_route\s*\(\s*['"`]([^'"`]+)['"`]/g);
+        if (routeRegistrations) {
+          routeRegistrations.forEach((match, index) => {
+            const routeMatch = match.match(/register_route\s*\(\s*['"`]([^'"`]+)['"`]/);
+            if (routeMatch) {
+              endpoints.push({
+                id: `cpp-custom-${filePath}-${index}`,
+                type: 'REST',
+                path: routeMatch[1],
+                filePath,
+                language: 'cpp',
+                framework: 'Custom HTTP Server',
+                confidence: 0.75
+              });
+            }
+          });
+        }
+      }
+    }
+
+    if (apiTypes.includes('gRPC')) {
+      // gRPC detection
+      if (content.includes('grpc::') && content.includes('Service')) {
+        endpoints.push({
+          id: `cpp-grpc-${filePath}`,
+          type: 'gRPC',
+          path: '/grpc',
+          filePath,
+          language: 'cpp',
+          framework: 'gRPC C++',
+          confidence: 0.85
+        });
+      }
+    }
+
+    return endpoints;
+  }
+
+  // Placeholder implementations for other languages
+  private detectJavaAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST')) {
+      // Spring Boot REST detection
+      if (content.includes('@RestController') || content.includes('@RequestMapping')) {
+        const mappings = content.match(/@(Get|Post|Put|Delete|Patch)Mapping\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g);
+        if (mappings) {
+          mappings.forEach((match, index) => {
+            const mappingMatch = match.match(/@(Get|Post|Put|Delete|Patch)Mapping\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/);
+            if (mappingMatch) {
+              endpoints.push({
+                id: `java-spring-${filePath}-${index}`,
+                type: 'REST',
+                method: mappingMatch[1].toUpperCase(),
+                path: mappingMatch[2],
+                filePath,
+                language: 'java',
+                framework: 'Spring Boot',
+                confidence: 0.9
+              });
+            }
+          });
+        }
+      }
+    }
+
+    return endpoints;
+  }
+
+  private detectGoAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST')) {
+      // Gin framework detection
+      const ginRoutes = content.match(/r\.(GET|POST|PUT|DELETE|PATCH)\s*\(\s*['"`]([^'"`]+)['"`]/g);
+      if (ginRoutes) {
+        ginRoutes.forEach((match, index) => {
+          const routeMatch = match.match(/r\.(GET|POST|PUT|DELETE|PATCH)\s*\(\s*['"`]([^'"`]+)['"`]/);
+          if (routeMatch) {
+            endpoints.push({
+              id: `go-gin-${filePath}-${index}`,
+              type: 'REST',
+              method: routeMatch[1],
+              path: routeMatch[2],
+              filePath,
+              language: 'go',
+              framework: 'Gin',
+              confidence: 0.85
+            });
+          }
+        });
+      }
+
+      // Gorilla Mux detection
+      if (content.includes('mux.NewRouter()')) {
+        endpoints.push({
+          id: `go-gorilla-${filePath}`,
+          type: 'REST',
+          path: '/api',
+          filePath,
+          language: 'go',
+          framework: 'Gorilla Mux',
+          confidence: 0.7
+        });
+      }
+    }
+
+    if (apiTypes.includes('gRPC')) {
+      // gRPC service detection
+      if (content.includes('grpc.NewServer()') || content.includes('pb.Register')) {
+        endpoints.push({
+          id: `go-grpc-${filePath}`,
+          type: 'gRPC',
+          path: '/grpc',
+          filePath,
+          language: 'go',
+          framework: 'gRPC Go',
+          confidence: 0.85
+        });
+      }
+    }
+
+    return endpoints;
+  }
+
+  // Simple implementations for remaining languages
+  private detectCSharpAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST') && content.includes('[ApiController]')) {
+      endpoints.push({
+        id: `csharp-webapi-${filePath}`,
+        type: 'REST',
+        path: '/api',
+        filePath,
+        language: 'csharp',
+        framework: 'ASP.NET Core',
+        confidence: 0.8
+      });
+    }
+
+    return endpoints;
+  }
+
+  private detectPHPAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST') && (content.includes('$app->') || content.includes('Route::'))) {
+      endpoints.push({
+        id: `php-api-${filePath}`,
+        type: 'REST',
+        path: '/api',
+        filePath,
+        language: 'php',
+        framework: 'Laravel/Slim',
+        confidence: 0.7
+      });
+    }
+
+    return endpoints;
+  }
+
+  private detectRubyAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST') && (content.includes('Rails.application.routes') || content.includes('get /'))) {
+      endpoints.push({
+        id: `ruby-rails-${filePath}`,
+        type: 'REST',
+        path: '/api',
+        filePath,
+        language: 'ruby',
+        framework: 'Ruby on Rails',
+        confidence: 0.8
+      });
+    }
+
+    return endpoints;
+  }
+
+  private detectSwiftAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST') && content.includes('Vapor')) {
+      endpoints.push({
+        id: `swift-vapor-${filePath}`,
+        type: 'REST',
+        path: '/api',
+        filePath,
+        language: 'swift',
+        framework: 'Vapor',
+        confidence: 0.8
+      });
+    }
+
+    return endpoints;
+  }
+
+  private detectKotlinAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST') && content.includes('@RestController')) {
+      endpoints.push({
+        id: `kotlin-spring-${filePath}`,
+        type: 'REST',
+        path: '/api',
+        filePath,
+        language: 'kotlin',
+        framework: 'Spring Boot',
+        confidence: 0.8
+      });
+    }
+
+    return endpoints;
+  }
+
+  private detectScalaAPIs(content: string, filePath: string, apiTypes: string[]): APIEndpoint[] {
+    const endpoints: APIEndpoint[] = [];
+
+    if (apiTypes.includes('REST') && (content.includes('Akka HTTP') || content.includes('Play Framework'))) {
+      endpoints.push({
+        id: `scala-akka-${filePath}`,
+        type: 'REST',
+        path: '/api',
+        filePath,
+        language: 'scala',
+        framework: 'Akka HTTP',
+        confidence: 0.8
+      });
+    }
+
+    return endpoints;
+  }
+
+  private async detectSchemasInFile(fileNode: MindMapNode, language: string): Promise<{
+    openapi?: string[];
+    graphql?: string[];
+    grpc?: string[];
+    wasm?: string[];
+  }> {
+    const schemas: any = {};
+
+    if (!fileNode.path) return schemas;
+
+    try {
+      const content = await require('fs/promises').readFile(fileNode.path, 'utf-8');
+
+      // OpenAPI/Swagger schema detection
+      if (content.includes('swagger:') || content.includes('openapi:') || fileNode.path.includes('swagger') || fileNode.path.includes('openapi')) {
+        schemas.openapi = [fileNode.path];
+      }
+
+      // GraphQL schema detection
+      if (content.includes('type Query') || content.includes('type Mutation') || fileNode.path.endsWith('.graphql') || fileNode.path.endsWith('.gql')) {
+        schemas.graphql = [fileNode.path];
+      }
+
+      // gRPC proto files
+      if (fileNode.path.endsWith('.proto')) {
+        schemas.grpc = [fileNode.path];
+      }
+
+      // WebAssembly modules
+      if (fileNode.path.endsWith('.wasm') || fileNode.path.endsWith('.wat')) {
+        schemas.wasm = [fileNode.path];
+      }
+    } catch (error) {
+      console.warn(`Failed to detect schemas in ${fileNode.path}:`, error);
+    }
+
+    return schemas;
   }
 }

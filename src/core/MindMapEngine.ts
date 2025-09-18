@@ -403,6 +403,14 @@ export class MindMapEngine {
     return await this.analysisService.getArchitecturalInsights();
   }
 
+  async detectCrossLanguageAPIs(options: {
+    apiTypes?: ('REST' | 'GraphQL' | 'gRPC' | 'WebSocket' | 'WebAssembly')[];
+    minConfidence?: number;
+    includeSchemas?: boolean;
+  } = {}) {
+    return await this.analysisService.detectCrossLanguageAPIs(options);
+  }
+
   async analyzeCallPatterns(filePaths?: string[], includeMetrics: boolean = true) {
     return await this.analysisService.analyzeCallPatterns(filePaths, includeMetrics);
   }
