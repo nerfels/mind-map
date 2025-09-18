@@ -1379,6 +1379,42 @@ export const ANALYZE_CONFIGURATION_RELATIONSHIPS_TOOL: Tool = {
   }
 };
 
+export const ANALYZE_ERROR_PROPAGATION_TOOL: Tool = {
+  name: 'analyze_error_propagation',
+  description: 'Analyze error handling patterns and exception propagation flows across the codebase. Identifies unhandled errors, error handling coverage, and vulnerable areas for improved error resilience.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      include_recommendations: {
+        type: 'boolean',
+        description: 'Include error handling optimization recommendations (default: true)',
+        default: true
+      },
+      min_confidence: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'Minimum confidence threshold for error pattern detection (default: 0.6)',
+        default: 0.6
+      },
+      error_types: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['try_catch', 'error_throw', 'error_handler', 'validation', 'logging', 'propagation']
+        },
+        description: 'Filter by specific error handling types (optional - analyzes all types if not specified)'
+      },
+      severity_filter: {
+        type: 'string',
+        enum: ['low', 'medium', 'high', 'critical'],
+        description: 'Filter by minimum severity level for unhandled error paths (optional)'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -1437,5 +1473,6 @@ export const ALL_TOOLS: Tool[] = [
   GET_DOCUMENT_RELATIONSHIPS_TOOL,
   DETECT_CROSS_LANGUAGE_APIS_TOOL,
   ANALYZE_TEST_COVERAGE_TOOL,
-  ANALYZE_CONFIGURATION_RELATIONSHIPS_TOOL
+  ANALYZE_CONFIGURATION_RELATIONSHIPS_TOOL,
+  ANALYZE_ERROR_PROPAGATION_TOOL
 ];

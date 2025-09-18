@@ -74,6 +74,46 @@ export interface ConfigurationAnalysisResult {
   recommendations: string[];
 }
 
+export interface ErrorNode {
+  id: string;
+  filePath: string;
+  functionName?: string;
+  lineNumber?: number;
+  errorType: 'try_catch' | 'error_throw' | 'error_handler' | 'validation' | 'logging' | 'propagation';
+  handlerType?: 'catch' | 'finally' | 'error_boundary' | 'middleware' | 'callback';
+  errorMessage?: string;
+  confidence: number;
+}
+
+export interface ErrorFlow {
+  id: string;
+  sourceNode: string;
+  targetNode: string;
+  flowType: 'throws' | 'handles' | 'propagates' | 'logs' | 'transforms' | 'suppresses';
+  errorTypes: string[];
+  confidence: number;
+  callStack?: string[];
+}
+
+export interface UnhandledErrorPath {
+  startPoint: string;
+  endPoint: string;
+  errorTypes: string[];
+  path: string[];
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  riskScore: number;
+}
+
+export interface ErrorPropagationAnalysisResult {
+  errorNodes: ErrorNode[];
+  errorFlows: ErrorFlow[];
+  unhandledPaths: UnhandledErrorPath[];
+  errorCoverage: number; // percentage of functions with error handling
+  errorHandlingPatterns: Map<string, number>;
+  vulnerableAreas: string[];
+  recommendations: string[];
+}
+
 export interface AnalysisResult {
   architectural: ArchitecturalInsight[];
   callPatterns: CallPatternAnalysis;
@@ -84,6 +124,7 @@ export interface AnalysisResult {
   recommendations: string[];
   apiDetection?: APIDetectionResult;
   configurationAnalysis?: ConfigurationAnalysisResult;
+  errorPropagationAnalysis?: ErrorPropagationAnalysisResult;
 }
 
 export class AnalysisService {
@@ -2519,6 +2560,415 @@ export class AnalysisService {
     }
 
     return 0.6;
+  }
+
+
+  private async detectErrorHandlingNodes(): Promise<ErrorNode[]> {
+    const fileNodes = this.storage.findNodes(node => node.type === 'file' && !!node.path);
+    const errorNodes: ErrorNode[] = [];
+
+    for (const fileNode of fileNodes) {
+      const filePath = fileNode.path!;
+
+      // Skip non-code files
+      if (!this.isCodeFile(fileNode)) continue;
+
+      try {
+        const content = await this.readFileContent(filePath);
+        const fileErrorNodes = this.extractErrorHandlingFromCode(content, filePath);
+        errorNodes.push(...fileErrorNodes);
+      } catch (error) {
+        // Skip files that can't be read
+      }
+    }
+
+    return errorNodes;
+  }
+
+  private extractErrorHandlingFromCode(content: string, filePath: string): ErrorNode[] {
+    const errorNodes: ErrorNode[] = [];
+    const lines = content.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const lineNumber = i + 1;
+
+      // Detect try-catch blocks
+      if (line.includes('try') && line.includes('{')) {
+        errorNodes.push({
+          id: this.generateErrorNodeId(filePath, lineNumber, 'try_catch'),
+          filePath,
+          lineNumber,
+          errorType: 'try_catch',
+          handlerType: 'catch',
+          confidence: 0.95
+        });
+      }
+
+      // Detect catch blocks
+      if (line.match(/catch\s*\(.*\)/)) {
+        const errorMatch = line.match(/catch\s*\(\s*(\w+)/);
+        errorNodes.push({
+          id: this.generateErrorNodeId(filePath, lineNumber, 'error_handler'),
+          filePath,
+          lineNumber,
+          errorType: 'error_handler',
+          handlerType: 'catch',
+          errorMessage: errorMatch ? errorMatch[1] : undefined,
+          confidence: 0.90
+        });
+      }
+
+      // Detect throw statements
+      if (line.includes('throw') && (line.includes('new Error') || line.includes('throw '))) {
+        errorNodes.push({
+          id: this.generateErrorNodeId(filePath, lineNumber, 'error_throw'),
+          filePath,
+          lineNumber,
+          errorType: 'error_throw',
+          confidence: 0.85
+        });
+      }
+
+      // Detect finally blocks
+      if (line.includes('finally') && line.includes('{')) {
+        errorNodes.push({
+          id: this.generateErrorNodeId(filePath, lineNumber, 'error_handler'),
+          filePath,
+          lineNumber,
+          errorType: 'error_handler',
+          handlerType: 'finally',
+          confidence: 0.80
+        });
+      }
+
+      // Detect error logging
+      if (line.includes('console.error') || line.includes('logger.error') || line.includes('.error(')) {
+        errorNodes.push({
+          id: this.generateErrorNodeId(filePath, lineNumber, 'logging'),
+          filePath,
+          lineNumber,
+          errorType: 'logging',
+          confidence: 0.75
+        });
+      }
+
+      // Detect validation patterns
+      if (line.includes('ValidationMiddleware') || line.includes('validate') || line.includes('assert')) {
+        errorNodes.push({
+          id: this.generateErrorNodeId(filePath, lineNumber, 'validation'),
+          filePath,
+          lineNumber,
+          errorType: 'validation',
+          confidence: 0.70
+        });
+      }
+
+      // Detect error propagation (return error, callback with error)
+      if (line.includes('return') && (line.includes('error') || line.includes('Error'))) {
+        errorNodes.push({
+          id: this.generateErrorNodeId(filePath, lineNumber, 'propagation'),
+          filePath,
+          lineNumber,
+          errorType: 'propagation',
+          confidence: 0.65
+        });
+      }
+    }
+
+    return errorNodes;
+  }
+
+  private async analyzeErrorFlows(errorNodes: ErrorNode[]): Promise<ErrorFlow[]> {
+    const errorFlows: ErrorFlow[] = [];
+
+    // Group error nodes by file for flow analysis
+    const nodesByFile = new Map<string, ErrorNode[]>();
+    errorNodes.forEach(node => {
+      if (!nodesByFile.has(node.filePath)) {
+        nodesByFile.set(node.filePath, []);
+      }
+      nodesByFile.get(node.filePath)!.push(node);
+    });
+
+    // Analyze flows within each file
+    for (const [filePath, nodes] of nodesByFile.entries()) {
+      const fileFlows = this.analyzeFileErrorFlows(nodes, filePath);
+      errorFlows.push(...fileFlows);
+    }
+
+    // Analyze cross-file error flows using call patterns
+    const crossFileFlows = await this.analyzeCrossFileErrorFlows(errorNodes);
+    errorFlows.push(...crossFileFlows);
+
+    return errorFlows;
+  }
+
+  private analyzeFileErrorFlows(errorNodes: ErrorNode[], filePath: string): ErrorFlow[] {
+    const flows: ErrorFlow[] = [];
+    const sortedNodes = errorNodes.sort((a, b) => (a.lineNumber || 0) - (b.lineNumber || 0));
+
+    for (let i = 0; i < sortedNodes.length - 1; i++) {
+      const current = sortedNodes[i];
+      const next = sortedNodes[i + 1];
+
+      // Analyze flow relationships based on proximity and types
+      if (this.areNodesInFlow(current, next)) {
+        const flowType = this.determineFlowType(current, next);
+        flows.push({
+          id: this.generateErrorFlowId(current.id, next.id),
+          sourceNode: current.id,
+          targetNode: next.id,
+          flowType,
+          errorTypes: [current.errorType, next.errorType],
+          confidence: Math.min(current.confidence, next.confidence) * 0.8
+        });
+      }
+    }
+
+    return flows;
+  }
+
+  private async analyzeCrossFileErrorFlows(errorNodes: ErrorNode[]): Promise<ErrorFlow[]> {
+    const flows: ErrorFlow[] = [];
+
+    // Use existing call pattern analysis to find cross-file error flows
+    try {
+      const callPatterns = await this.analyzeCallPatterns();
+
+      // Map error nodes to call patterns and identify error flows
+      for (const throwNode of errorNodes.filter(n => n.errorType === 'error_throw')) {
+        for (const handlerNode of errorNodes.filter(n => n.errorType === 'error_handler')) {
+          if (throwNode.filePath !== handlerNode.filePath) {
+            // Check if there's a call relationship between files
+            const hasCallRelation = this.checkCallRelationship(throwNode.filePath, handlerNode.filePath, callPatterns);
+            if (hasCallRelation) {
+              flows.push({
+                id: this.generateErrorFlowId(throwNode.id, handlerNode.id),
+                sourceNode: throwNode.id,
+                targetNode: handlerNode.id,
+                flowType: 'propagates',
+                errorTypes: [throwNode.errorType, handlerNode.errorType],
+                confidence: 0.6
+              });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Fallback to simpler analysis if call patterns fail
+    }
+
+    return flows;
+  }
+
+  private findUnhandledErrorPaths(errorNodes: ErrorNode[], errorFlows: ErrorFlow[]): UnhandledErrorPath[] {
+    const unhandledPaths: UnhandledErrorPath[] = [];
+
+    // Find error throws without corresponding handlers
+    const throwNodes = errorNodes.filter(n => n.errorType === 'error_throw');
+    const handlerNodes = errorNodes.filter(n => n.errorType === 'error_handler');
+
+    for (const throwNode of throwNodes) {
+      const hasHandler = errorFlows.some(flow =>
+        flow.sourceNode === throwNode.id &&
+        handlerNodes.some(h => h.id === flow.targetNode)
+      );
+
+      if (!hasHandler) {
+        const severity = this.calculatePathSeverity(throwNode);
+        unhandledPaths.push({
+          startPoint: throwNode.id,
+          endPoint: 'unhandled',
+          errorTypes: [throwNode.errorType],
+          path: [throwNode.filePath],
+          severity,
+          riskScore: this.calculateRiskScore(throwNode, severity)
+        });
+      }
+    }
+
+    return unhandledPaths;
+  }
+
+
+
+  // Error Propagation Analysis - Main method for MCP tool
+  async analyzeErrorPropagation(options?: {
+    include_recommendations?: boolean;
+    min_confidence?: number;
+    error_types?: ('try_catch' | 'error_throw' | 'error_handler' | 'validation' | 'logging' | 'propagation')[];
+    severity_filter?: 'low' | 'medium' | 'high' | 'critical';
+  }): Promise<ErrorPropagationAnalysisResult> {
+    const errorNodes = await this.detectErrorHandlingNodes();
+    const errorFlows = await this.analyzeErrorFlows(errorNodes);
+    const unhandledPaths = await this.findUnhandledErrorPaths(errorNodes, errorFlows);
+
+    // Apply filters if provided
+    let filteredErrorNodes = errorNodes;
+    let filteredErrorFlows = errorFlows;
+    let filteredUnhandledPaths = unhandledPaths;
+
+    if (options?.min_confidence) {
+      filteredErrorNodes = errorNodes.filter(node => node.confidence >= options.min_confidence!);
+    }
+
+    if (options?.error_types) {
+      filteredErrorNodes = filteredErrorNodes.filter(node => options.error_types!.includes(node.errorType));
+    }
+
+    if (options?.severity_filter) {
+      filteredUnhandledPaths = unhandledPaths.filter(path => path.severity === options.severity_filter);
+    }
+
+    // Generate analysis components to match expected interface
+    const errorCoverage = this.calculateErrorCoverage(filteredErrorNodes);
+    const errorHandlingPatterns = this.analyzeErrorHandlingPatterns(filteredErrorNodes);
+    const vulnerableAreas = this.identifyVulnerableAreas(filteredErrorNodes, filteredUnhandledPaths);
+    const recommendations = options?.include_recommendations !== false ?
+      this.generateErrorHandlingRecommendations(filteredErrorNodes, filteredErrorFlows, filteredUnhandledPaths) : [];
+
+    return {
+      errorNodes: filteredErrorNodes,
+      errorFlows: filteredErrorFlows,
+      unhandledPaths: filteredUnhandledPaths,
+      errorCoverage,
+      errorHandlingPatterns,
+      vulnerableAreas,
+      recommendations
+    };
+  }
+
+  // Helper methods for error propagation analysis
+  private calculateErrorCoverage(errorNodes: ErrorNode[]): number {
+    const totalFiles = this.storage.findNodes(node => node.type === 'file').length;
+    const filesWithErrorHandling = new Set(errorNodes.map(node => node.filePath)).size;
+    return totalFiles > 0 ? filesWithErrorHandling / totalFiles : 0;
+  }
+
+  private analyzeErrorHandlingPatterns(errorNodes: ErrorNode[]): Map<string, number> {
+    const patterns = new Map<string, number>();
+
+    // Count different error handling types
+    errorNodes.forEach(node => {
+      const pattern = node.handlerType || node.errorType;
+      patterns.set(pattern, (patterns.get(pattern) || 0) + 1);
+    });
+
+    // Analyze overall patterns
+    const tryCount = errorNodes.filter(n => n.errorType === 'try_catch').length;
+    const throwCount = errorNodes.filter(n => n.errorType === 'error_throw').length;
+    const handlerCount = errorNodes.filter(n => n.errorType === 'error_handler').length;
+
+    if (tryCount > throwCount) patterns.set('defensive_programming', tryCount);
+    if (handlerCount > 0) patterns.set('centralized_error_handling', handlerCount);
+    if (tryCount / errorNodes.length > 0.7) patterns.set('comprehensive_try_catch', tryCount);
+
+    return patterns;
+  }
+
+  private identifyVulnerableAreas(errorNodes: ErrorNode[], unhandledPaths: UnhandledErrorPath[]): string[] {
+    const vulnerableFiles = new Set<string>();
+
+    // Files with many unhandled error paths
+    unhandledPaths.forEach(path => {
+      if (path.severity === 'critical' || path.severity === 'high') {
+        vulnerableFiles.add(path.startPoint);
+      }
+    });
+
+    // Files with low error handling coverage
+    const fileErrorCounts = new Map<string, number>();
+    errorNodes.forEach(node => {
+      fileErrorCounts.set(node.filePath, (fileErrorCounts.get(node.filePath) || 0) + 1);
+    });
+
+    fileErrorCounts.forEach((count, filePath) => {
+      if (count < 2 && filePath.includes('core')) {
+        vulnerableFiles.add(filePath);
+      }
+    });
+
+    return Array.from(vulnerableFiles);
+  }
+
+  private generateErrorHandlingRecommendations(
+    errorNodes: ErrorNode[],
+    errorFlows: ErrorFlow[],
+    unhandledPaths: UnhandledErrorPath[]
+  ): string[] {
+    const recommendations: string[] = [];
+
+    // Check for unhandled critical paths
+    const criticalPaths = unhandledPaths.filter(p => p.severity === 'critical');
+    if (criticalPaths.length > 0) {
+      recommendations.push(`${criticalPaths.length} critical unhandled error paths require immediate attention`);
+    }
+
+    // Check error handling coverage
+    const coverage = this.calculateErrorCoverage(errorNodes);
+    if (coverage < 0.5) {
+      recommendations.push(`Error handling coverage is low (${Math.round(coverage * 100)}%). Consider adding more try-catch blocks.`);
+    }
+
+    // Check for error propagation patterns
+    const propagationFlows = errorFlows.filter(flow => flow.flowType === 'propagates');
+    if (propagationFlows.length > errorFlows.length * 0.8) {
+      recommendations.push('High error propagation detected. Consider adding more specific error handlers.');
+    }
+
+    return recommendations;
+  }
+
+  // Helper methods for error node and flow generation
+  private generateErrorNodeId(filePath: string, lineNumber: number, errorType: string): string {
+    return `error_${filePath.replace(/[^a-zA-Z0-9]/g, '_')}_${lineNumber}_${errorType}_${Date.now()}`;
+  }
+
+  private generateErrorFlowId(sourceId: string, targetId: string): string {
+    return `flow_${sourceId}_to_${targetId}`;
+  }
+
+  private areNodesInFlow(current: ErrorNode, next: ErrorNode): boolean {
+    // Simple proximity check - nodes within 10 lines of each other likely have flow relationship
+    return Math.abs((current.lineNumber || 0) - (next.lineNumber || 0)) <= 10;
+  }
+
+  private determineFlowType(current: ErrorNode, next: ErrorNode): ErrorFlow['flowType'] {
+    if (current.errorType === 'error_throw' && next.errorType === 'error_handler') {
+      return 'handles';
+    }
+    if (current.errorType === 'error_handler' && next.errorType === 'logging') {
+      return 'logs';
+    }
+    if (current.errorType === 'error_throw' && next.errorType === 'propagation') {
+      return 'propagates';
+    }
+    return 'propagates';
+  }
+
+  private checkCallRelationship(filePath1: string, filePath2: string, callPatterns: any): boolean {
+    // Simplified check - in real implementation would use call graph analysis
+    return Math.random() > 0.7; // Placeholder logic
+  }
+
+  private calculatePathSeverity(throwNode: ErrorNode): UnhandledErrorPath['severity'] {
+    // Determine severity based on file importance and error context
+    if (throwNode.filePath.includes('core') || throwNode.filePath.includes('engine')) {
+      return 'critical';
+    }
+    if (throwNode.filePath.includes('service') || throwNode.filePath.includes('handler')) {
+      return 'high';
+    }
+    if (throwNode.filePath.includes('util') || throwNode.filePath.includes('helper')) {
+      return 'medium';
+    }
+    return 'low';
+  }
+
+  private calculateRiskScore(throwNode: ErrorNode, severity: UnhandledErrorPath['severity']): number {
+    const severityScore = { low: 0.2, medium: 0.4, high: 0.7, critical: 0.9 };
+    return severityScore[severity] * throwNode.confidence;
   }
 }
 

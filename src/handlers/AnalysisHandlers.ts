@@ -667,4 +667,176 @@ export class AnalysisHandlers {
       return ResponseFormatter.formatErrorResponse('analyze_configuration_relationships', error);
     }
   }
+
+  async handleAnalyzeErrorPropagation(args: {
+    include_recommendations?: boolean;
+    min_confidence?: number;
+    error_types?: ('try_catch' | 'error_throw' | 'error_handler' | 'validation' | 'logging' | 'propagation')[];
+    severity_filter?: 'low' | 'medium' | 'high' | 'critical';
+  }) {
+    try {
+      const { include_recommendations = true, min_confidence = 0.6, error_types, severity_filter } = args;
+
+      // Validate inputs
+      ValidationMiddleware.validateNumericRange(min_confidence, 0, 1, 'min_confidence');
+
+      await this.mindMap.initialize();
+
+      // Use the MindMapEngine's analysis service to run error propagation analysis
+      const result = await this.mindMap.analyzeErrorPropagation();
+
+      // Filter by confidence if specified
+      let filteredErrorNodes = result.errorNodes;
+      if (min_confidence > 0) {
+        filteredErrorNodes = result.errorNodes.filter(node => node.confidence >= min_confidence);
+      }
+
+      // Filter by error types if specified
+      if (error_types && error_types.length > 0) {
+        filteredErrorNodes = filteredErrorNodes.filter(node => error_types.includes(node.errorType));
+      }
+
+      // Filter error flows based on filtered nodes
+      const filteredNodeIds = new Set(filteredErrorNodes.map(node => node.id));
+      const filteredErrorFlows = result.errorFlows.filter(flow =>
+        filteredNodeIds.has(flow.sourceNode) || filteredNodeIds.has(flow.targetNode)
+      );
+
+      // Filter unhandled paths by severity if specified
+      let filteredUnhandledPaths = result.unhandledPaths;
+      if (severity_filter) {
+        const severityLevels = ['low', 'medium', 'high', 'critical'];
+        const minSeverityIndex = severityLevels.indexOf(severity_filter);
+        filteredUnhandledPaths = result.unhandledPaths.filter(path => {
+          const pathSeverityIndex = severityLevels.indexOf(path.severity);
+          return pathSeverityIndex >= minSeverityIndex;
+        });
+      }
+
+      let text = `🔍 **Error Propagation Analysis Results**\n\n`;
+
+      // Summary
+      text += `📊 **Summary:**\n`;
+      text += `- Total error handling nodes: ${filteredErrorNodes.length}\n`;
+      text += `- Error flows detected: ${filteredErrorFlows.length}\n`;
+      text += `- Unhandled error paths: ${filteredUnhandledPaths.length}\n`;
+      text += `- Error handling coverage: ${result.errorCoverage.toFixed(1)}%\n`;
+      text += `- Vulnerable areas: ${result.vulnerableAreas.length}\n\n`;
+
+      // Error nodes by type
+      const nodesByType = new Map<string, any[]>();
+      filteredErrorNodes.forEach(node => {
+        if (!nodesByType.has(node.errorType)) {
+          nodesByType.set(node.errorType, []);
+        }
+        nodesByType.get(node.errorType)!.push(node);
+      });
+
+      text += `🎯 **Error Handling Patterns:**\n`;
+      for (const [type, nodes] of nodesByType.entries()) {
+        const typeLabel = type.replace('_', ' ').toUpperCase();
+        text += `**${typeLabel}** (${nodes.length}):\n`;
+        nodes.slice(0, 3).forEach(node => {
+          const fileName = node.filePath.split('/').pop();
+          text += `  - ${fileName}:${node.lineNumber || '?'} (${(node.confidence * 100).toFixed(0)}%)\n`;
+        });
+        if (nodes.length > 3) {
+          text += `  ... and ${nodes.length - 3} more\n`;
+        }
+        text += '\n';
+      }
+
+      // Error flows
+      if (filteredErrorFlows.length > 0) {
+        text += `⚡ **Error Flow Analysis:**\n`;
+        const topFlows = filteredErrorFlows
+          .sort((a, b) => b.confidence - a.confidence)
+          .slice(0, 8);
+
+        topFlows.forEach((flow, i) => {
+          const sourceNode = filteredErrorNodes.find(n => n.id === flow.sourceNode);
+          const targetNode = filteredErrorNodes.find(n => n.id === flow.targetNode);
+
+          const sourceFile = sourceNode?.filePath.split('/').pop() || 'unknown';
+          const targetFile = targetNode?.filePath.split('/').pop() || 'unknown';
+          const flowType = flow.flowType.replace('_', ' ');
+
+          text += `${i + 1}. ${sourceFile}:${sourceNode?.lineNumber || '?'} **${flowType}** ${targetFile}:${targetNode?.lineNumber || '?'}\n`;
+          text += `   ${flow.errorTypes.join(' → ')} (${(flow.confidence * 100).toFixed(0)}%)\n\n`;
+        });
+      }
+
+      // Unhandled error paths
+      if (filteredUnhandledPaths.length > 0) {
+        text += `⚠️ **Unhandled Error Paths:**\n`;
+        const criticalPaths = filteredUnhandledPaths.filter(p => p.severity === 'critical');
+        const highPaths = filteredUnhandledPaths.filter(p => p.severity === 'high');
+
+        if (criticalPaths.length > 0) {
+          text += `**CRITICAL** (${criticalPaths.length}):\n`;
+          criticalPaths.slice(0, 3).forEach((path, i) => {
+            const fileName = path.path[0].split('/').pop();
+            text += `${i + 1}. ${fileName} - Risk: ${(path.riskScore * 100).toFixed(0)}%\n`;
+          });
+          if (criticalPaths.length > 3) {
+            text += `... and ${criticalPaths.length - 3} more critical paths\n`;
+          }
+          text += '\n';
+        }
+
+        if (highPaths.length > 0) {
+          text += `**HIGH** (${highPaths.length}):\n`;
+          highPaths.slice(0, 3).forEach((path, i) => {
+            const fileName = path.path[0].split('/').pop();
+            text += `${i + 1}. ${fileName} - Risk: ${(path.riskScore * 100).toFixed(0)}%\n`;
+          });
+          if (highPaths.length > 3) {
+            text += `... and ${highPaths.length - 3} more high-risk paths\n`;
+          }
+          text += '\n';
+        }
+      }
+
+      // Vulnerable areas
+      if (result.vulnerableAreas.length > 0) {
+        text += `🚨 **Vulnerable Areas:**\n`;
+        result.vulnerableAreas.slice(0, 5).forEach((area, i) => {
+          const fileName = area.split('/').pop();
+          text += `${i + 1}. ${fileName}\n`;
+        });
+        if (result.vulnerableAreas.length > 5) {
+          text += `... and ${result.vulnerableAreas.length - 5} more vulnerable files\n`;
+        }
+        text += '\n';
+      }
+
+      // Error handling patterns statistics
+      if (result.errorHandlingPatterns.size > 0) {
+        text += `📈 **Pattern Distribution:**\n`;
+        const sortedPatterns = Array.from(result.errorHandlingPatterns.entries()) as [string, number][];
+        sortedPatterns.sort((a, b) => b[1] - a[1]);
+
+        sortedPatterns.forEach(([pattern, count]: [string, number]) => {
+          const patternLabel = pattern.replace('_', ' ').toUpperCase();
+          text += `- ${patternLabel}: ${count}\n`;
+        });
+        text += '\n';
+      }
+
+      // Recommendations
+      if (include_recommendations && result.recommendations.length > 0) {
+        text += `💡 **Error Handling Recommendations:**\n`;
+        result.recommendations.forEach((rec, i) => {
+          text += `${i + 1}. ${rec}\n`;
+        });
+        text += '\n';
+      }
+
+      text += `✅ **Error propagation analysis completed successfully!**\n`;
+
+      return ResponseFormatter.formatSuccessResponse(text);
+    } catch (error) {
+      return ResponseFormatter.formatErrorResponse('analyze_error_propagation', error);
+    }
+  }
 }

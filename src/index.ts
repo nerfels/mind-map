@@ -143,6 +143,8 @@ class MindMapMCPServer {
             return await this.analysisHandlers.handleAnalyzeTestCoverage(args as any);
           case 'analyze_configuration_relationships':
             return await this.analysisHandlers.handleAnalyzeConfigurationRelationships(args as any);
+          case 'analyze_error_propagation':
+            return await this.analysisHandlers.handleAnalyzeErrorPropagation(args as any);
 
           // System handlers
           case 'get_context':

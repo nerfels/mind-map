@@ -737,6 +737,10 @@ export class MindMapEngine {
     return await this.analysisService.detectCrossLanguageDependencies(options);
   }
 
+  async analyzeErrorPropagation(options?: any): Promise<any> {
+    return await this.analysisService.analyzeErrorPropagation(options);
+  }
+
   async analyzePolyglotProject(options?: any): Promise<any> {
     return await this.analysisService.analyzePolyglotProject(options);
   }
