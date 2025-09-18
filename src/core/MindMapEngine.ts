@@ -420,6 +420,10 @@ export class MindMapEngine {
     return await this.analysisService.analyzeTestCoverage(options);
   }
 
+  async analyzeConfigurationRelationships() {
+    return await this.analysisService.analyzeConfigurationRelationships();
+  }
+
   async analyzeCallPatterns(filePaths?: string[], includeMetrics: boolean = true) {
     return await this.analysisService.analyzeCallPatterns(filePaths, includeMetrics);
   }

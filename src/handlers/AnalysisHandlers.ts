@@ -534,4 +534,137 @@ export class AnalysisHandlers {
       return ResponseFormatter.formatErrorResponse('analyze_test_coverage', error);
     }
   }
+
+  async handleAnalyzeConfigurationRelationships(args: {
+    include_recommendations?: boolean;
+    min_confidence?: number;
+    config_types?: ('package' | 'build' | 'env' | 'editor' | 'lint' | 'test' | 'framework' | 'deployment' | 'other')[];
+  }) {
+    try {
+      const { include_recommendations = true, min_confidence = 0.6, config_types } = args;
+
+      // Validate inputs
+      ValidationMiddleware.validateNumericRange(min_confidence, 0, 1, 'min_confidence');
+
+      await this.mindMap.initialize();
+
+      // Use the MindMapEngine's analysis service to run configuration analysis
+      const result = await this.mindMap.analyzeConfigurationRelationships();
+
+      // Filter by confidence if specified
+      let filteredConfigFiles = result.configurationFiles;
+      if (min_confidence > 0) {
+        filteredConfigFiles = result.configurationFiles.filter(cf => cf.confidence >= min_confidence);
+      }
+
+      // Filter by types if specified
+      if (config_types && config_types.length > 0) {
+        filteredConfigFiles = filteredConfigFiles.filter(cf => config_types.includes(cf.type));
+      }
+
+      // Filter relationships based on filtered config files
+      const filteredConfigPaths = new Set(filteredConfigFiles.map(cf => cf.filePath));
+      const filteredRelationships = result.relationships.filter(rel =>
+        filteredConfigPaths.has(rel.sourceFile) && filteredConfigPaths.has(rel.targetFile)
+      );
+
+      let text = `🔧 **Configuration Relationship Analysis Results**\n\n`;
+
+      // Summary
+      text += `📊 **Summary:**\n`;
+      text += `- Total configuration files: ${filteredConfigFiles.length}\n`;
+      text += `- Configuration relationships: ${filteredRelationships.length}\n`;
+      text += `- Configuration coverage: ${result.configCoverage.toFixed(1)}%\n`;
+      text += `- Orphaned configurations: ${result.orphanedConfigs.length}\n\n`;
+
+      // Configuration files by type
+      const configsByType = new Map<string, any[]>();
+      filteredConfigFiles.forEach(cf => {
+        if (!configsByType.has(cf.type)) {
+          configsByType.set(cf.type, []);
+        }
+        configsByType.get(cf.type)!.push(cf);
+      });
+
+      text += `🗂️ **Configuration Files by Type:**\n`;
+      for (const [type, configs] of configsByType.entries()) {
+        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+        text += `**${typeLabel}** (${configs.length}):\n`;
+        configs.slice(0, 5).forEach(cf => {
+          const fileName = cf.filePath.split('/').pop();
+          const languageInfo = cf.language ? ` [${cf.language}]` : '';
+          const frameworkInfo = cf.framework ? ` (${cf.framework})` : '';
+          text += `  - ${fileName}${languageInfo}${frameworkInfo} (${(cf.confidence * 100).toFixed(0)}%)\n`;
+        });
+        if (configs.length > 5) {
+          text += `  ... and ${configs.length - 5} more\n`;
+        }
+        text += '\n';
+      }
+
+      // Key relationships
+      if (filteredRelationships.length > 0) {
+        text += `🔗 **Key Configuration Relationships:**\n`;
+        const topRelationships = filteredRelationships
+          .sort((a, b) => b.confidence - a.confidence)
+          .slice(0, 10);
+
+        topRelationships.forEach((rel, i) => {
+          const sourceFile = rel.sourceFile.split('/').pop();
+          const targetFile = rel.targetFile.split('/').pop();
+          const relationshipType = rel.relationship.replace('_', ' ');
+          text += `${i + 1}. ${sourceFile} **${relationshipType}** ${targetFile}\n`;
+          text += `   ${rel.description} (${(rel.confidence * 100).toFixed(0)}%)\n\n`;
+        });
+      }
+
+      // Dependency tree
+      if (result.dependencyTree.size > 0) {
+        text += `🌳 **Configuration Dependency Tree:**\n`;
+        let treeCount = 0;
+        for (const [sourceFile, dependencies] of result.dependencyTree.entries()) {
+          if (treeCount >= 5) break; // Limit to avoid too much output
+          const fileName = sourceFile.split('/').pop();
+          text += `**${fileName}** depends on:\n`;
+          dependencies.slice(0, 3).forEach(dep => {
+            const depName = dep.split('/').pop();
+            text += `  → ${depName}\n`;
+          });
+          if (dependencies.length > 3) {
+            text += `  → ... and ${dependencies.length - 3} more\n`;
+          }
+          text += '\n';
+          treeCount++;
+        }
+      }
+
+      // Orphaned configurations
+      if (result.orphanedConfigs.length > 0) {
+        text += `⚠️ **Orphaned Configuration Files:**\n`;
+        result.orphanedConfigs.slice(0, 5).forEach((orphan, i) => {
+          const fileName = orphan.split('/').pop();
+          text += `${i + 1}. ${fileName}\n`;
+        });
+        if (result.orphanedConfigs.length > 5) {
+          text += `... and ${result.orphanedConfigs.length - 5} more\n`;
+        }
+        text += '\n';
+      }
+
+      // Recommendations
+      if (include_recommendations && result.recommendations.length > 0) {
+        text += `💡 **Configuration Recommendations:**\n`;
+        result.recommendations.forEach((rec, i) => {
+          text += `${i + 1}. ${rec}\n`;
+        });
+        text += '\n';
+      }
+
+      text += `✅ **Configuration analysis completed successfully!**\n`;
+
+      return ResponseFormatter.formatSuccessResponse(text);
+    } catch (error) {
+      return ResponseFormatter.formatErrorResponse('analyze_configuration_relationships', error);
+    }
+  }
 }

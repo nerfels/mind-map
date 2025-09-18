@@ -1348,6 +1348,37 @@ export const ANALYZE_TEST_COVERAGE_TOOL: Tool = {
   }
 };
 
+export const ANALYZE_CONFIGURATION_RELATIONSHIPS_TOOL: Tool = {
+  name: 'analyze_configuration_relationships',
+  description: 'Analyze configuration file relationships and dependencies across the project. Tracks package.json, tsconfig.json, .env files, and other configuration files to understand project setup and dependencies.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      include_recommendations: {
+        type: 'boolean',
+        description: 'Include configuration optimization recommendations (default: true)',
+        default: true
+      },
+      min_confidence: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'Minimum confidence threshold for configuration detection (default: 0.6)',
+        default: 0.6
+      },
+      config_types: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['package', 'build', 'env', 'editor', 'lint', 'test', 'framework', 'deployment', 'other']
+        },
+        description: 'Filter by specific configuration types (optional - analyzes all types if not specified)'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -1405,5 +1436,6 @@ export const ALL_TOOLS: Tool[] = [
   GET_DOCUMENTATION_INSIGHTS_TOOL,
   GET_DOCUMENT_RELATIONSHIPS_TOOL,
   DETECT_CROSS_LANGUAGE_APIS_TOOL,
-  ANALYZE_TEST_COVERAGE_TOOL
+  ANALYZE_TEST_COVERAGE_TOOL,
+  ANALYZE_CONFIGURATION_RELATIONSHIPS_TOOL
 ];

@@ -140,8 +140,9 @@ function runTest() {
   console.log(`\n🧪 Running: ${test.name}`);
   const testStartTime = Date.now();
 
-  const serverProcess = spawn('node', ['../../dist/index.js'], {
-    stdio: ['pipe', 'pipe', 'pipe']
+  const serverProcess = spawn('node', ['./dist/index.js'], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    cwd: process.cwd().replace('/tests/language-ast', '')
   });
 
   let output = '';

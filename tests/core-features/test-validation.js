@@ -7,7 +7,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const serverPath = join(__dirname, '../../dist/index.js');
+const serverPath = join(__dirname, './dist/index.js');
 
 console.log('🔒 Testing Input Validation and Security Fixes...\n');
 

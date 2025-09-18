@@ -7,7 +7,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const serverPath = join(__dirname, '../../dist/index.js');
+const serverPath = './dist/index.js';
 
 function createRequest(id, method, params) {
   return JSON.stringify({
@@ -21,8 +21,9 @@ function createRequest(id, method, params) {
 async function testAttentionSystem() {
   console.log('🧠 Testing Attention System - Dynamic attention allocation and multi-modal attention fusion\n');
   
-  const server = spawn('node', [serverPath], { 
+  const server = spawn('node', [serverPath], {
     stdio: ['pipe', 'pipe', 'inherit'],
+    cwd: process.cwd().replace('/tests/brain-inspired', '')
   });
 
   console.log('🔧 Step 1: Initialize server...');

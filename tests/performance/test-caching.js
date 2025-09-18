@@ -7,7 +7,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const serverPath = join(__dirname, '../../dist/index.js');
+const serverPath = join(__dirname, './dist/index.js');
 import { readFile } from 'fs/promises';
 
 function createMCPRequest(id, method, params = {}) {

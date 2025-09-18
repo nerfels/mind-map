@@ -361,7 +361,7 @@ async function runTests() {
   for (const test of tests) {
     try {
       console.log(`🧪 Running: ${test.name}`);
-      const serverProcess = spawn('node', ['../../dist/index.js'], {
+      const serverProcess = spawn('node', ['./dist/index.js'], {
         stdio: ['pipe', 'pipe', 'pipe']
       });
 

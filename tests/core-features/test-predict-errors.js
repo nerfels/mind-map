@@ -66,7 +66,7 @@ function runTest() {
   const test = tests[currentTestIndex];
   console.log(`\n🧪 Running: ${test.name}`);
 
-  const serverProcess = spawn('node', ['../../dist/index.js'], {
+  const serverProcess = spawn('node', ['./dist/index.js'], {
     stdio: ['pipe', 'pipe', 'pipe']
   });
 

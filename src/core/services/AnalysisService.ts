@@ -45,6 +45,35 @@ export interface APIDetectionResult {
   apiCoverage: number; // percentage of files with API definitions
 }
 
+export interface ConfigurationFile {
+  id: string;
+  filePath: string;
+  type: 'package' | 'build' | 'env' | 'editor' | 'lint' | 'test' | 'framework' | 'deployment' | 'other';
+  language?: string;
+  framework?: string;
+  dependencies: string[];
+  relatedFiles: string[];
+  settings: Record<string, any>;
+  confidence: number;
+}
+
+export interface ConfigurationRelationship {
+  sourceFile: string;
+  targetFile: string;
+  relationship: 'depends_on' | 'configures' | 'extends' | 'overrides' | 'references';
+  description: string;
+  confidence: number;
+}
+
+export interface ConfigurationAnalysisResult {
+  configurationFiles: ConfigurationFile[];
+  relationships: ConfigurationRelationship[];
+  dependencyTree: Map<string, string[]>;
+  orphanedConfigs: string[];
+  configCoverage: number; // percentage of project components with configuration
+  recommendations: string[];
+}
+
 export interface AnalysisResult {
   architectural: ArchitecturalInsight[];
   callPatterns: CallPatternAnalysis;
@@ -54,6 +83,7 @@ export interface AnalysisResult {
   riskAssessment: RiskAssessment;
   recommendations: string[];
   apiDetection?: APIDetectionResult;
+  configurationAnalysis?: ConfigurationAnalysisResult;
 }
 
 export class AnalysisService {
@@ -2121,6 +2151,374 @@ export class AnalysisService {
     if (javaGroup.includes(ext1) && javaGroup.includes(ext2)) return true;
 
     return ext1 === ext2;
+  }
+
+  // Configuration Relationship Tracking
+  async analyzeConfigurationRelationships(): Promise<ConfigurationAnalysisResult> {
+    const configurationFiles = await this.detectConfigurationFiles();
+    const relationships = await this.analyzeConfigurationDependencies(configurationFiles);
+    const dependencyTree = this.buildConfigurationDependencyTree(relationships);
+    const orphanedConfigs = this.findOrphanedConfigurations(configurationFiles, relationships);
+    const configCoverage = this.calculateConfigurationCoverage(configurationFiles);
+    const recommendations = this.generateConfigurationRecommendations(configurationFiles, relationships);
+
+    return {
+      configurationFiles,
+      relationships,
+      dependencyTree,
+      orphanedConfigs,
+      configCoverage,
+      recommendations
+    };
+  }
+
+  private async detectConfigurationFiles(): Promise<ConfigurationFile[]> {
+    const fileNodes = this.storage.findNodes(node => node.type === 'file' && !!node.path);
+    const configFiles: ConfigurationFile[] = [];
+
+    for (const fileNode of fileNodes) {
+      const filePath = fileNode.path!;
+      const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+
+      // Configuration file patterns
+      const configPatterns = [
+        { pattern: /^package\.json$/, type: 'package' as const, language: 'javascript' },
+        { pattern: /^tsconfig.*\.json$/, type: 'build' as const, language: 'typescript' },
+        { pattern: /^\.env.*$/, type: 'env' as const },
+        { pattern: /^\.gitignore$/, type: 'other' as const },
+        { pattern: /^\.editorconfig$/, type: 'editor' as const },
+        { pattern: /^\.eslintrc.*$/, type: 'lint' as const, language: 'javascript' },
+        { pattern: /^jest\.config\.(js|ts|json)$/, type: 'test' as const, language: 'javascript' },
+        { pattern: /^webpack\.config\.(js|ts)$/, type: 'build' as const, language: 'javascript' },
+        { pattern: /^vite\.config\.(js|ts)$/, type: 'build' as const, language: 'javascript' },
+        { pattern: /^rollup\.config\.(js|ts)$/, type: 'build' as const, language: 'javascript' },
+        { pattern: /^babel\.config\.(js|json)$/, type: 'build' as const, language: 'javascript' },
+        { pattern: /^\.prettierrc.*$/, type: 'lint' as const },
+        { pattern: /^Dockerfile$/, type: 'deployment' as const },
+        { pattern: /^docker-compose\.ya?ml$/, type: 'deployment' as const },
+        { pattern: /^pom\.xml$/, type: 'build' as const, language: 'java' },
+        { pattern: /^build\.gradle$/, type: 'build' as const, language: 'java' },
+        { pattern: /^Cargo\.toml$/, type: 'build' as const, language: 'rust' },
+        { pattern: /^go\.mod$/, type: 'build' as const, language: 'go' },
+        { pattern: /^requirements\.txt$/, type: 'package' as const, language: 'python' },
+        { pattern: /^pyproject\.toml$/, type: 'build' as const, language: 'python' },
+        { pattern: /^setup\.py$/, type: 'build' as const, language: 'python' },
+        { pattern: /^\.github\/workflows\/.*\.ya?ml$/, type: 'deployment' as const },
+        { pattern: /^next\.config\.(js|ts)$/, type: 'framework' as const, language: 'javascript', framework: 'Next.js' },
+        { pattern: /^nuxt\.config\.(js|ts)$/, type: 'framework' as const, language: 'javascript', framework: 'Nuxt.js' },
+        { pattern: /^angular\.json$/, type: 'framework' as const, language: 'typescript', framework: 'Angular' },
+        { pattern: /^vue\.config\.(js|ts)$/, type: 'framework' as const, language: 'javascript', framework: 'Vue.js' }
+      ];
+
+      for (const { pattern, type, language, framework } of configPatterns) {
+        if (pattern.test(fileName)) {
+          const dependencies = await this.extractConfigurationDependencies(filePath, type);
+          const relatedFiles = await this.findRelatedFiles(filePath, type);
+          const settings = await this.extractConfigurationSettings(filePath, type);
+
+          configFiles.push({
+            id: this.generateConfigId(filePath),
+            filePath,
+            type,
+            language,
+            framework,
+            dependencies,
+            relatedFiles,
+            settings,
+            confidence: this.calculateConfigConfidence(filePath, type)
+          });
+          break;
+        }
+      }
+    }
+
+    return configFiles;
+  }
+
+  private async extractConfigurationDependencies(filePath: string, type: ConfigurationFile['type']): Promise<string[]> {
+    const dependencies: string[] = [];
+
+    try {
+      // Read file content to extract dependencies
+      const content = await this.readFileContent(filePath);
+
+      switch (type) {
+        case 'package':
+          if (filePath.endsWith('package.json')) {
+            const packageJson = JSON.parse(content);
+            if (packageJson.dependencies) {
+              dependencies.push(...Object.keys(packageJson.dependencies));
+            }
+            if (packageJson.devDependencies) {
+              dependencies.push(...Object.keys(packageJson.devDependencies));
+            }
+          }
+          break;
+        case 'build':
+          if (filePath.includes('tsconfig')) {
+            const tsconfig = JSON.parse(content);
+            if (tsconfig.extends) {
+              dependencies.push(tsconfig.extends);
+            }
+          }
+          break;
+        case 'env':
+          // Extract referenced environment variables
+          const envVarMatches = content.match(/\$\{?([A-Z_][A-Z0-9_]*)\}?/g);
+          if (envVarMatches) {
+            dependencies.push(...envVarMatches.map(match => match.replace(/\$\{?|\}?/g, '')));
+          }
+          break;
+      }
+    } catch (error) {
+      // File might not be readable or parseable
+    }
+
+    return dependencies;
+  }
+
+  private async findRelatedFiles(filePath: string, type: ConfigurationFile['type']): Promise<string[]> {
+    const relatedFiles: string[] = [];
+    const fileNodes = this.storage.findNodes(node => node.type === 'file' && !!node.path);
+
+    switch (type) {
+      case 'package':
+        // Find lock files, build configs, etc.
+        relatedFiles.push(
+          ...fileNodes
+            .map(node => node.path!)
+            .filter(path =>
+              path.includes('package-lock.json') ||
+              path.includes('yarn.lock') ||
+              path.includes('pnpm-lock.yaml') ||
+              path.includes('tsconfig.json') ||
+              path.includes('webpack.config') ||
+              path.includes('vite.config')
+            )
+        );
+        break;
+      case 'build':
+        if (filePath.includes('tsconfig')) {
+          relatedFiles.push(
+            ...fileNodes
+              .map(node => node.path!)
+              .filter(path => path.endsWith('.ts') || path.endsWith('.tsx'))
+              .slice(0, 10) // Limit to avoid too many files
+          );
+        }
+        break;
+      case 'test':
+        relatedFiles.push(
+          ...fileNodes
+            .map(node => node.path!)
+            .filter(path =>
+              path.includes('/test/') ||
+              path.includes('/tests/') ||
+              path.includes('.test.') ||
+              path.includes('.spec.')
+            )
+            .slice(0, 10)
+        );
+        break;
+    }
+
+    return relatedFiles;
+  }
+
+  private async extractConfigurationSettings(filePath: string, type: ConfigurationFile['type']): Promise<Record<string, any>> {
+    const settings: Record<string, any> = {};
+
+    try {
+      const content = await this.readFileContent(filePath);
+
+      if (filePath.endsWith('.json')) {
+        const jsonContent = JSON.parse(content);
+        // Extract key configuration settings
+        if (type === 'package') {
+          settings.main = jsonContent.main;
+          settings.scripts = Object.keys(jsonContent.scripts || {});
+          settings.engines = jsonContent.engines;
+        } else if (type === 'build' && filePath.includes('tsconfig')) {
+          settings.target = jsonContent.compilerOptions?.target;
+          settings.module = jsonContent.compilerOptions?.module;
+          settings.strict = jsonContent.compilerOptions?.strict;
+        }
+      }
+    } catch (error) {
+      // File might not be readable or parseable
+    }
+
+    return settings;
+  }
+
+  private async analyzeConfigurationDependencies(configFiles: ConfigurationFile[]): Promise<ConfigurationRelationship[]> {
+    const relationships: ConfigurationRelationship[] = [];
+
+    for (const config of configFiles) {
+      // Analyze extends relationships
+      if (config.settings.extends) {
+        relationships.push({
+          sourceFile: config.filePath,
+          targetFile: config.settings.extends,
+          relationship: 'extends',
+          description: `${config.filePath} extends configuration from ${config.settings.extends}`,
+          confidence: 0.9
+        });
+      }
+
+      // Analyze dependency relationships
+      for (const dep of config.dependencies) {
+        const relatedConfig = configFiles.find(cf =>
+          cf.filePath.includes(dep) ||
+          cf.settings.main === dep ||
+          cf.filePath.endsWith(`${dep}.json`)
+        );
+
+        if (relatedConfig) {
+          relationships.push({
+            sourceFile: config.filePath,
+            targetFile: relatedConfig.filePath,
+            relationship: 'depends_on',
+            description: `${config.filePath} depends on configuration in ${relatedConfig.filePath}`,
+            confidence: 0.7
+          });
+        }
+      }
+
+      // Analyze file proximity relationships
+      for (const relatedFile of config.relatedFiles) {
+        const relatedConfig = configFiles.find(cf => cf.filePath === relatedFile);
+        if (relatedConfig && relatedConfig.filePath !== config.filePath) {
+          relationships.push({
+            sourceFile: config.filePath,
+            targetFile: relatedConfig.filePath,
+            relationship: 'configures',
+            description: `${config.filePath} provides configuration for ${relatedConfig.filePath}`,
+            confidence: 0.6
+          });
+        }
+      }
+    }
+
+    return relationships;
+  }
+
+  private buildConfigurationDependencyTree(relationships: ConfigurationRelationship[]): Map<string, string[]> {
+    const dependencyTree = new Map<string, string[]>();
+
+    for (const rel of relationships) {
+      if (!dependencyTree.has(rel.sourceFile)) {
+        dependencyTree.set(rel.sourceFile, []);
+      }
+      dependencyTree.get(rel.sourceFile)!.push(rel.targetFile);
+    }
+
+    return dependencyTree;
+  }
+
+  private findOrphanedConfigurations(configFiles: ConfigurationFile[], relationships: ConfigurationRelationship[]): string[] {
+    const connectedFiles = new Set<string>();
+
+    for (const rel of relationships) {
+      connectedFiles.add(rel.sourceFile);
+      connectedFiles.add(rel.targetFile);
+    }
+
+    return configFiles
+      .filter(config => !connectedFiles.has(config.filePath))
+      .map(config => config.filePath);
+  }
+
+  private calculateConfigurationCoverage(configFiles: ConfigurationFile[]): number {
+    const totalFiles = this.storage.findNodes(node => node.type === 'file').length;
+    const configuredComponents = new Set<string>();
+
+    for (const config of configFiles) {
+      configuredComponents.add(config.filePath);
+      config.relatedFiles.forEach(file => configuredComponents.add(file));
+    }
+
+    return totalFiles > 0 ? (configuredComponents.size / totalFiles) * 100 : 0;
+  }
+
+  private generateConfigurationRecommendations(configFiles: ConfigurationFile[], relationships: ConfigurationRelationship[]): string[] {
+    const recommendations: string[] = [];
+
+    // Check for missing essential configurations
+    const hasPackageJson = configFiles.some(cf => cf.filePath.endsWith('package.json'));
+    const hasTsConfig = configFiles.some(cf => cf.filePath.includes('tsconfig'));
+    const hasTestConfig = configFiles.some(cf => cf.type === 'test');
+    const hasLintConfig = configFiles.some(cf => cf.type === 'lint');
+
+    if (!hasPackageJson && configFiles.some(cf => cf.language === 'javascript' || cf.language === 'typescript')) {
+      recommendations.push('Consider adding package.json for Node.js dependency management');
+    }
+
+    if (!hasTsConfig && configFiles.some(cf => cf.language === 'typescript')) {
+      recommendations.push('Consider adding tsconfig.json for TypeScript configuration');
+    }
+
+    if (!hasTestConfig) {
+      recommendations.push('Consider adding test configuration (jest.config.js, etc.) for automated testing');
+    }
+
+    if (!hasLintConfig) {
+      recommendations.push('Consider adding linting configuration (.eslintrc, .prettierrc) for code quality');
+    }
+
+    // Check for orphaned configurations
+    const orphanedCount = this.findOrphanedConfigurations(configFiles, relationships).length;
+    if (orphanedCount > 0) {
+      recommendations.push(`${orphanedCount} configuration files appear to be orphaned - consider reviewing their necessity`);
+    }
+
+    // Check for overly complex configuration relationships
+    const maxRelationships = Math.max(...Array.from(this.buildConfigurationDependencyTree(relationships).values()).map(deps => deps.length));
+    if (maxRelationships > 5) {
+      recommendations.push('Some configuration files have many dependencies - consider simplifying configuration structure');
+    }
+
+    return recommendations;
+  }
+
+  private async readFileContent(filePath: string): Promise<string> {
+    try {
+      const fs = await import('fs');
+      return fs.readFileSync(filePath, 'utf-8');
+    } catch (error) {
+      // File might not be readable or accessible
+      return '';
+    }
+  }
+
+  private generateConfigId(filePath: string): string {
+    return `config_${filePath.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`;
+  }
+
+  private calculateConfigConfidence(filePath: string, type: ConfigurationFile['type']): number {
+    const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+
+    // Well-known configuration files get higher confidence
+    const wellKnownConfigs = [
+      'package.json', 'tsconfig.json', '.gitignore', '.env',
+      'webpack.config.js', 'jest.config.js', '.eslintrc.json'
+    ];
+
+    if (wellKnownConfigs.includes(fileName)) {
+      return 0.95;
+    }
+
+    // Framework-specific configs get medium-high confidence
+    if (type === 'framework') {
+      return 0.85;
+    }
+
+    // Other recognized patterns get medium confidence
+    if (fileName.startsWith('.') || fileName.includes('config')) {
+      return 0.75;
+    }
+
+    return 0.6;
   }
 }
 

@@ -14,7 +14,7 @@ function createRequest(id, method, params) {
 async function testParallel() {
   console.log('🚀 Testing Parallel Processing Implementation...\n');
   
-  const server = spawn('node', ['../../dist/index.js'], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const server = spawn('node', ['./dist/index.js'], { stdio: ['pipe', 'pipe', 'inherit'] });
   
   // Initialize
   server.stdin.write(createRequest(1, 'initialize', {

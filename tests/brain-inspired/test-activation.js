@@ -5,8 +5,9 @@
 
 import { spawn } from 'child_process';
 
-const server = spawn('node', ['../../dist/index.js'], {
-  stdio: ['pipe', 'pipe', 'inherit']
+const server = spawn('node', ['./dist/index.js'], {
+  stdio: ['pipe', 'pipe', 'inherit'],
+  cwd: process.cwd().replace('/tests/brain-inspired', '')
 });
 
 let responseId = 1;

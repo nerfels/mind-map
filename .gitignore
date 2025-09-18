@@ -9,6 +9,8 @@ coverage/
 .nyc_output/
 .vscode/
 .idea/
+.git/
+.github/
 *.swp
 *.swo
 *~
