@@ -139,6 +139,8 @@ class MindMapMCPServer {
             return await this.analysisHandlers.handleGetInsights(args as any);
           case 'detect_cross_language_apis':
             return await this.analysisHandlers.handleDetectCrossLanguageAPIs(args as any);
+          case 'analyze_test_coverage':
+            return await this.analysisHandlers.handleAnalyzeTestCoverage(args as any);
 
           // System handlers
           case 'get_context':

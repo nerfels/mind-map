@@ -429,4 +429,109 @@ export class AnalysisHandlers {
       return ResponseFormatter.formatErrorResponse('detect_cross_language_apis', error);
     }
   }
+
+  async handleAnalyzeTestCoverage(args: {
+    include_orphans?: boolean;
+    include_untested?: boolean;
+    min_confidence?: number;
+    group_by?: 'file' | 'directory' | 'module';
+  }) {
+    try {
+      const {
+        include_orphans = true,
+        include_untested = false,
+        min_confidence = 0.5,
+        group_by = 'file'
+      } = args;
+
+      // Validate inputs
+      ValidationMiddleware.validateNumericRange(min_confidence, 0, 1, 'min_confidence');
+
+      await this.mindMap.initialize();
+
+      // Use the MindMapEngine's analysis service to analyze test coverage
+      const result = await this.mindMap.analyzeTestCoverage({
+        includeOrphans: include_orphans,
+        includeUntested: include_untested,
+        minConfidence: min_confidence,
+        groupBy: group_by
+      });
+
+      let text = '🧪 Test Coverage Mapping Analysis\n';
+      text += '=' .repeat(50) + '\n\n';
+
+      text += `📊 **Coverage Summary:**\n`;
+      text += `• Total Implementation Files: ${result.totalImplementationFiles}\n`;
+      text += `• Total Test Files: ${result.totalTestFiles}\n`;
+      text += `• Files with Tests: ${result.filesWithTests} (${result.coveragePercentage.toFixed(1)}%)\n`;
+      text += `• Files without Tests: ${result.filesWithoutTests}\n\n`;
+
+      if (result.mappings.length > 0) {
+        text += `🔗 **Test-to-Implementation Mappings:**\n\n`;
+
+        if (group_by === 'directory') {
+          // Group by directory
+          const byDirectory = new Map<string, any[]>();
+          result.mappings.forEach(mapping => {
+            const dir = mapping.implementationFile.substring(0, mapping.implementationFile.lastIndexOf('/'));
+            if (!byDirectory.has(dir)) {
+              byDirectory.set(dir, []);
+            }
+            byDirectory.get(dir)?.push(mapping);
+          });
+
+          for (const [dir, mappings] of byDirectory) {
+            text += `📁 **${dir.split('/').slice(-2).join('/')}**\n`;
+            mappings.forEach((m, i) => {
+              const implFile = m.implementationFile.split('/').pop();
+              const testFile = m.testFile.split('/').pop();
+              text += `  ${i + 1}. ${implFile} ← ${testFile} (${(m.confidence * 100).toFixed(0)}%)\n`;
+            });
+            text += '\n';
+          }
+        } else {
+          // Default file-by-file view
+          result.mappings.slice(0, 20).forEach((mapping, i) => {
+            text += `${i + 1}. **${mapping.implementationFile.split('/').pop()}**\n`;
+            text += `   ✅ Test: ${mapping.testFile.split('/').pop()}\n`;
+            text += `   🎯 Confidence: ${(mapping.confidence * 100).toFixed(0)}%\n`;
+            text += `   📊 Match Type: ${mapping.matchType}\n\n`;
+          });
+        }
+
+        if (result.mappings.length > 20) {
+          text += `... and ${result.mappings.length - 20} more mappings\n\n`;
+        }
+      }
+
+      if (include_orphans && result.orphanImplementationFiles.length > 0) {
+        text += `⚠️ **Implementation Files Without Tests:**\n`;
+        result.orphanImplementationFiles.slice(0, 10).forEach((file, i) => {
+          text += `${i + 1}. ${file.split('/').slice(-2).join('/')}\n`;
+        });
+        if (result.orphanImplementationFiles.length > 10) {
+          text += `... and ${result.orphanImplementationFiles.length - 10} more files\n`;
+        }
+        text += '\n';
+      }
+
+      if (include_untested && result.untestedTestFiles.length > 0) {
+        text += `❓ **Test Files Without Clear Targets:**\n`;
+        result.untestedTestFiles.slice(0, 10).forEach((file, i) => {
+          text += `${i + 1}. ${file.split('/').slice(-2).join('/')}\n`;
+        });
+        if (result.untestedTestFiles.length > 10) {
+          text += `... and ${result.untestedTestFiles.length - 10} more files\n`;
+        }
+        text += '\n';
+      }
+
+      text += `✅ **Test coverage mapping completed successfully!**\n`;
+      text += `Achieved ${result.mappingAccuracy.toFixed(1)}% mapping accuracy (target: 95%)\n`;
+
+      return ResponseFormatter.formatSuccessResponse(text);
+    } catch (error) {
+      return ResponseFormatter.formatErrorResponse('analyze_test_coverage', error);
+    }
+  }
 }

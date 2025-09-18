@@ -1314,6 +1314,40 @@ export const DETECT_CROSS_LANGUAGE_APIS_TOOL: Tool = {
   }
 };
 
+export const ANALYZE_TEST_COVERAGE_TOOL: Tool = {
+  name: 'analyze_test_coverage',
+  description: 'Analyze test coverage by mapping test files to their corresponding implementation files. Identifies test-to-code relationships through naming patterns, imports, and code references with 95% accuracy target.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      include_orphans: {
+        type: 'boolean',
+        description: 'Include implementation files without test coverage (default: true)',
+        default: true
+      },
+      include_untested: {
+        type: 'boolean',
+        description: 'Include test files without clear implementation targets (default: false)',
+        default: false
+      },
+      min_confidence: {
+        type: 'number',
+        minimum: 0,
+        maximum: 1,
+        description: 'Minimum confidence threshold for test-implementation mapping (default: 0.5)',
+        default: 0.5
+      },
+      group_by: {
+        type: 'string',
+        enum: ['file', 'directory', 'module'],
+        description: 'How to group the coverage results (default: file)',
+        default: 'file'
+      }
+    },
+    additionalProperties: false
+  }
+};
+
 export const ALL_TOOLS: Tool[] = [
   QUERY_MINDMAP_TOOL,
   UPDATE_MINDMAP_TOOL,
@@ -1370,5 +1404,6 @@ export const ALL_TOOLS: Tool[] = [
   GET_DOCUMENTATION_STATISTICS_TOOL,
   GET_DOCUMENTATION_INSIGHTS_TOOL,
   GET_DOCUMENT_RELATIONSHIPS_TOOL,
-  DETECT_CROSS_LANGUAGE_APIS_TOOL
+  DETECT_CROSS_LANGUAGE_APIS_TOOL,
+  ANALYZE_TEST_COVERAGE_TOOL
 ];

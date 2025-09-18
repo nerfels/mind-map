@@ -1890,4 +1890,255 @@ export class AnalysisService {
 
     return schemas;
   }
+
+  async analyzeTestCoverage(options: {
+    includeOrphans?: boolean;
+    includeUntested?: boolean;
+    minConfidence?: number;
+    groupBy?: 'file' | 'directory' | 'module';
+  } = {}): Promise<TestCoverageResult> {
+    const {
+      includeOrphans = true,
+      includeUntested = false,
+      minConfidence = 0.5,
+      groupBy = 'file'
+    } = options;
+
+    // Get all file nodes
+    const allFiles = this.storage.findNodes(node => node.type === 'file' && !!node.path);
+
+    // Separate test files from implementation files
+    const testFiles: string[] = [];
+    const implementationFiles: string[] = [];
+
+    for (const fileNode of allFiles) {
+      if (!fileNode.path) continue;
+
+      const filePath = fileNode.path;
+      const fileName = filePath.split('/').pop() || '';
+      const isTestFile = this.isTestFile(fileName, filePath);
+
+      if (isTestFile) {
+        testFiles.push(filePath);
+      } else if (this.isImplementationFile(fileName, filePath)) {
+        implementationFiles.push(filePath);
+      }
+    }
+
+    // Create test-to-implementation mappings
+    const mappings: TestCoverageMapping[] = [];
+    const mappedImplementationFiles = new Set<string>();
+    const mappedTestFiles = new Set<string>();
+
+    for (const testFile of testFiles) {
+      const bestMatch = this.findBestImplementationMatch(testFile, implementationFiles);
+      if (bestMatch && bestMatch.confidence >= minConfidence) {
+        mappings.push({
+          testFile,
+          implementationFile: bestMatch.file,
+          confidence: bestMatch.confidence,
+          matchType: bestMatch.matchType
+        });
+        mappedImplementationFiles.add(bestMatch.file);
+        mappedTestFiles.add(testFile);
+      }
+    }
+
+    // Calculate statistics
+    const totalImplementationFiles = implementationFiles.length;
+    const totalTestFiles = testFiles.length;
+    const filesWithTests = mappedImplementationFiles.size;
+    const filesWithoutTests = totalImplementationFiles - filesWithTests;
+    const coveragePercentage = totalImplementationFiles > 0 ? (filesWithTests / totalImplementationFiles) * 100 : 0;
+
+    // Find orphan files (implementation files without tests)
+    const orphanImplementationFiles = includeOrphans
+      ? implementationFiles.filter(file => !mappedImplementationFiles.has(file))
+      : [];
+
+    // Find untested test files (test files without clear implementation targets)
+    const untestedTestFiles = includeUntested
+      ? testFiles.filter(file => !mappedTestFiles.has(file))
+      : [];
+
+    // Calculate mapping accuracy (how many mappings have high confidence)
+    const highConfidenceMappings = mappings.filter(m => m.confidence >= 0.8).length;
+    const mappingAccuracy = mappings.length > 0 ? (highConfidenceMappings / mappings.length) * 100 : 0;
+
+    return {
+      totalImplementationFiles,
+      totalTestFiles,
+      filesWithTests,
+      filesWithoutTests,
+      coveragePercentage,
+      mappings,
+      orphanImplementationFiles,
+      untestedTestFiles,
+      mappingAccuracy
+    };
+  }
+
+  private isTestFile(fileName: string, filePath: string): boolean {
+    // Check file name patterns
+    const testPatterns = [
+      /\.test\./,
+      /\.spec\./,
+      /test-.*\./,
+      /_test\./,
+      /tests?\./,
+      /\.tests?\./
+    ];
+
+    if (testPatterns.some(pattern => pattern.test(fileName))) {
+      return true;
+    }
+
+    // Check directory patterns
+    const testDirectories = ['test/', 'tests/', '__tests__/', 'spec/', 'specs/'];
+    return testDirectories.some(dir => filePath.includes(dir));
+  }
+
+  private isImplementationFile(fileName: string, filePath: string): boolean {
+    // Exclude test files, config files, and build artifacts
+    const excludePatterns = [
+      /\.test\./,
+      /\.spec\./,
+      /test-/,
+      /_test\./,
+      /\.config\./,
+      /\.conf\./,
+      /package\.json/,
+      /tsconfig\.json/,
+      /\.md$/,
+      /\.txt$/,
+      /\.log$/,
+      /node_modules/,
+      /dist/,
+      /build/,
+      /\.git/
+    ];
+
+    if (excludePatterns.some(pattern => pattern.test(fileName) || pattern.test(filePath))) {
+      return false;
+    }
+
+    // Include common source file extensions
+    const sourceExtensions = ['.ts', '.js', '.tsx', '.jsx', '.py', '.java', '.go', '.rs', '.cpp', '.c', '.cs', '.php', '.rb', '.swift', '.kt', '.scala'];
+    return sourceExtensions.some(ext => fileName.endsWith(ext));
+  }
+
+  private findBestImplementationMatch(testFile: string, implementationFiles: string[]): {
+    file: string;
+    confidence: number;
+    matchType: string;
+  } | null {
+    const testFileName = testFile.split('/').pop() || '';
+    const testBaseName = this.extractBaseFileName(testFileName);
+
+    let bestMatch: { file: string; confidence: number; matchType: string } | null = null;
+
+    for (const implFile of implementationFiles) {
+      const implFileName = implFile.split('/').pop() || '';
+      const implBaseName = this.extractBaseFileName(implFileName);
+
+      let confidence = 0;
+      let matchType = 'unknown';
+
+      // Direct name match (highest confidence)
+      if (testBaseName === implBaseName) {
+        confidence = 0.95;
+        matchType = 'exact_name_match';
+      }
+      // Test file contains implementation name
+      else if (testBaseName.includes(implBaseName) && implBaseName.length > 3) {
+        confidence = 0.85;
+        matchType = 'test_contains_impl_name';
+      }
+      // Implementation name contains test base
+      else if (implBaseName.includes(testBaseName) && testBaseName.length > 3) {
+        confidence = 0.75;
+        matchType = 'impl_contains_test_name';
+      }
+      // Directory structure similarity
+      else if (this.isSimilarDirectory(testFile, implFile)) {
+        confidence = 0.6;
+        matchType = 'directory_similarity';
+      }
+      // File extension similarity
+      else if (this.isSimilarExtension(testFile, implFile)) {
+        confidence = 0.4;
+        matchType = 'extension_similarity';
+      }
+
+      if (confidence > (bestMatch?.confidence || 0)) {
+        bestMatch = { file: implFile, confidence, matchType };
+      }
+    }
+
+    return bestMatch;
+  }
+
+  private extractBaseFileName(fileName: string): string {
+    // Remove common test patterns and extensions
+    let baseName = fileName
+      .replace(/\.test\./g, '.')
+      .replace(/\.spec\./g, '.')
+      .replace(/test-/g, '')
+      .replace(/_test\./g, '.')
+      .replace(/\.tests?\./g, '.');
+
+    // Remove extension
+    const lastDot = baseName.lastIndexOf('.');
+    if (lastDot > 0) {
+      baseName = baseName.substring(0, lastDot);
+    }
+
+    return baseName;
+  }
+
+  private isSimilarDirectory(file1: string, file2: string): boolean {
+    const dir1 = file1.substring(0, file1.lastIndexOf('/'));
+    const dir2 = file2.substring(0, file2.lastIndexOf('/'));
+
+    // Remove test-specific directory parts
+    const normalizedDir1 = dir1.replace(/\/tests?\/|\/test\/|\/spec\//g, '/').replace(/\/\//g, '/');
+    const normalizedDir2 = dir2.replace(/\/tests?\/|\/test\/|\/spec\//g, '/').replace(/\/\//g, '/');
+
+    return normalizedDir1 === normalizedDir2;
+  }
+
+  private isSimilarExtension(file1: string, file2: string): boolean {
+    const ext1 = file1.substring(file1.lastIndexOf('.'));
+    const ext2 = file2.substring(file2.lastIndexOf('.'));
+
+    // Group similar extensions
+    const jsGroup = ['.js', '.jsx', '.ts', '.tsx'];
+    const pythonGroup = ['.py', '.pyx'];
+    const javaGroup = ['.java', '.kt', '.scala'];
+
+    if (jsGroup.includes(ext1) && jsGroup.includes(ext2)) return true;
+    if (pythonGroup.includes(ext1) && pythonGroup.includes(ext2)) return true;
+    if (javaGroup.includes(ext1) && javaGroup.includes(ext2)) return true;
+
+    return ext1 === ext2;
+  }
+}
+
+export interface TestCoverageResult {
+  totalImplementationFiles: number;
+  totalTestFiles: number;
+  filesWithTests: number;
+  filesWithoutTests: number;
+  coveragePercentage: number;
+  mappings: TestCoverageMapping[];
+  orphanImplementationFiles: string[];
+  untestedTestFiles: string[];
+  mappingAccuracy: number;
+}
+
+export interface TestCoverageMapping {
+  testFile: string;
+  implementationFile: string;
+  confidence: number;
+  matchType: string;
 }

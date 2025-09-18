@@ -411,6 +411,15 @@ export class MindMapEngine {
     return await this.analysisService.detectCrossLanguageAPIs(options);
   }
 
+  async analyzeTestCoverage(options: {
+    includeOrphans?: boolean;
+    includeUntested?: boolean;
+    minConfidence?: number;
+    groupBy?: 'file' | 'directory' | 'module';
+  } = {}) {
+    return await this.analysisService.analyzeTestCoverage(options);
+  }
+
   async analyzeCallPatterns(filePaths?: string[], includeMetrics: boolean = true) {
     return await this.analysisService.analyzeCallPatterns(filePaths, includeMetrics);
   }
