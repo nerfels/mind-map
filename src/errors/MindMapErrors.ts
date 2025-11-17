@@ -161,13 +161,13 @@ export class ToolExecutionError extends MindMapError {
   constructor(
     message: string,
     public readonly toolName: string,
-    public readonly arguments?: Record<string, any>,
+    public readonly toolArgs?: Record<string, any>,
     public readonly cause?: Error
   ) {
     super(
       message,
       'TOOL_ERROR',
-      { toolName, arguments, cause: cause?.message }
+      { toolName, arguments: toolArgs, cause: cause?.message }
     );
   }
 }
