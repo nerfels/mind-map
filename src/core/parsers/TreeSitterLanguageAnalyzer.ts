@@ -15,18 +15,39 @@ import {
 import {
   SupportedLanguage
 } from './TreeSitterParser.js';
+import {
+  IncrementalParseManager,
+  getIncrementalParseManager
+} from './IncrementalParseManager.js';
 import { ParseError } from '../../errors/MindMapErrors.js';
+
+/**
+ * Configuration options for TreeSitterLanguageAnalyzer
+ */
+export interface AnalyzerOptions {
+  /** Enable incremental parsing for faster re-parsing (default: true) */
+  enableIncrementalParsing?: boolean;
+  /** Maximum number of parse trees to cache (default: 100) */
+  maxCacheSize?: number;
+}
 
 /**
  * Universal language analyzer powered by Tree-sitter
  *
  * Supports: TypeScript, JavaScript, Python, Java, Go, Rust, C++, C#, PHP, Ruby
+ *
+ * Features:
+ * - Incremental parsing for 10-100x faster re-parsing
+ * - LRU cache for parse trees
+ * - Robust error recovery
  */
 export class TreeSitterLanguageAnalyzer extends BaseLanguageAnalyzer {
   private adapter: TreeSitterAdapter;
+  private incrementalManager?: IncrementalParseManager;
   private language?: SupportedLanguage;
+  private options: Required<AnalyzerOptions>;
 
-  constructor(language?: SupportedLanguage) {
+  constructor(language?: SupportedLanguage, options: AnalyzerOptions = {}) {
     // Get all supported extensions from Tree-sitter
     const extensions = language
       ? TreeSitterLanguageAnalyzer.getExtensionsForLanguage(language)
@@ -39,20 +60,42 @@ export class TreeSitterLanguageAnalyzer extends BaseLanguageAnalyzer {
 
     this.language = language;
     this.adapter = getTreeSitterAdapter();
+
+    // Set default options
+    this.options = {
+      enableIncrementalParsing: options.enableIncrementalParsing ?? true,
+      maxCacheSize: options.maxCacheSize ?? 100
+    };
+
+    // Initialize incremental parsing if enabled
+    if (this.options.enableIncrementalParsing) {
+      this.incrementalManager = getIncrementalParseManager();
+      this.incrementalManager.setMaxCacheSize(this.options.maxCacheSize);
+    }
   }
 
   /**
-   * Parse code using Tree-sitter
+   * Parse code using Tree-sitter with optional incremental parsing
    */
   protected async parseCode(content: string, filePath: string): Promise<CodeStructure> {
     try {
-      // Initialize adapter if needed
-      if (!this.adapter['parser'].isInitialized()) {
-        await this.adapter.initialize();
-      }
+      let parseResult;
 
-      // Parse the file
-      const parseResult = await this.adapter.parseFile(filePath, content);
+      // Use incremental parsing if enabled
+      if (this.incrementalManager) {
+        await this.incrementalManager.initialize();
+        parseResult = await this.incrementalManager.parse(
+          filePath,
+          content,
+          this.language
+        );
+      } else {
+        // Fallback to regular parsing
+        if (!this.adapter['parser'].isInitialized()) {
+          await this.adapter.initialize();
+        }
+        parseResult = await this.adapter.parseFile(filePath, content);
+      }
 
       // Check for syntax errors
       if (parseResult.hasErrors) {
@@ -76,6 +119,27 @@ export class TreeSitterLanguageAnalyzer extends BaseLanguageAnalyzer {
         error instanceof Error ? error : undefined
       );
     }
+  }
+
+  /**
+   * Get incremental parsing statistics (if enabled)
+   */
+  getIncrementalStats() {
+    return this.incrementalManager?.getStats();
+  }
+
+  /**
+   * Clear cache for a specific file (if incremental parsing is enabled)
+   */
+  clearCache(filePath: string): void {
+    this.incrementalManager?.clearCache(filePath);
+  }
+
+  /**
+   * Clear all cached parse trees (if incremental parsing is enabled)
+   */
+  clearAllCache(): void {
+    this.incrementalManager?.clearAllCache();
   }
 
   /**
