@@ -17,11 +17,13 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration",
+    "test:integration": "node run-integration-tests.js",
+    "test:integration:parallel": "node run-integration-tests.js --parallel",
+    "test:all": "npm run test:unit && npm run test:integration",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "type-check": "tsc --noEmit",
-    "validate": "npm run type-check && npm run lint && npm test"
+    "validate": "npm run type-check && npm run lint && npm run test:unit"
   },
   "keywords": [
     "mcp",
