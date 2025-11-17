@@ -12,11 +12,16 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "test": "vitest",
-    "test:coverage": "vitest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "validate": "npm run type-check && npm run lint && npm test"
   },
   "keywords": [
     "mcp",
@@ -43,6 +48,8 @@
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
     "eslint": "^8.56.0",
     "tsup": "^8.0.1",
     "vitest": "^3.2.4"
