@@ -1,5 +1,8 @@
 import { readFile } from 'fs/promises';
-import { CodeStructure } from '../../types/index.js';
+import { CodeStructure, FunctionInfo, ClassInfo, ImportInfo, ExportInfo } from '../../types/index.js';
+
+// Re-export for convenience
+export { CodeStructure, FunctionInfo, ClassInfo, ImportInfo, ExportInfo };
 
 /**
  * Abstract base class for language analyzers

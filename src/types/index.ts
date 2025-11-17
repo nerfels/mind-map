@@ -242,31 +242,51 @@ export interface FileInfo {
   isIgnored: boolean;
 }
 
+export interface FunctionInfo {
+  name: string;
+  startLine: number;
+  endLine: number;
+  parameters: string[];
+  returnType?: string;
+  filePath?: string;
+  async?: boolean;
+  generator?: boolean;
+}
+
+export interface ClassInfo {
+  name: string;
+  startLine: number;
+  endLine: number;
+  methods: string[];
+  properties: string[];
+  filePath?: string;
+  superClass?: string;
+  implements?: string[];
+}
+
+export interface ImportInfo {
+  module: string;
+  path?: string;
+  type: 'default' | 'named' | 'namespace' | 'dynamic' | 'require';
+  line?: number; // Line number for dynamic imports/requires
+}
+
+export interface ExportInfo {
+  name: string;
+  type: 'default' | 'named';
+}
+
 export interface CodeStructure {
-  functions: Array<{
-    name: string;
-    startLine: number;
-    endLine: number;
-    parameters: string[];
-    returnType?: string;
-  }>;
-  classes: Array<{
-    name: string;
-    startLine: number;
-    endLine: number;
-    methods: string[];
-    properties: string[];
-  }>;
-  imports: Array<{
-    module: string;
-    path?: string;
-    type: 'default' | 'named' | 'namespace' | 'dynamic' | 'require';
-    line?: number; // Line number for dynamic imports/requires
-  }>;
-  exports: Array<{
-    name: string;
-    type: 'default' | 'named';
-  }>;
+  functions: FunctionInfo[];
+  classes: ClassInfo[];
+  imports: ImportInfo[];
+  exports: ExportInfo[];
+  filePath?: string;
+  language?: string;
+  dependencies?: string[];
+  complexity?: number;
+  linesOfCode?: number;
+  parseTime?: number;
 }
 
 export interface QueryOptions {
