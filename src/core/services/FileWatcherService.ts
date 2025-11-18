@@ -377,6 +377,23 @@ export class FileWatcherService extends EventEmitter {
   }
 
   /**
+   * Reset statistics
+   */
+  resetStats(): void {
+    this.stats = {
+      totalEvents: 0,
+      addedEvents: 0,
+      changedEvents: 0,
+      deletedEvents: 0,
+      totalAnalyses: 0,
+      totalAnalysisTime: 0,
+      incrementalAnalyses: 0,
+      fullAnalyses: 0
+    };
+    this.startTime = new Date();
+  }
+
+  /**
    * Get list of watched files
    */
   getWatchedFiles(): string[] {
